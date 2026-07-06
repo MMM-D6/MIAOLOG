@@ -398,6 +398,23 @@ body{
 .color-label{font-size:12px;color:#000;flex:1;font-family:var(--font-ui);}
 
 /* ══════════════════════════════════════
+   FINANCE (记账理财)
+   ══════════════════════════════════════ */
+.fin-cur-badge{background:#c9a13b;border-color:#7a5a00;color:#fff;}
+.fin-cur-badge.gbp{background:#3b6bc9;border-color:#00317a;}
+.fin-totals-panel{
+  background:#fff;border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  padding:8px 10px;font-size:13px;font-family:var(--font-ui);
+}
+.fin-totals-row{display:flex;justify-content:space-between;padding:2px 0;}
+.fin-totals-row.grand{font-weight:bold;border-top:1px dashed #808080;margin-top:4px;padding-top:4px;font-size:15px;color:#000080;}
+.fin-totals-row.warn{color:#cc0000;}
+.fin-sub{font-size:11px;color:#555;}
+.fin-type-badge{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid;vertical-align:middle;}
+.fin-type-badge.income{border-color:var(--green);color:var(--green);}
+.fin-type-badge.expense{border-color:#cc0000;color:#cc0000;}
+
+/* ══════════════════════════════════════
    TOAST
    ══════════════════════════════════════ */
 .toast{
@@ -852,6 +869,7 @@ body{
     <div class="tab active" onclick="showTab('tasks',this)">任务</div>
     <div class="tab" onclick="showTab('gantt',this)">甘特图</div>
     <div class="tab" onclick="showTab('journal',this)">Log</div>
+    <div class="tab" onclick="showTab('finance',this)">记账理财</div>
     <div class="tab" onclick="showTab('checkin',this)">日历打卡</div>
     <div class="tab" onclick="showTab('eng',this)">英语卡片</div>
     <div class="tab" onclick="showTab('dreams',this)">Spark</div>
@@ -912,6 +930,45 @@ body{
       <div id="randomCard" style="display:none;"></div>
       <div id="archiveJ" class="archive-row"></div>
       <div id="journalList"></div>
+    </div>
+
+    <!-- FINANCE (记账理财) -->
+    <div class="section" id="sec-finance">
+      <div class="toolbar">
+        <button class="pxl-btn primary" onclick="finOpenAccountModal()">💰 + 添加账户</button>
+        <button class="pxl-btn primary" onclick="finOpenCartModal()">🛒 + 购物车条目</button>
+        <button class="pxl-btn" onclick="finOpenIncomeModal()">＋ 记一笔收入</button>
+        <span style="font-size:12px;color:#808080;">汇率(1GBP=?CNY)</span>
+        <input class="form-select" id="finRateInput" type="number" step="0.0001" min="0" style="width:90px;" onchange="finOnRateChange()"/>
+      </div>
+
+      <div id="finAcctList" class="task-list" style="margin-bottom:8px;"></div>
+      <div id="finTotalsPanel" class="fin-totals-panel" style="margin-bottom:16px;"></div>
+
+      <div class="setting-title">购物车（支出模拟）</div>
+      <div class="toolbar" style="margin-bottom:6px;">
+        <button class="pxl-btn" onclick="finCartSelectAll(true)">全选</button>
+        <button class="pxl-btn" onclick="finCartSelectAll(false)">全不选</button>
+        <button class="pxl-btn" onclick="finCartCompleteSelected()">✓ 完成选中（扣款）</button>
+      </div>
+      <div id="finCartList" class="task-list" style="margin-bottom:8px;"></div>
+      <div id="finCartSummary" class="fin-totals-panel" style="margin-bottom:16px;"></div>
+
+      <div class="dream-group-card" id="finRecordsCard">
+        <div class="dream-group-hdr">
+          <span class="dream-group-tog" onclick="finToggleRecords()"><span id="finRecArrow">▶</span> 记录<span id="finRecCount" style="margin-left:6px;opacity:.85;"></span></span>
+        </div>
+        <div class="dream-group-body" id="finRecordsBody" style="display:none;">
+          <div id="finRecordsList"></div>
+        </div>
+      </div>
+
+      <div class="setting-title" style="margin-top:16px;">月度导出</div>
+      <div class="toolbar">
+        <input class="form-select" id="finExportMonth" type="month" style="width:150px;"/>
+        <button class="pxl-btn" onclick="finExportMonth()">📄 导出该月</button>
+      </div>
+      <div id="finExportPreview" class="fin-totals-panel" style="display:none;"></div>
     </div>
 
     <!-- DREAMS -->
@@ -1264,6 +1321,76 @@ body{
   </div>
 </div>
 
+<!-- FINANCE ACCOUNT MODAL -->
+<div class="overlay" id="finAccountModal">
+  <div class="modal" style="max-width:400px;">
+    <button class="close-btn" onclick="closeModal('finAccountModal')">✕</button>
+    <div class="modal-title" id="finAccountModalTitle">添加账户</div>
+    <input type="hidden" id="finAccEditId"/>
+    <div class="form-row"><label class="form-label">账户名称</label><input class="form-input" id="finAccName" placeholder="账户名称"/></div>
+    <div class="form-row"><label class="form-label">币种</label>
+      <select class="form-select" id="finAccCurrency" style="width:100%;">
+        <option value="CNY">人民币 CNY</option>
+        <option value="GBP">英镑 GBP</option>
+      </select>
+    </div>
+    <div class="form-row"><label class="form-label">余额</label><input class="form-input" id="finAccBalance" type="number" step="0.01" value="0"/></div>
+    <div class="form-row"><label class="form-label">标签（逗号分隔）</label><input class="form-input" id="finAccTags" placeholder="日常, 储蓄"/></div>
+    <div class="form-row"><label class="form-label">备注</label><input class="form-input" id="finAccNote" placeholder="备注"/></div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="closeModal('finAccountModal')">取消</button>
+      <button class="pxl-btn primary" onclick="finSaveAccount()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- FINANCE CART ITEM MODAL -->
+<div class="overlay" id="finCartModal">
+  <div class="modal" style="max-width:400px;">
+    <button class="close-btn" onclick="closeModal('finCartModal')">✕</button>
+    <div class="modal-title" id="finCartModalTitle">添加条目</div>
+    <input type="hidden" id="finCartEditId"/>
+    <div class="form-row"><label class="form-label">条目名称</label><input class="form-input" id="finCartName" placeholder="耳机、房租、超市采购..."/></div>
+    <div class="form-row"><label class="form-label">金额</label><input class="form-input" id="finCartAmount" type="number" step="0.01" value="0"/></div>
+    <div class="form-row"><label class="form-label">币种</label>
+      <select class="form-select" id="finCartCurrency" style="width:100%;">
+        <option value="CNY">人民币 CNY</option>
+        <option value="GBP">英镑 GBP</option>
+      </select>
+    </div>
+    <div class="form-row"><label class="form-label">扣款账户</label><select class="form-select" id="finCartAccount" style="width:100%;"></select></div>
+    <div class="form-row"><label class="form-label">标签（逗号分隔）</label><input class="form-input" id="finCartTags" placeholder="数码, 娱乐"/></div>
+    <div class="form-row"><label class="form-label">备注</label><input class="form-input" id="finCartNote" placeholder="备注"/></div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="closeModal('finCartModal')">取消</button>
+      <button class="pxl-btn primary" onclick="finSaveCartItem()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- FINANCE INCOME MODAL -->
+<div class="overlay" id="finIncomeModal">
+  <div class="modal" style="max-width:400px;">
+    <button class="close-btn" onclick="closeModal('finIncomeModal')">✕</button>
+    <div class="modal-title">记一笔收入</div>
+    <div class="form-row"><label class="form-label">收入名称</label><input class="form-input" id="finIncName" placeholder="工资、转账..."/></div>
+    <div class="form-row"><label class="form-label">金额</label><input class="form-input" id="finIncAmount" type="number" step="0.01" value="0"/></div>
+    <div class="form-row"><label class="form-label">币种</label>
+      <select class="form-select" id="finIncCurrency" style="width:100%;">
+        <option value="CNY">人民币 CNY</option>
+        <option value="GBP">英镑 GBP</option>
+      </select>
+    </div>
+    <div class="form-row"><label class="form-label">存入账户</label><select class="form-select" id="finIncAccount" style="width:100%;"></select></div>
+    <div class="form-row"><label class="form-label">标签（逗号分隔）</label><input class="form-input" id="finIncTags" placeholder="工资, 兼职"/></div>
+    <div class="form-row"><label class="form-label">备注</label><input class="form-input" id="finIncNote" placeholder="备注"/></div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="closeModal('finIncomeModal')">取消</button>
+      <button class="pxl-btn primary" onclick="finSaveIncome()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- CHANGE PASSWORD MODAL -->
 <div class="overlay" id="changePwModal">
   <div class="modal" style="max-width:360px;">
@@ -1305,7 +1432,8 @@ var S = {
   tasks:[], journal:[], dreams:[], cards:[], events:[], ganttPos:{}, ganttNotes:{},
   habits:[], checkins:{}, energyTags:[], dreamGroups:[],
   theme:{}, nextId:1,
-  avatar:null
+  avatar:null,
+  finance:{rate:9.2, accounts:[], cart:[], records:[], recordsCollapsed:true}
 };
 
 let undoStack=[], undoTimer=null;
@@ -1415,6 +1543,13 @@ function migrateState(loaded) {
   if (typeof S.xp     !== 'number') S.xp      = 0;
   if (typeof S.nextId !== 'number') S.nextId  = 1;
   if (!S.theme || typeof S.theme !== 'object') S.theme = {};
+  // Finance (记账理财)
+  if (!S.finance || typeof S.finance !== 'object') S.finance = {rate:9.2, accounts:[], cart:[], records:[], recordsCollapsed:true};
+  if (!Array.isArray(S.finance.accounts)) S.finance.accounts = [];
+  if (!Array.isArray(S.finance.cart)) S.finance.cart = [];
+  if (!Array.isArray(S.finance.records)) S.finance.records = [];
+  if (typeof S.finance.rate !== 'number') S.finance.rate = 9.2;
+  if (typeof S.finance.recordsCollapsed !== 'boolean') S.finance.recordsCollapsed = true;
 }
 
 // Load: try cloud first, fall back to localStorage
@@ -1511,6 +1646,7 @@ function showTab(tab, el){
   document.getElementById('sec-'+tab).classList.add('active');
   if(tab==='tasks') renderTasks();
   if(tab==='journal') renderJournal();
+  if(tab==='finance') finRenderAll();
   if(tab==='dreams') renderDreams();
   if(tab==='notes') renderCards();
   if(tab==='gantt') ganttRender();
@@ -4652,6 +4788,405 @@ function ganttAutoShift(){
   });
   if(changed){ saveState(); }
 }
+// ═══════════════════════════════════════
+// FINANCE (记账理财)
+// ═══════════════════════════════════════
+function finParseTags(str){
+  return (str||'').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+}
+function finFmtMoney(amount, currency){
+  var sym = currency === 'GBP' ? '£' : '¥';
+  var n = Number(amount) || 0;
+  return sym + n.toFixed(2);
+}
+function finConvert(amount, fromCur, toCur, rate){
+  amount = Number(amount) || 0;
+  if(fromCur === toCur) return amount;
+  if(fromCur === 'GBP' && toCur === 'CNY') return amount * rate;
+  if(fromCur === 'CNY' && toCur === 'GBP') return rate ? amount / rate : 0;
+  return amount;
+}
+function finToCNY(amount, currency){ return finConvert(amount, currency, 'CNY', S.finance.rate); }
+
+function finAccountOptionsHTML(selectedId){
+  return S.finance.accounts.map(function(a){
+    var sel = (selectedId!=null && a.id==selectedId) ? ' selected' : '';
+    return '<option value="'+a.id+'"'+sel+'>'+a.name+' ('+a.currency+')</option>';
+  }).join('');
+}
+function finAccountNameById(id){
+  var a = S.finance.accounts.find(function(x){ return x.id==id; });
+  return a ? a.name : '（账户已删除）';
+}
+
+// ── 账户 ──
+function finOpenAccountModal(id){
+  document.getElementById('finAccEditId').value = id || '';
+  var a = id ? S.finance.accounts.find(function(x){ return x.id==id; }) : null;
+  document.getElementById('finAccountModalTitle').textContent = a ? '编辑账户' : '添加账户';
+  document.getElementById('finAccName').value = a ? a.name : '';
+  document.getElementById('finAccCurrency').value = a ? a.currency : 'CNY';
+  document.getElementById('finAccBalance').value = a ? a.balance : 0;
+  document.getElementById('finAccTags').value = a ? (a.tags||[]).join(', ') : '';
+  document.getElementById('finAccNote').value = a ? (a.note||'') : '';
+  openModal('finAccountModal');
+}
+function finSaveAccount(){
+  var id = document.getElementById('finAccEditId').value;
+  var name = document.getElementById('finAccName').value.trim();
+  if(!name){ showToast('请填写账户名称'); return; }
+  var currency = document.getElementById('finAccCurrency').value;
+  var balance = parseFloat(document.getElementById('finAccBalance').value) || 0;
+  var tags = finParseTags(document.getElementById('finAccTags').value);
+  var note = document.getElementById('finAccNote').value.trim();
+  if(id){
+    var a = S.finance.accounts.find(function(x){ return x.id==id; });
+    if(a){ Object.assign(a, {name:name, currency:currency, balance:balance, tags:tags, note:note}); }
+  } else {
+    S.finance.accounts.push({id: S.nextId++, name:name, currency:currency, balance:balance, tags:tags, note:note});
+  }
+  saveState(); closeModal('finAccountModal'); finRenderAll();
+  showToast('账户已保存');
+}
+function finDeleteAccount(id){
+  var used = S.finance.cart.some(function(c){ return c.accountId==id; });
+  if(used){ showToast('该账户还有购物车条目在用，请先处理'); return; }
+  if(!confirm('删除该账户？')) return;
+  S.finance.accounts = S.finance.accounts.filter(function(a){ return a.id!=id; });
+  saveState(); finRenderAll();
+}
+function finRenderAccounts(){
+  var wrap = document.getElementById('finAcctList');
+  if(!wrap) return;
+  if(!S.finance.accounts.length){
+    wrap.innerHTML = '<div style="font-size:12px;color:#808080;padding:6px 0;">还没有账户，点「＋ 添加账户」加一个吧</div>';
+    return;
+  }
+  wrap.innerHTML = S.finance.accounts.map(function(a){
+    var neg = a.balance < 0 ? ' style="color:#cc0000;"' : '';
+    var tagsHTML = (a.tags&&a.tags.length) ? '<div class="tags">'+a.tags.map(function(t){ return '<span class="tag">'+t+'</span>'; }).join('')+'</div>' : '';
+    var curCls = a.currency==='GBP' ? 'fin-cur-badge gbp' : 'fin-cur-badge';
+    return '<div class="task-card"><div class="task-top">'
+      + '<span class="tag '+curCls+'" style="margin-top:1px;">'+a.currency+'</span>'
+      + '<div class="task-title-wrap">'
+      +   '<div class="task-title">'+a.name+'<span style="font-family:\'Courier New\',monospace;font-weight:bold;margin-left:10px;"'+neg+'>'+finFmtMoney(a.balance, a.currency)+'</span></div>'
+      +   (a.note?'<div class="task-meta">'+a.note+'</div>':'')
+      +   tagsHTML
+      + '</div>'
+      + '<div class="task-actions">'
+      +   '<button class="icon-btn" onclick="finOpenAccountModal('+a.id+')">✎</button>'
+      +   '<button class="icon-btn" onclick="finDeleteAccount('+a.id+')">🗑</button>'
+      + '</div></div></div>';
+  }).join('');
+}
+function finOnRateChange(){
+  var v = parseFloat(document.getElementById('finRateInput').value);
+  S.finance.rate = isNaN(v) ? S.finance.rate : v;
+  saveState();
+  finRenderTotals();
+  finRenderCartSummary();
+}
+function finTotalAssetsCNY(){
+  var total = 0;
+  S.finance.accounts.forEach(function(a){ total += finToCNY(a.balance, a.currency); });
+  return total;
+}
+function finRenderTotals(){
+  var rateEl = document.getElementById('finRateInput');
+  if(rateEl) rateEl.value = S.finance.rate;
+  var cnySum = 0, gbpSum = 0;
+  S.finance.accounts.forEach(function(a){
+    if(a.currency === 'CNY') cnySum += a.balance; else gbpSum += a.balance;
+  });
+  var grand = cnySum + finConvert(gbpSum, 'GBP', 'CNY', S.finance.rate);
+  var html = '';
+  html += '<div class="fin-totals-row"><span>人民币账户小计</span><span>'+finFmtMoney(cnySum,'CNY')+'</span></div>';
+  html += '<div class="fin-totals-row"><span>英镑账户小计</span><span>'+finFmtMoney(gbpSum,'GBP')+'</span></div>';
+  html += '<div class="fin-totals-row grand"><span>总资产（折算人民币）</span><span>'+finFmtMoney(grand,'CNY')+'</span></div>';
+  var panel = document.getElementById('finTotalsPanel');
+  if(panel) panel.innerHTML = html;
+}
+
+// ── 购物车 ──
+function finOpenCartModal(id){
+  if(!S.finance.accounts.length){ showToast('请先添加至少一个账户'); return; }
+  document.getElementById('finCartEditId').value = id || '';
+  var c = id ? S.finance.cart.find(function(x){ return x.id==id; }) : null;
+  document.getElementById('finCartModalTitle').textContent = c ? '编辑条目' : '添加条目';
+  document.getElementById('finCartName').value = c ? c.name : '';
+  document.getElementById('finCartAmount').value = c ? c.amount : 0;
+  document.getElementById('finCartCurrency').value = c ? c.currency : 'CNY';
+  document.getElementById('finCartAccount').innerHTML = finAccountOptionsHTML(c ? c.accountId : null);
+  document.getElementById('finCartTags').value = c ? (c.tags||[]).join(', ') : '';
+  document.getElementById('finCartNote').value = c ? (c.note||'') : '';
+  openModal('finCartModal');
+}
+function finSaveCartItem(){
+  var id = document.getElementById('finCartEditId').value;
+  var name = document.getElementById('finCartName').value.trim();
+  if(!name){ showToast('请填写条目名称'); return; }
+  var amount = parseFloat(document.getElementById('finCartAmount').value) || 0;
+  var currency = document.getElementById('finCartCurrency').value;
+  var accountId = parseInt(document.getElementById('finCartAccount').value, 10);
+  var tags = finParseTags(document.getElementById('finCartTags').value);
+  var note = document.getElementById('finCartNote').value.trim();
+  if(id){
+    var c = S.finance.cart.find(function(x){ return x.id==id; });
+    if(c){ Object.assign(c, {name:name, amount:amount, currency:currency, accountId:accountId, tags:tags, note:note}); }
+  } else {
+    S.finance.cart.push({id: S.nextId++, name:name, amount:amount, currency:currency, accountId:accountId, tags:tags, note:note, checked:false});
+  }
+  saveState(); closeModal('finCartModal'); finRenderAll();
+  showToast('条目已保存');
+}
+function finDeleteCartItem(id){
+  if(!confirm('删除该购物车条目？')) return;
+  S.finance.cart = S.finance.cart.filter(function(c){ return c.id!=id; });
+  saveState(); finRenderAll();
+}
+function finToggleCartCheck(id){
+  var c = S.finance.cart.find(function(x){ return x.id==id; });
+  if(c){ c.checked = !c.checked; saveState(); finRenderCart(); finRenderCartSummary(); }
+}
+function finCartSelectAll(val){
+  S.finance.cart.forEach(function(c){ c.checked = val; });
+  saveState(); finRenderCart(); finRenderCartSummary();
+}
+function finRenderCart(){
+  var wrap = document.getElementById('finCartList');
+  if(!wrap) return;
+  if(!S.finance.cart.length){
+    wrap.innerHTML = '<div style="font-size:12px;color:#808080;padding:6px 0;">购物车是空的，点「＋ 购物车条目」开始记录要花的钱吧</div>';
+    return;
+  }
+  wrap.innerHTML = S.finance.cart.map(function(c){
+    var accName = finAccountNameById(c.accountId);
+    var tagsHTML = (c.tags&&c.tags.length) ? '<div class="tags">'+c.tags.map(function(t){ return '<span class="tag">'+t+'</span>'; }).join('')+'</div>' : '';
+    return '<div class="task-card"><div class="task-top">'
+      + '<div class="task-check'+(c.checked?' checked':'')+'" onclick="finToggleCartCheck('+c.id+')">'+(c.checked?'✓':'')+'</div>'
+      + '<div class="task-title-wrap">'
+      +   '<div class="task-title">'+c.name+'<span style="font-family:\'Courier New\',monospace;margin-left:10px;">'+finFmtMoney(c.amount, c.currency)+'</span></div>'
+      +   '<div class="task-meta">扣款账户: '+accName+(c.note?'　备注: '+c.note:'')+'</div>'
+      +   tagsHTML
+      + '</div>'
+      + '<div class="task-actions">'
+      +   '<button class="icon-btn" onclick="finCartCompleteOne('+c.id+')">✓</button>'
+      +   '<button class="icon-btn" onclick="finOpenCartModal('+c.id+')">✎</button>'
+      +   '<button class="icon-btn" onclick="finDeleteCartItem('+c.id+')">🗑</button>'
+      + '</div></div></div>';
+  }).join('');
+}
+function finRenderCartSummary(){
+  var box = document.getElementById('finCartSummary');
+  if(!box) return;
+  var selected = S.finance.cart.filter(function(c){ return c.checked; });
+  if(!selected.length){
+    box.innerHTML = '<div style="font-size:12px;color:#808080;">勾选购物车里的条目，这里会实时模拟总开销和结余</div>';
+    return;
+  }
+  var totalCNY = 0;
+  var byCurrency = {CNY:0, GBP:0};
+  selected.forEach(function(c){
+    byCurrency[c.currency] = (byCurrency[c.currency]||0) + c.amount;
+    totalCNY += finToCNY(c.amount, c.currency);
+  });
+  var totalAssets = finTotalAssetsCNY();
+  var remain = totalAssets - totalCNY;
+
+  var byAccount = {};
+  selected.forEach(function(c){
+    if(!byAccount[c.accountId]) byAccount[c.accountId] = 0;
+    var acc = S.finance.accounts.find(function(a){ return a.id==c.accountId; });
+    if(acc){ byAccount[c.accountId] += finConvert(c.amount, c.currency, acc.currency, S.finance.rate); }
+  });
+
+  var html = '';
+  html += '<div class="fin-totals-row"><span>已选 '+selected.length+' 项，原始金额</span><span>'
+        + (byCurrency.CNY?finFmtMoney(byCurrency.CNY,'CNY')+' ':'')
+        + (byCurrency.GBP?finFmtMoney(byCurrency.GBP,'GBP'):'')
+        + '</span></div>';
+  html += '<div class="fin-totals-row"><span>模拟总开销（折算人民币）</span><span>'+finFmtMoney(totalCNY,'CNY')+'</span></div>';
+  html += '<div class="fin-totals-row"><span>当前总资产（折算人民币）</span><span>'+finFmtMoney(totalAssets,'CNY')+'</span></div>';
+  html += '<div class="fin-totals-row grand'+(remain<0?' warn':'')+'"><span>模拟结余</span><span>'+finFmtMoney(remain,'CNY')+(remain<0?'（余额不足）':'')+'</span></div>';
+  Object.keys(byAccount).forEach(function(accId){
+    var acc = S.finance.accounts.find(function(a){ return a.id==accId; });
+    if(!acc) return;
+    var after = acc.balance - byAccount[accId];
+    html += '<div class="fin-totals-row fin-sub'+(after<0?' warn':'')+'"><span>　'+acc.name+' 完成后预计</span><span>'+finFmtMoney(after, acc.currency)+'</span></div>';
+  });
+  box.innerHTML = html;
+}
+function finCartCompleteOne(id){
+  var c = S.finance.cart.find(function(x){ return x.id==id; });
+  if(!c) return;
+  finDoCompleteCartItems([c]);
+}
+function finCartCompleteSelected(){
+  var selected = S.finance.cart.filter(function(c){ return c.checked; });
+  if(!selected.length){ showToast('请先勾选要完成的条目'); return; }
+  finDoCompleteCartItems(selected);
+}
+function finDoCompleteCartItems(items){
+  if(!items.length) return;
+  if(!confirm('确认完成 '+items.length+' 项，并从对应账户扣款吗？')) return;
+  items.forEach(function(c){
+    var acc = S.finance.accounts.find(function(a){ return a.id==c.accountId; });
+    var deduct = acc ? finConvert(c.amount, c.currency, acc.currency, S.finance.rate) : 0;
+    if(acc) acc.balance -= deduct;
+    S.finance.records.unshift({
+      id: S.nextId++, type: 'expense', name: c.name, amount: c.amount, currency: c.currency,
+      cnyAmount: finToCNY(c.amount, c.currency), accountId: c.accountId,
+      accountName: acc ? acc.name : '（账户已删除）', tags: c.tags||[], note: c.note||'',
+      createdAt: new Date().toISOString(), fromCart: true
+    });
+  });
+  var ids = items.map(function(c){ return c.id; });
+  S.finance.cart = S.finance.cart.filter(function(c){ return ids.indexOf(c.id) === -1; });
+  saveState(); finRenderAll();
+  showToast('已完成 '+items.length+' 项，余额已更新');
+}
+
+// ── 收入 ──
+function finOpenIncomeModal(){
+  if(!S.finance.accounts.length){ showToast('请先添加至少一个账户'); return; }
+  document.getElementById('finIncName').value = '';
+  document.getElementById('finIncAmount').value = 0;
+  document.getElementById('finIncCurrency').value = 'CNY';
+  document.getElementById('finIncAccount').innerHTML = finAccountOptionsHTML(null);
+  document.getElementById('finIncTags').value = '';
+  document.getElementById('finIncNote').value = '';
+  openModal('finIncomeModal');
+}
+function finSaveIncome(){
+  var name = document.getElementById('finIncName').value.trim();
+  if(!name){ showToast('请填写收入名称'); return; }
+  var amount = parseFloat(document.getElementById('finIncAmount').value) || 0;
+  var currency = document.getElementById('finIncCurrency').value;
+  var accountId = parseInt(document.getElementById('finIncAccount').value, 10);
+  var tags = finParseTags(document.getElementById('finIncTags').value);
+  var note = document.getElementById('finIncNote').value.trim();
+  var acc = S.finance.accounts.find(function(a){ return a.id==accountId; });
+  var add = acc ? finConvert(amount, currency, acc.currency, S.finance.rate) : 0;
+  if(acc) acc.balance += add;
+  S.finance.records.unshift({
+    id: S.nextId++, type: 'income', name: name, amount: amount, currency: currency,
+    cnyAmount: finToCNY(amount, currency), accountId: accountId,
+    accountName: acc ? acc.name : '（账户已删除）', tags: tags, note: note,
+    createdAt: new Date().toISOString(), fromCart: false
+  });
+  saveState(); closeModal('finIncomeModal'); finRenderAll();
+  showToast('收入已记录');
+}
+
+// ── 记录 ──
+function finToggleRecords(){
+  S.finance.recordsCollapsed = !S.finance.recordsCollapsed;
+  saveState(); finRenderRecords();
+}
+function finRenderRecords(){
+  var body = document.getElementById('finRecordsBody');
+  var arrow = document.getElementById('finRecArrow');
+  var countEl = document.getElementById('finRecCount');
+  if(!body) return;
+  body.style.display = S.finance.recordsCollapsed ? 'none' : 'block';
+  arrow.textContent = S.finance.recordsCollapsed ? '▶' : '▼';
+  if(countEl) countEl.textContent = S.finance.records.length ? '（'+S.finance.records.length+'）' : '';
+  var wrap = document.getElementById('finRecordsList');
+  if(!S.finance.records.length){
+    wrap.innerHTML = '<div style="font-size:12px;color:#808080;">还没有任何收支记录</div>';
+    return;
+  }
+  wrap.innerHTML = S.finance.records.map(function(r){
+    var tagsHTML = (r.tags&&r.tags.length) ? '<div class="tags">'+r.tags.map(function(t){ return '<span class="tag">'+t+'</span>'; }).join('')+'</div>' : '';
+    var typeLabel = r.type==='income' ? '收入' : '支出';
+    return '<div class="entry-card">'
+      + '<div class="entry-header"><span class="fin-type-badge '+r.type+'">'+typeLabel+'</span><span class="entry-ts">'+fmtDT(r.createdAt)+'</span></div>'
+      + '<div class="entry-body">'+r.name+'　<b>'+finFmtMoney(r.amount, r.currency)+'</b>（折算 '+finFmtMoney(r.cnyAmount,'CNY')+'）'
+      +   '<div style="font-size:11px;color:#808080;margin-top:2px;">账户: '+r.accountName+(r.note?'　备注: '+r.note:'')+'</div>'
+      + '</div>'
+      + tagsHTML
+      + '<div style="margin-top:5px;display:flex;gap:4px;">'
+      +   '<button class="icon-btn" onclick="finUndoRecord('+r.id+')">↩ 撤销</button>'
+      +   '<button class="icon-btn" onclick="finHardDeleteRecord('+r.id+')">🗑 删除</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+function finUndoRecord(id){
+  var r = S.finance.records.find(function(x){ return x.id==id; });
+  if(!r) return;
+  if(!confirm('撤销这条记录？余额会退回'+(r.fromCart?'，并把条目恢复到购物车。':'。'))) return;
+  var acc = S.finance.accounts.find(function(a){ return a.id==r.accountId; });
+  if(acc){
+    var reverted = finConvert(r.amount, r.currency, acc.currency, S.finance.rate);
+    if(r.type === 'expense') acc.balance += reverted; else acc.balance -= reverted;
+  }
+  if(r.type === 'expense' && r.fromCart){
+    S.finance.cart.push({id: S.nextId++, name:r.name, amount:r.amount, currency:r.currency, accountId:r.accountId, tags:r.tags||[], note:r.note||'', checked:false});
+  }
+  S.finance.records = S.finance.records.filter(function(x){ return x.id!=id; });
+  saveState(); finRenderAll();
+  showToast('已撤销');
+}
+function finHardDeleteRecord(id){
+  if(!confirm('仅删除该记录，不改变账户余额，确定吗？')) return;
+  S.finance.records = S.finance.records.filter(function(x){ return x.id!=id; });
+  saveState(); finRenderRecords();
+  showToast('已删除记录');
+}
+
+// ── 月度导出 ──
+function finExportMonth(){
+  var monthEl = document.getElementById('finExportMonth');
+  var monthStr = monthEl.value;
+  if(!monthStr){ showToast('请先选择月份'); return; }
+  var records = S.finance.records.filter(function(r){ return (r.createdAt||'').slice(0,7) === monthStr; });
+  var incomeSum = 0, expenseSum = 0;
+  records.forEach(function(r){
+    if(r.type === 'income') incomeSum += r.cnyAmount; else expenseSum += r.cnyAmount;
+  });
+  var net = incomeSum - expenseSum;
+
+  var previewHTML = '';
+  previewHTML += '<div class="fin-totals-row"><span>本月收入合计（折算人民币）</span><span>'+finFmtMoney(incomeSum,'CNY')+'</span></div>';
+  previewHTML += '<div class="fin-totals-row"><span>本月支出合计（折算人民币）</span><span>'+finFmtMoney(expenseSum,'CNY')+'</span></div>';
+  previewHTML += '<div class="fin-totals-row grand"><span>本月结余</span><span>'+finFmtMoney(net,'CNY')+'</span></div>';
+  var previewEl = document.getElementById('finExportPreview');
+  previewEl.style.display = 'block';
+  previewEl.innerHTML = previewHTML;
+
+  var txt = '=== '+monthStr+' 记账汇总 ===\n\n';
+  txt += '收入合计（折算人民币）: ' + finFmtMoney(incomeSum,'CNY') + '\n';
+  txt += '支出合计（折算人民币）: ' + finFmtMoney(expenseSum,'CNY') + '\n';
+  txt += '本月结余: ' + finFmtMoney(net,'CNY') + '\n';
+  txt += '汇率（1 GBP = ? CNY，导出时）: ' + S.finance.rate + '\n\n';
+  txt += '--- 明细 ---\n\n';
+  records.slice().reverse().forEach(function(r){
+    var typeLabel = r.type === 'income' ? '收入' : '支出';
+    txt += '['+fmtDT(r.createdAt)+'] '+typeLabel+' '+r.name+' '+finFmtMoney(r.amount, r.currency)+'（折算 '+finFmtMoney(r.cnyAmount,'CNY')+'）\n';
+    txt += '  账户: '+r.accountName;
+    if(r.tags && r.tags.length) txt += '　标签: '+r.tags.join(', ');
+    if(r.note) txt += '　备注: '+r.note;
+    txt += '\n\n';
+  });
+  if(!records.length) txt += '（该月暂无记录）\n';
+  dl('记账_'+monthStr+'.txt', txt);
+  showToast('已导出 '+monthStr+' 的记账汇总');
+}
+
+function finRenderAll(){
+  var monthEl = document.getElementById('finExportMonth');
+  if(monthEl && !monthEl.value){
+    var now = new Date();
+    monthEl.value = now.getFullYear() + '-' + (now.getMonth()+1<10?'0':'') + (now.getMonth()+1);
+  }
+  finRenderAccounts();
+  finRenderTotals();
+  finRenderCart();
+  finRenderCartSummary();
+  finRenderRecords();
+}
+
 function renderAll(){
   ganttAutoShift();
   document.getElementById('charName').value=S.charName;
