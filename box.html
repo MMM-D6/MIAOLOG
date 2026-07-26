@@ -186,12 +186,12 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
 .tag-input:focus{outline:1px dotted #000;outline-offset:-3px;}
 .sticker-row{display:flex;gap:4px;align-items:center;margin-bottom:2px;font-size:11px;color:var(--dark);}
 .note-input{
-  width:100%;font-family:var(--font);font-size:11px;color:var(--dark);
-  background:transparent;border:none;border-left:2px solid var(--dark);
-  padding:1px 6px;outline:none;resize:none;line-height:1.5;
-  font-style:italic;
+  width:100%;font-family:var(--font);font-size:12px;color:#000;
+  background:#fff;border:2px solid;border-color:var(--darker) var(--white) var(--white) var(--darker);
+  padding:5px 7px;outline:none;resize:none;line-height:1.6;min-height:46px;
 }
-.note-input:focus{background:#fff;border-left-color:var(--blue);color:#000;font-style:normal;outline:1px dotted #000;outline-offset:-2px;}
+.note-input:focus{outline:1px dotted #000;outline-offset:-2px;}
+.field-label{font-size:10px;color:var(--dark);font-family:var(--font);margin-bottom:2px;font-weight:bold;}
 .sticker-input{
   font-family:var(--font);font-size:13px;background:#fff;color:#000;
   border:2px solid;border-color:var(--darker) var(--white) var(--white) var(--darker);
@@ -350,7 +350,7 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
 <div class="app">
 
 <div class="titlebar">
-  <span class="titlebar-icon">📦</span>
+  <span class="titlebar-icon">❓</span>
   <span class="titlebar-name" id="titlebarName">BOX</span>
 </div>
 
@@ -366,11 +366,11 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
     <div class="ditem" onclick="saveAsFileAPI()">另存为...</div>
   </div>
   <div class="dropdown" id="menu-edit">
-    <div class="ditem" onclick="openImportDialog()">导入 SOP JSON...</div>
-    <div class="ditem" onclick="clearAllAPs()">清空所有条目</div>
+    <div class="ditem" onclick="openImportDialog()">导入问题清单 JSON...</div>
+    <div class="ditem" onclick="clearAllAPs()">清空所有问题</div>
   </div>
   <div class="dropdown" id="menu-export">
-    <div class="ditem" onclick="exportTemplate()">导出空白模版</div>
+    <div class="ditem" onclick="exportTemplate()">导出问题模版</div>
   </div>
 </div>
 
@@ -378,9 +378,9 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
   <div class="toolbar">
     <input class="proj-title-input" id="projTitleInput" placeholder="项目名称..." oninput="onTitleChange()"/>
     <div class="toolbar-sep"></div>
-    <button class="pxl-btn primary" onclick="focusAddAP()">+ 条目</button>
-    <button class="pxl-btn" onclick="addSection()">+ 小标题</button>
-    <button class="pxl-btn" onclick="openImportDialog()">导入 SOP</button>
+    <button class="pxl-btn primary" onclick="focusAddAP()">+ 问题</button>
+    <button class="pxl-btn" onclick="addSection()">+ 分组</button>
+    <button class="pxl-btn" onclick="openImportDialog()">导入问题清单</button>
     <div class="toolbar-sep"></div>
     <button class="pxl-btn" onclick="collapseAll()">折叠</button>
     <button class="pxl-btn" onclick="expandAll()">展开</button>
@@ -412,7 +412,7 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
       <button class="sidebar-toggle" onclick="toggleSidebar()" title="收起目录">◀ 收起</button>
     </div>
     <div class="sidebar-search">
-      <input id="tocSearch" placeholder="检索条目..." autocomplete="off"/>
+      <input id="tocSearch" placeholder="检索问题..." autocomplete="off"/>
     </div>
     <div class="sidebar-tree" id="tocTree"></div>
   </aside>
@@ -422,7 +422,7 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
   <div class="content" id="content">
   <div class="splash" id="splash">
     <div class="splash-title">BOX</div>
-    <div class="splash-sub">打开一个盒子，开始一件事</div>
+    <div class="splash-sub">打开一个盒子，理清一个问题</div>
     <div class="splash-btns">
       <button class="pxl-btn primary" onclick="newProject()">新建盒子</button>
       <button class="pxl-btn" onclick="openFileAPI()">打开文件...</button>
@@ -430,15 +430,15 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
   </div>
   <div id="apList" style="display:none;flex-direction:column;gap:4px;"></div>
   <div class="add-ap-bar" id="addAPBar" style="display:none;">
-    <input class="add-ap-input" id="addAPInput" placeholder="写下下一个行动..."/>
-    <button class="pxl-btn primary" onclick="addAP()">加入</button>
+    <input class="add-ap-input" id="addAPInput" placeholder="写下一个问题..."/>
+    <button class="pxl-btn primary" onclick="addAP()">添加问题</button>
   </div>
   </div>
 </div>
 
 <div class="statusbar">
-  <div class="status-cell" id="statusTotal">条目: 0</div>
-  <div class="status-cell" id="statusDone">完成: 0</div>
+  <div class="status-cell" id="statusTotal">问题: 0</div>
+  <div class="status-cell" id="statusDone">已答: 0</div>
   <div class="status-cell" id="statusFile">未保存</div>
   <div style="margin-left:auto;font-size:10px;color:var(--dark);" id="statusTime"></div>
 </div>
@@ -446,22 +446,21 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
 <div class="overlay" id="importOverlay">
   <div class="win-dialog">
     <div class="dialog-title">
-      <span>导入 SOP JSON</span>
+      <span>导入问题清单 JSON</span>
       <button class="pxl-btn" style="padding:1px 5px;font-size:10px;" onclick="closeImport()">✕</button>
     </div>
     <div class="dialog-body">
-      <div style="font-size:11px;color:#444;margin-bottom:6px;">粘贴 AI 生成的 SOP JSON：</div>
+      <div style="font-size:11px;color:#444;margin-bottom:6px;">粘贴 Claude 生成的问题清单 JSON：</div>
       <pre style="font-size:10px;background:#fff;padding:6px;border:1px solid var(--darker);color:#444;margin-bottom:8px;overflow-x:auto;font-family:'Courier New',monospace;">{
-  "project": "项目名称",
+  "project": "题目名称",
   "sections": [
     {
-      "name": "小标题（可选）",
-      "tasks": [
+      "name": "分组（可选；删掉即为无分组）",
+      "questions": [
         {
-          "text": "行动内容",
-          "note": "备注（可选）",
-          "tags": ["标签（可选）"],
-          "stickerEmoji": "🍅"
+          "question": "问题内容",
+          "answer": "预填的答案（可选，通常留空）",
+          "tags": ["标签（可选）"]
         }
       ]
     }
@@ -662,7 +661,7 @@ function fallbackSave(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);dirty=false;updateTitlebar();updateStatus();toast('已下载');
 }
 
-// ── import SOP ──
+// ── import question list ──
 function openImportDialog(){closeAllMenus();document.getElementById('importOverlay').classList.add('open');document.getElementById('importMsg').textContent='';}
 function closeImport(){document.getElementById('importOverlay').classList.remove('open');}
 function doImport(){
@@ -670,13 +669,13 @@ function doImport(){
   if(!raw){document.getElementById('importMsg').textContent='请粘贴 JSON';return;}
   try{
     const data=JSON.parse(raw);
-    if(!data.sections&&!data.tasks){document.getElementById('importMsg').textContent='需要 sections 或 tasks 字段';return;}
+    if(!data.sections&&!data.tasks&&!data.questions){document.getElementById('importMsg').textContent='需要 sections、questions 或 tasks 字段';return;}
     let n=0;
     if(data.project&&(!S.project||S.project==='未命名项目')){S.project=data.project;document.getElementById('projTitleInput').value=S.project;updateTitlebar();}
     const mkTask=(t)=>{
-      if(typeof t==='string') t={text:t};
+      if(typeof t==='string') t={question:t};
       t=t||{};
-      return {id:uid(),type:'task',text:t.text||'',note:t.note||'',
+      return {id:uid(),type:'task',text:t.question||t.text||'',note:(t.answer!==undefined?t.answer:(t.note||'')),
         done:!!t.done,doneAt:t.done?ts():'',createdAt:ts(),collapsed:false,
         tags:Array.isArray(t.tags)?t.tags.filter(Boolean).map(String):[],
         msgs:[],stickers:[],stickerEmoji:t.stickerEmoji||'🍅'};
@@ -685,12 +684,12 @@ function doImport(){
     if(data.sections){
       data.sections.forEach(sec=>{
         if(sec.name){S.items.push(mkSection(sec.name));n++;}
-        (sec.tasks||[]).forEach(t=>{S.items.push(mkTask(t));n++;});
+        (sec.questions||sec.tasks||[]).forEach(t=>{S.items.push(mkTask(t));n++;});
       });
     } else {
-      data.tasks.forEach(t=>{S.items.push(mkTask(t));n++;});
+      (data.questions||data.tasks).forEach(t=>{S.items.push(mkTask(t));n++;});
     }
-    markDirty();renderList();closeImport();document.getElementById('importTA').value='';toast('已导入 '+n+' 条');
+    markDirty();renderList();closeImport();document.getElementById('importTA').value='';toast('已导入 '+n+' 个问题');
   }catch(e){document.getElementById('importMsg').textContent='JSON 解析失败: '+e.message;}
 }
 
@@ -755,7 +754,7 @@ function toggleSectionCollapse(id){
 function toggleCollapse(id){const item=S.items.find(a=>a.id===id);if(!item) return;item.collapsed=!item.collapsed;markDirty();renderList();}
 function collapseAll(){closeAllMenus();S.items.forEach(a=>{if(a.type==='task') a.collapsed=true;});markDirty();renderList();}
 function expandAll(){closeAllMenus();S.items.forEach(a=>{if(a.type==='task') a.collapsed=false;});markDirty();renderList();}
-function clearAllAPs(){closeAllMenus();if(!confirm('清空所有条目？')) return;S.items=[];markDirty();renderList();}
+function clearAllAPs(){closeAllMenus();if(!confirm('清空所有问题？')) return;S.items=[];markDirty();renderList();}
 
 function updateSectionText(id,val){
   const item=S.items.find(a=>a.id===id);if(!item) return;
@@ -838,7 +837,7 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function renderList(){
   const list=document.getElementById('apList');if(!list) return;
   if(!S.items.length){
-    list.innerHTML='<div style="padding:20px;color:var(--dark);font-size:12px;">还没有任何条目。在下方输入第一条，或导入 SOP。</div>';
+    list.innerHTML='<div style="padding:20px;color:var(--dark);font-size:12px;">还没有任何问题。在下方写第一个问题，或导入问题清单。</div>';
     updateStatus();renderToc();return;
   }
 
@@ -901,7 +900,7 @@ function renderSection(item){
     <span class="drag-handle" title="拖拽移动" draggable="true" onmousedown="startHandleDrag(event,'${item.id}')">⠿</span>
     <input class="sec-edit-input" id="secinp-${item.id}" value="${escHtml(item.text)}" placeholder="标题名称..." draggable="false"/>
     <div class="sec-header-actions">
-      <button class="icon-btn" style="color:#fff;border-color:transparent;font-weight:bold;" onclick="addTaskAfterSection('${item.id}')" title="在此标题下添加条目">+</button>
+      <button class="icon-btn" style="color:#fff;border-color:transparent;font-weight:bold;" onclick="addTaskAfterSection('${item.id}')" title="在此分组下添加问题">+</button>
       <button class="icon-btn" style="color:#fff;border-color:transparent;" onclick="toggleSectionCollapse('${item.id}')" title="折叠/展开">${chev}</button>
       <button class="icon-btn" style="color:#fff;border-color:transparent;font-weight:bold;" onclick="deleteItem('${item.id}')" title="删除标题">✕</button>
     </div>
@@ -917,7 +916,7 @@ function renderTask(item){
   h+=`<div class="ap-top">`;
   h+=`<span class="drag-handle" title="拖拽移动" draggable="true" onmousedown="startHandleDrag(event,'${item.id}')">⠿</span>`;
   h+=`<div class="ap-check" onclick="toggleAP('${item.id}')">${item.done?'✓':''}</div>`;
-  h+=`<div class="ap-title" ondblclick="startEditTitle('${item.id}',this)" title="双击编辑">${escHtml(item.text)}</div>`;
+  h+=`<div class="ap-title" ondblclick="startEditTitle('${item.id}',this)" title="双击编辑问题">${escHtml(item.text||'（点击右侧编辑按钮填写问题）')}</div>`;
   if(item.tags&&item.tags.length){
     h+=`<div class="ap-tags">`;
     item.tags.forEach(t=>{h+=`<span class="ap-tag" onclick="removeTag('${item.id}','${escHtml(t)}')" title="点击删除">${escHtml(t)}</span>`;});
@@ -932,9 +931,11 @@ function renderTask(item){
   h+=`</div></div>`;
 
   h+=`<div class="ap-body${item.collapsed?' hidden':''}" id="apb-${item.id}">`;
-  h+=`<div style="margin-bottom:4px;"><textarea class="note-input" id="noteinp-${item.id}" placeholder="备注..." rows="1">${escHtml(item.note||'')}</textarea></div>`;
-  h+=`<div class="tag-row"><input class="tag-input" id="taginp-${item.id}" placeholder="添加 tag..."/><button class="pxl-btn" style="font-size:11px;padding:1px 6px;" onclick="addTag('${item.id}')">+ tag</button></div>`;
+  h+=`<div class="field-label">答案</div>`;
+  h+=`<div style="margin-bottom:4px;"><textarea class="note-input" id="noteinp-${item.id}" placeholder="在这里写下你的答案、想法或思考过程..." rows="3">${escHtml(item.note||'')}</textarea></div>`;
+  h+=`<div class="tag-row"><input class="tag-input" id="taginp-${item.id}" placeholder="添加标签..."/><button class="pxl-btn" style="font-size:11px;padding:1px 6px;" onclick="addTag('${item.id}')">+ 标签</button></div>`;
   h+=`<div class="sticker-row">贴纸：<input class="sticker-input" id="stickerinp-${item.id}" value="${escHtml(item.stickerEmoji||'🍅')}" maxlength="4"/><button class="pxl-btn" style="font-size:11px;padding:1px 6px;" onclick="setStickerEmoji('${item.id}')">设置</button><span style="font-size:10px;color:var(--dark);margin-left:4px;">番茄完成时自动贴</span></div>`;
+  if(item.msgs.length){ h+=`<div class="field-label" style="margin-top:2px;">补充想法</div>`; }
   item.msgs.forEach(m=>{
     h+=`<div class="msg" id="msg-${m.id}">`;
     h+=`<div class="msg-text" ondblclick="editMsg('${item.id}','${m.id}',this)" title="双击编辑">${escHtml(m.text)}</div>`;
@@ -942,7 +943,7 @@ function renderTask(item){
     h+=`<button class="msg-del" onclick="deleteMsg('${item.id}','${m.id}')">✕</button>`;
     h+=`</div>`;
   });
-  h+=`<div class="compose-row"><textarea class="compose-input" id="msginp-${item.id}" rows="2" placeholder="随时写下想法、情绪、insight..."></textarea><button class="pxl-btn primary" style="align-self:flex-end;" onclick="sendMsg('${item.id}')">发送</button></div>`;
+  h+=`<div class="compose-row"><textarea class="compose-input" id="msginp-${item.id}" rows="2" placeholder="补充想法、新的角度、或事后的修正..."></textarea><button class="pxl-btn primary" style="align-self:flex-end;" onclick="sendMsg('${item.id}')">追加</button></div>`;
   h+=`</div></div>`;
   return h;
 }
@@ -1019,7 +1020,7 @@ function clearDropIndicators(){
 function addTaskAfterSection(sectionId){
   const idx=S.items.findIndex(a=>a.id===sectionId);
   if(idx===-1) return;
-  const newTask={id:uid(),type:'task',text:'新条目',note:'',done:false,doneAt:'',createdAt:ts(),collapsed:false,tags:[],msgs:[],stickers:[],stickerEmoji:'🍅'};
+  const newTask={id:uid(),type:'task',text:'新问题',note:'',done:false,doneAt:'',createdAt:ts(),collapsed:false,tags:[],msgs:[],stickers:[],stickerEmoji:'🍅'};
   S.items.splice(idx+1,0,newTask);
   markDirty();renderList();
   // auto-focus to edit the new task title
@@ -1032,8 +1033,8 @@ function addTaskAfterSection(sectionId){
 function updateStatus(){
   const tasks=S.items.filter(a=>a.type==='task');
   const done=tasks.filter(a=>a.done).length;
-  document.getElementById('statusTotal').textContent='条目: '+tasks.length;
-  document.getElementById('statusDone').textContent='完成: '+done;
+  document.getElementById('statusTotal').textContent='问题: '+tasks.length;
+  document.getElementById('statusDone').textContent='已答: '+done;
   document.getElementById('statusFile').textContent=dirty?'未保存 *':'已保存';
 }
 function tickClock(){
@@ -1068,7 +1069,7 @@ function renderToc(){
   const q=(document.getElementById('tocSearch')?.value||'').trim().toLowerCase();
 
   if(!S.items.length){
-    tree.innerHTML='<div class="toc-empty">还没有条目</div>';
+    tree.innerHTML='<div class="toc-empty">还没有问题</div>';
     return;
   }
 
@@ -1110,10 +1111,10 @@ function renderToc(){
     if(!collapsed){
       visTasks.forEach(t=>{
         const dcls=t.done?' done':'';
-        const msg=(t.msgs&&t.msgs.length)?`<span class="toc-msg" title="${t.msgs.length} 条记录">✎</span>`:'';
+        const msg=(t.msgs&&t.msgs.length)?`<span class="toc-msg" title="${t.msgs.length} 条补充想法">✎</span>`:'';
         html+=`<div class="toc-task${dcls}" onclick="gotoItem('${t.id}')" title="${escHtml(t.text)}">`
           + `<span class="toc-dot">${t.done?'✓':'•'}</span>`
-          + `<span class="toc-task-text">${escHtml(t.text||'（空条目）')}</span>`
+          + `<span class="toc-task-text">${escHtml(t.text||'（空问题）')}</span>`
           + msg + `</div>`;
       });
     }
@@ -1151,35 +1152,34 @@ function gotoItem(id){
 function exportTemplate(){
   closeAllMenus();
   const tmpl={
-    project:'项目名称',
+    project:'题目名称',
     sections:[
       {
-        name:'小标题一（可选；删掉 name 这一行即为无标题分组）',
-        tasks:[
+        name:'分组一（可选；删掉 name 这一行即为无分组）',
+        questions:[
           {
-            text:'行动内容（必填）',
-            note:'备注（可选）',
-            tags:['标签A','标签B'],
-            stickerEmoji:'🍅'
+            question:'问题内容（必填）',
+            answer:'预填答案（可选，通常留空，留给自己回答）',
+            tags:['标签A','标签B']
           },
-          {text:'只写 text 的简单条目'}
+          {question:'只写 question 的简单问题'}
         ]
       },
       {
-        name:'小标题二',
-        tasks:[
-          {text:'又一个行动',note:'tags 和 stickerEmoji 都可以省略'}
+        name:'分组二',
+        questions:[
+          {question:'又一个问题',answer:'answer 和 tags 都可以省略'}
         ]
       },
       {
-        tasks:[
-          {text:'没有小标题的条目，放进一个没有 name 的分组里'}
+        questions:[
+          {question:'没有分组的问题，放进一个没有 name 的分组里'}
         ]
       }
     ]
   };
-  download((S.project||'box')+'-template.json',JSON.stringify(tmpl,null,2));
-  toast('空白模版已导出');
+  download((S.project||'box')+'-questions.json',JSON.stringify(tmpl,null,2));
+  toast('问题模版已导出');
 }
 
 function download(filename,text){
