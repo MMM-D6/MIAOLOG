@@ -467,6 +467,9 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
   ]
 }</pre>
       <textarea class="dialog-textarea" id="importTA" placeholder="在此粘贴 JSON..."></textarea>
+      <div class="dialog-btns" style="margin-top:6px;justify-content:flex-start;">
+        <button class="pxl-btn" onclick="pasteFromClipboard()">📋 从剪贴板粘贴</button>
+      </div>
       <div class="dialog-msg" id="importMsg"></div>
       <div class="dialog-btns">
         <button class="pxl-btn primary" onclick="doImport()">导入</button>
@@ -663,6 +666,19 @@ function fallbackSave(){
 
 // ── import question list ──
 function openImportDialog(){closeAllMenus();document.getElementById('importOverlay').classList.add('open');document.getElementById('importMsg').textContent='';}
+async function pasteFromClipboard(){
+  const msg=document.getElementById('importMsg');
+  try{
+    const text=await navigator.clipboard.readText();
+    if(!text){msg.textContent='剪贴板是空的，请先复制 JSON 内容';return;}
+    document.getElementById('importTA').value=text;
+    msg.style.color='var(--dark)';
+    msg.textContent='已读取剪贴板内容，请核对后点击"导入"';
+  }catch(err){
+    msg.style.color='var(--red)';
+    msg.textContent='无法读取剪贴板（浏览器可能拦截了权限）。请点击下方输入框后手动按 Ctrl+V（或 Cmd+V），或右键选择"粘贴"';
+  }
+}
 function closeImport(){document.getElementById('importOverlay').classList.remove('open');}
 function doImport(){
   const raw=document.getElementById('importTA').value.trim();
