@@ -143,34 +143,25 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
 /* ap body */
 .ap-body{padding:6px 8px 6px 26px;display:flex;flex-direction:column;gap:4px;}
 .ap-body.hidden{display:none;}
-.note-input{
-  width:100%;font-family:var(--font);font-size:12px;color:#000;
-  background:#fff;border:2px solid;border-color:var(--darker) var(--white) var(--white) var(--darker);
-  padding:5px 7px;outline:none;resize:none;line-height:1.6;min-height:46px;
-}
-.note-input:focus{outline:1px dotted #000;outline-offset:-2px;}
 .field-label{font-size:10px;color:var(--dark);font-family:var(--font);margin-bottom:2px;font-weight:bold;}
-.msg{
-  background:#fff;border:1px solid;border-color:var(--darker) var(--white) var(--white) var(--darker);
-  padding:4px 7px;font-size:12px;line-height:1.6;font-family:var(--font);word-break:break-word;position:relative;
+
+/* ── answers (unified exam-style answer blocks, supports multiple) ── */
+.answers-list{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;}
+.answers-empty{font-size:11px;color:var(--dark);padding:6px 2px;}
+.answer-block{display:flex;gap:6px;align-items:stretch;}
+.answer-num{
+  flex-shrink:0;width:26px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font);font-size:11px;font-weight:bold;color:#fff;background:var(--blue);
+  border:2px solid;border-color:var(--white) var(--darker) var(--darker) var(--white);
 }
-.msg-time{font-size:10px;color:var(--dark);margin-top:2px;}
-.msg-text{cursor:text;}
-.msg-edit-input{
-  width:100%;font-family:var(--font);font-size:12px;
-  background:#fffde7;color:#000;
-  border:1px solid var(--blue);padding:2px 4px;outline:none;resize:none;line-height:1.6;
+.answer-input{
+  flex:1;width:100%;font-family:var(--font);font-size:12px;color:#000;
+  background:#fff;border:2px solid;border-color:var(--darker) var(--white) var(--white) var(--darker);
+  padding:5px 7px;outline:none;resize:vertical;line-height:1.6;min-height:44px;
 }
-.msg-del{position:absolute;top:3px;right:4px;font-size:10px;color:var(--dark);cursor:pointer;background:none;border:none;display:none;}
-.msg:hover .msg-del{display:block;}
-.msg-del:hover{color:var(--red);}
-.compose-row{display:flex;gap:4px;margin-top:4px;}
-.compose-input{
-  flex:1;font-family:var(--font);font-size:12px;background:#fff;color:#000;
-  border:2px solid;border-color:var(--darker) var(--white) var(--white) var(--darker);
-  padding:3px 6px;outline:none;resize:none;
-}
-.compose-input:focus{outline:1px dotted #000;outline-offset:-3px;}
+.answer-input:focus{outline:1px dotted #000;outline-offset:-2px;}
+.answer-del{flex-shrink:0;align-self:flex-start;margin-top:1px;}
+.add-answer-btn{align-self:flex-start;margin-top:2px;}
 
 /* add bar */
 .add-ap-bar{
@@ -277,13 +268,12 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
   white-space:nowrap;overflow:hidden;
 }
 .toc-task:hover{background:var(--blue);color:#fff;}
-.toc-task:hover .toc-dot,.toc-task:hover .toc-msg{color:#fff;}
+.toc-task:hover .toc-dot{color:#fff;}
 .toc-dot{font-size:9px;color:var(--blue);flex-shrink:0;width:10px;text-align:center;}
 .toc-task.done .toc-dot{color:var(--green);}
 .toc-task.done .toc-task-text{color:var(--dark);}
 .toc-task:hover.done .toc-task-text{color:#fff;}
 .toc-task-text{flex:1;overflow:hidden;text-overflow:ellipsis;}
-.toc-msg{font-size:10px;color:var(--purple);flex-shrink:0;}
 .toc-empty{padding:10px 8px;color:var(--dark);font-size:11px;line-height:1.5;}
 
 /* flash highlight when navigating from the directory */
@@ -508,8 +498,17 @@ function loadFromJSON(text,filename){
         if(item.collapsed===undefined) item.collapsed=false;
       }
       if(item.type==='task'){
-        if(!item.msgs) item.msgs=[];
+        if(!item.answers){
+          // migrate old single note + 补充想法(msgs) into the unified answers list
+          const arr=[];
+          if(item.note && String(item.note).trim()) arr.push({id:uid(),text:item.note});
+          if(item.msgs && item.msgs.length){
+            item.msgs.forEach(m=>{ if(m && m.text && String(m.text).trim()) arr.push({id:uid(),text:m.text}); });
+          }
+          item.answers=arr;
+        }
         // drop legacy fields from older exports if present
+        delete item.note; delete item.msgs;
         delete item.tags; delete item.stickers; delete item.stickerEmoji; delete item.done; delete item.doneAt;
       }
     });
@@ -566,9 +565,10 @@ function doImport(){
     const mkTask=(t)=>{
       if(typeof t==='string') t={question:t};
       t=t||{};
-      return {id:uid(),type:'task',text:t.question||t.text||'',note:(t.answer!==undefined?t.answer:(t.note||'')),
-        createdAt:ts(),collapsed:false,
-        msgs:[]};
+      const ansText=t.answer!==undefined?t.answer:(t.note||'');
+      const answers=(ansText&&String(ansText).trim())?[{id:uid(),text:ansText}]:[];
+      return {id:uid(),type:'task',text:t.question||t.text||'',answers,
+        createdAt:ts(),collapsed:false};
     };
     const mkSection=(name)=>({id:uid(),type:'section',text:name,createdAt:ts(),collapsed:false});
     if(data.sections){
@@ -590,7 +590,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 function addAP(){
   const inp=document.getElementById('addAPInput');const text=inp.value.trim();if(!text) return;
-  S.items.push({id:uid(),type:'task',text,note:'',createdAt:ts(),collapsed:false,msgs:[]});
+  S.items.push({id:uid(),type:'task',text,answers:[],createdAt:ts(),collapsed:false});
   inp.value='';markDirty();renderList();
   setTimeout(()=>{const l=document.getElementById('apList');if(l.lastElementChild) l.lastElementChild.scrollIntoView({behavior:'smooth'});},50);
 }
@@ -624,27 +624,6 @@ function updateSectionText(id,val){
   item.text=val||'未命名标题';markDirty();
 }
 
-function editMsg(itemId, msgId, el){
-  const item=S.items.find(a=>a.id===itemId); if(!item) return;
-  const msg=item.msgs.find(m=>m.id===msgId); if(!msg) return;
-  const ta=document.createElement('textarea');
-  ta.className='msg-edit-input';
-  ta.value=msg.text;
-  ta.rows=Math.max(2, msg.text.split('\n').length);
-  el.replaceWith(ta);
-  ta.focus(); ta.select();
-  function save(){
-    const val=ta.value.trim();
-    if(val && val!==msg.text){ msg.text=val; msg.edited=true; markDirty(); }
-    renderList();
-  }
-  ta.addEventListener('blur', save);
-  ta.addEventListener('keydown', e=>{
-    if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();ta.blur();}
-    if(e.key==='Escape'){ta.blur();}
-  });
-}
-
 function startEditTitle(id, el){
   const item=S.items.find(a=>a.id===id); if(!item) return;
   const inp=document.createElement('input');
@@ -670,14 +649,24 @@ function startEditTitle(id, el){
   });
 }
 
-function sendMsg(id){
-  const inp=document.getElementById('msginp-'+id);if(!inp) return;
-  const text=inp.value.trim();if(!text) return;
+function hasAnyAnswer(item){return (item.answers||[]).some(a=>a.text&&a.text.trim());}
+
+function addAnswer(id){
   const item=S.items.find(a=>a.id===id);if(!item) return;
-  item.msgs.push({id:uid(),text,ts:ts()});inp.value='';markDirty();renderList();
-  setTimeout(()=>{const el=document.getElementById('msginp-'+id);if(el) el.focus();},50);
+  if(!item.answers) item.answers=[];
+  const newAns={id:uid(),text:''};
+  item.answers.push(newAns);
+  markDirty();renderList();
+  setTimeout(()=>{
+    const el=document.getElementById('ansinp-'+newAns.id);
+    if(el){ el.focus(); el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  },60);
 }
-function deleteMsg(itemId,msgId){const item=S.items.find(a=>a.id===itemId);if(!item) return;item.msgs=item.msgs.filter(m=>m.id!==msgId);markDirty();renderList();}
+function deleteAnswer(itemId,ansId){
+  const item=S.items.find(a=>a.id===itemId);if(!item) return;
+  item.answers=(item.answers||[]).filter(a=>a.id!==ansId);
+  markDirty();renderList();
+}
 
 // ── render ──
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -714,26 +703,24 @@ function renderList(){
       }
       return;
     }
-    // note input
-    const ni=document.getElementById('noteinp-'+item.id);
-    if(ni){
-      ni.value=item.note||'';
-      ni.oninput=e=>{
-        item.note=e.target.value;
+    // answer inputs (one per answer block)
+    (item.answers||[]).forEach(a=>{
+      const ai=document.getElementById('ansinp-'+a.id);
+      if(!ai) return;
+      ai.oninput=e=>{
+        a.text=e.target.value;
         // auto-grow
-        ni.style.height='auto';
-        ni.style.height=ni.scrollHeight+'px';
+        ai.style.height='auto';
+        ai.style.height=ai.scrollHeight+'px';
         // live-update the card's left border to reflect answered state
         const card=document.getElementById('apc-'+item.id);
-        if(card) card.style.borderLeftColor=item.note.trim()?'var(--green)':'var(--blue)';
+        if(card) card.style.borderLeftColor=hasAnyAnswer(item)?'var(--green)':'var(--blue)';
         markDirty();
       };
       // initial height
-      ni.style.height='auto';
-      ni.style.height=Math.max(ni.scrollHeight,20)+'px';
-    }
-    const ta=document.getElementById('msginp-'+item.id);
-    if(ta) ta.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sendMsg(item.id);}};
+      ai.style.height='auto';
+      ai.style.height=Math.max(ai.scrollHeight,20)+'px';
+    });
   });
 
   setTimeout(initDrag,0);
@@ -755,8 +742,9 @@ function renderSection(item){
 }
 
 function renderTask(item){
-  const answered=!!(item.note&&item.note.trim());
+  const answered=hasAnyAnswer(item);
   const bc=answered?'var(--green)':'var(--blue)';
+  const answers=item.answers||[];
 
   let h=`<div class="ap-card" id="apc-${item.id}" style="border-left-color:${bc};">`;
   h+=`<div class="ap-top">`;
@@ -770,16 +758,20 @@ function renderTask(item){
 
   h+=`<div class="ap-body${item.collapsed?' hidden':''}" id="apb-${item.id}">`;
   h+=`<div class="field-label">答案</div>`;
-  h+=`<div style="margin-bottom:4px;"><textarea class="note-input" id="noteinp-${item.id}" placeholder="在这里写下你的答案、想法或思考过程..." rows="3">${escHtml(item.note||'')}</textarea></div>`;
-  if(item.msgs.length){ h+=`<div class="field-label" style="margin-top:2px;">补充想法</div>`; }
-  item.msgs.forEach(m=>{
-    h+=`<div class="msg" id="msg-${m.id}">`;
-    h+=`<div class="msg-text" ondblclick="editMsg('${item.id}','${m.id}',this)" title="双击编辑">${escHtml(m.text)}</div>`;
-    h+=`<div class="msg-time">${fmtTime(m.ts)}${m.edited?' (已编辑)':''}</div>`;
-    h+=`<button class="msg-del" onclick="deleteMsg('${item.id}','${m.id}')">✕</button>`;
-    h+=`</div>`;
-  });
-  h+=`<div class="compose-row"><textarea class="compose-input" id="msginp-${item.id}" rows="2" placeholder="补充想法、新的角度、或事后的修正..."></textarea><button class="pxl-btn primary" style="align-self:flex-end;" onclick="sendMsg('${item.id}')">追加</button></div>`;
+  h+=`<div class="answers-list" id="answers-${item.id}">`;
+  if(!answers.length){
+    h+=`<div class="answers-empty">还没有答案，点击下方"添加答案"开始作答</div>`;
+  } else {
+    answers.forEach((a,idx)=>{
+      h+=`<div class="answer-block" id="ans-${a.id}">`;
+      h+=`<div class="answer-num">${String(idx+1).padStart(2,'0')}</div>`;
+      h+=`<textarea class="answer-input" id="ansinp-${a.id}" placeholder="在这里写下你的答案..." rows="3">${escHtml(a.text||'')}</textarea>`;
+      h+=`<button class="icon-btn danger answer-del" onclick="deleteAnswer('${item.id}','${a.id}')" title="删除此答案">✕</button>`;
+      h+=`</div>`;
+    });
+  }
+  h+=`</div>`;
+  h+=`<button class="pxl-btn add-answer-btn" onclick="addAnswer('${item.id}')">+ 添加答案</button>`;
   h+=`</div></div>`;
   return h;
 }
@@ -856,7 +848,7 @@ function clearDropIndicators(){
 function addTaskAfterSection(sectionId){
   const idx=S.items.findIndex(a=>a.id===sectionId);
   if(idx===-1) return;
-  const newTask={id:uid(),type:'task',text:'新问题',note:'',createdAt:ts(),collapsed:false,msgs:[]};
+  const newTask={id:uid(),type:'task',text:'新问题',answers:[],createdAt:ts(),collapsed:false};
   S.items.splice(idx+1,0,newTask);
   markDirty();renderList();
   // auto-focus to edit the new task title
@@ -868,7 +860,7 @@ function addTaskAfterSection(sectionId){
 
 function updateStatus(){
   const tasks=S.items.filter(a=>a.type==='task');
-  const done=tasks.filter(a=>a.note&&a.note.trim()).length;
+  const done=tasks.filter(hasAnyAnswer).length;
   document.getElementById('statusTotal').textContent='问题: '+tasks.length;
   document.getElementById('statusDone').textContent='已答: '+done;
   document.getElementById('statusFile').textContent=dirty?'未保存 *':'已保存';
@@ -918,7 +910,7 @@ function renderToc(){
 
   const matchTask=t=>{
     if(!q) return true;
-    const hay=(t.text||'')+' '+(t.note||'')+' '+((t.msgs||[]).map(m=>m.text).join(' '));
+    const hay=(t.text||'')+' '+((t.answers||[]).map(a=>a.text).join(' '));
     return hay.toLowerCase().includes(q);
   };
   const secMatch=s=> !!s && (s.text||'').toLowerCase().includes(q);
@@ -934,7 +926,7 @@ function renderToc(){
 
     if(sec){
       const caret = collapsed ? '▶' : '▼';
-      const cnt=g.tasks.length, done=g.tasks.filter(t=>t.note&&t.note.trim()).length;
+      const cnt=g.tasks.length, done=g.tasks.filter(hasAnyAnswer).length;
       html+=`<div class="toc-sec">`
         + `<button class="toc-caret" onclick="toggleTocGroup('${sec.id}')" title="折叠/展开">${caret}</button>`
         + `<span class="toc-sec-name" onclick="gotoItem('${sec.id}')" title="${escHtml(sec.text)}">${escHtml(sec.text)}</span>`
@@ -946,13 +938,12 @@ function renderToc(){
 
     if(!collapsed){
       visTasks.forEach(t=>{
-        const answered=!!(t.note&&t.note.trim());
+        const answered=hasAnyAnswer(t);
         const dcls=answered?' done':'';
-        const msg=(t.msgs&&t.msgs.length)?`<span class="toc-msg" title="${t.msgs.length} 条补充想法">✎</span>`:'';
         html+=`<div class="toc-task${dcls}" onclick="gotoItem('${t.id}')" title="${escHtml(t.text)}">`
           + `<span class="toc-dot">${answered?'✓':'•'}</span>`
           + `<span class="toc-task-text">${escHtml(t.text||'（空问题）')}</span>`
-          + msg + `</div>`;
+          + `</div>`;
       });
     }
   });
