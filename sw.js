@@ -1,17 +1,24 @@
-// ADHD RPG — Service Worker v4
-const CACHE_NAME = 'adhd-rpg-v4';
+// MMM (ADHD RPG) — Service Worker v5
+// v5: 适配重构后的主程序（移除甘特图/Toolkit/英语卡片，新增 BOX 栏）
+//     修复：v4 中 STATIC_ASSETS 引用了不存在的 icons/ 文件，
+//     导致 cache.addAll 整体失败、Service Worker 无法安装；
+//     修复：index.html 离线回退之前从未真正入缓存，离线时无法打开
+const CACHE_NAME = 'adhd-rpg-v5';
 
-// 不缓存 index.html，始终从网络获取最新版本
-// 只缓存静态资源
+// 只预缓存确定存在的静态资源（图标已内嵌在 manifest.json 的 data URL 中，仓库里没有 icons/ 目录）
 const STATIC_ASSETS = [
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
+  './box.html',
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then(cache =>
+      // 逐个缓存：单个资源失败不影响 Service Worker 安装
+      Promise.all(STATIC_ASSETS.map(url =>
+        cache.add(url).catch(() => null)
+      ))
+    )
   );
   self.skipWaiting();
 });
@@ -27,11 +34,22 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  
-  // index.html 始终从网络获取，确保拿到最新版本
-  if (url.pathname.endsWith('/') || url.pathname.endsWith('index.html')) {
+
+  // index.html / box.html 始终网络优先获取最新版本；
+  // 成功后写入缓存，离线时回退到缓存副本
+  const isIndex = url.pathname.endsWith('/') || url.pathname.endsWith('index.html');
+  const isBox = url.pathname.endsWith('box.html');
+  if (isIndex || isBox) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('./index.html'))
+      fetch(event.request).then(resp => {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+        return resp;
+      }).catch(() =>
+        caches.match(event.request).then(cached =>
+          cached || caches.match(isBox ? './box.html' : './index.html')
+        )
+      )
     );
     return;
   }
@@ -64,8 +82,6 @@ self.addEventListener('push', event => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: './icons/icon-192.png',
-      badge: './icons/icon-192.png',
       vibrate: [200, 100, 200]
     })
   );
