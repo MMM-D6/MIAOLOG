@@ -157,11 +157,43 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
 .answer-input{
   flex:1;width:100%;font-family:var(--font);font-size:12px;color:#000;
   background:#fff;border:2px solid;border-color:var(--darker) var(--white) var(--white) var(--darker);
-  padding:5px 7px;outline:none;resize:vertical;line-height:1.6;min-height:44px;
+  padding:5px 7px;outline:none;line-height:1.6;min-height:44px;
+  white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;
 }
 .answer-input:focus{outline:1px dotted #000;outline-offset:-2px;}
+.answer-input:empty:before{content:attr(data-placeholder);color:var(--dark);}
 .answer-del{flex-shrink:0;align-self:flex-start;margin-top:1px;}
 .add-answer-btn{align-self:flex-start;margin-top:2px;}
+
+/* ── global format toolbar (fixed at top, like Word — acts on whichever answer box has focus) ── */
+.fmt-toolbar-wrap{background:var(--gray);border-bottom:2px solid var(--darker);flex-shrink:0;display:none;}
+.fmt-toolbar{padding:4px 6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.fmt-group{display:flex;gap:3px;align-items:center;}
+.fmt-group-label{font-family:var(--font);font-size:11px;color:var(--dark);margin-right:1px;white-space:nowrap;}
+.fmt-sep{width:1px;align-self:stretch;background:var(--darker);margin:1px 0;flex-shrink:0;}
+
+.fmt-btn{
+  font-family:var(--font);font-size:12px;color:#000;
+  width:24px;height:22px;line-height:1;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:var(--gray);
+  border:2px solid;border-color:var(--white) var(--darker) var(--darker) var(--white);
+  cursor:pointer;padding:0;
+}
+.fmt-btn:hover{background:var(--light);}
+.fmt-btn:active{border-color:var(--darker) var(--white) var(--white) var(--darker);transform:translate(1px,1px);}
+.fmt-btn-wide{width:auto;padding:0 8px;font-size:12px;}
+
+.fmt-swatch{
+  width:18px;height:18px;box-sizing:border-box;flex-shrink:0;padding:0;cursor:pointer;
+  border:2px solid;border-color:var(--white) var(--darker) var(--darker) var(--white);
+}
+.fmt-swatch:hover{outline:1px solid var(--blue);outline-offset:1px;}
+.fmt-swatch.fmt-clear{
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), var(--red) calc(50% - 1px), var(--red) calc(50% + 1px), transparent calc(50% + 1px)),
+    #fff;
+}
 
 /* add bar */
 .add-ap-bar{
@@ -331,6 +363,8 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
   </div>
 </div>
 
+<div class="fmt-toolbar-wrap" id="fmtToolbarWrap"></div>
+
 <div class="workspace" id="workspace">
 
   <aside class="sidebar" id="sidebar" style="display:none;">
@@ -457,6 +491,7 @@ function showProject(){
   list.style.display='flex';list.style.flexDirection='column';list.style.gap='4px';
   document.getElementById('addAPBar').style.display='flex';
   document.getElementById('toolbarWrap').style.display='block';
+  document.getElementById('fmtToolbarWrap').style.display='block';
   projectOpen=true;
   applySidebarState();
 }
@@ -510,6 +545,7 @@ function loadFromJSON(text,filename){
         // drop legacy fields from older exports if present
         delete item.note; delete item.msgs;
         delete item.tags; delete item.stickers; delete item.stickerEmoji; delete item.done; delete item.doneAt;
+        (item.answers||[]).forEach(a=>{ if(a.html) a.html=sanitizeAnswerHtml(a.html); });
       }
     });
     dirty=false;showProject();
@@ -654,7 +690,7 @@ function hasAnyAnswer(item){return (item.answers||[]).some(a=>a.text&&a.text.tri
 function addAnswer(id){
   const item=S.items.find(a=>a.id===id);if(!item) return;
   if(!item.answers) item.answers=[];
-  const newAns={id:uid(),text:''};
+  const newAns={id:uid(),text:'',html:''};
   item.answers.push(newAns);
   markDirty();renderList();
   setTimeout(()=>{
@@ -666,6 +702,108 @@ function deleteAnswer(itemId,ansId){
   const item=S.items.find(a=>a.id===itemId);if(!item) return;
   item.answers=(item.answers||[]).filter(a=>a.id!==ansId);
   markDirty();renderList();
+}
+
+// ── sync a contenteditable answer box back into the data model ──
+function syncAnswerFromDOM(ansId){
+  const el=document.getElementById('ansinp-'+ansId);
+  if(!el) return;
+  for(const item of S.items){
+    if(item.type!=='task') continue;
+    const a=(item.answers||[]).find(x=>x.id===ansId);
+    if(a){
+      a.html=el.innerHTML;
+      a.text=el.innerText||el.textContent||'';
+      const card=document.getElementById('apc-'+item.id);
+      if(card) card.style.borderLeftColor=hasAnyAnswer(item)?'var(--green)':'var(--blue)';
+      markDirty();
+      return;
+    }
+  }
+}
+
+// ── rich text formatting toolbar (acts on whichever .answer-input currently has focus) ──
+function fmtGetActiveEditable(){
+  const el=document.activeElement;
+  if(el&&el.classList&&el.classList.contains('answer-input')) return el;
+  return null;
+}
+function fmtToggle(cmd){
+  const el=fmtGetActiveEditable();
+  if(!el){toast('请先点击一个答案框');return;}
+  document.execCommand(cmd,false,null);
+  syncAnswerFromDOM(el.id.replace('ansinp-',''));
+}
+function fmtWrapSelection(styleFn){
+  const el=fmtGetActiveEditable();
+  if(!el){toast('请先点击一个答案框');return null;}
+  const sel=window.getSelection();
+  if(!sel||sel.rangeCount===0||sel.getRangeAt(0).collapsed){toast('请先划选要处理的文字');return null;}
+  const range=sel.getRangeAt(0);
+  const span=document.createElement('span');
+  styleFn(span);
+  const frag=range.extractContents();
+  span.appendChild(frag);
+  range.insertNode(span);
+  sel.removeAllRanges();
+  const nr=document.createRange();
+  nr.selectNodeContents(span);
+  sel.addRange(nr);
+  syncAnswerFromDOM(el.id.replace('ansinp-',''));
+  return span;
+}
+function fmtColor(mode,color){
+  fmtWrapSelection(span=>{
+    if(mode==='text'){ span.style.color=color||'inherit'; }
+    else { span.style.backgroundColor=color||'transparent'; }
+  });
+}
+function fmtFontSize(delta){
+  fmtWrapSelection(span=>{
+    const sel=window.getSelection();
+    let node=sel.rangeCount?sel.getRangeAt(0).startContainer:null;
+    if(node&&node.nodeType===3) node=node.parentNode;
+    const base=node?parseFloat(window.getComputedStyle(node).fontSize)||12:12;
+    const next=Math.max(10,Math.min(40,base+delta*2));
+    span.style.fontSize=next+'px';
+  });
+}
+
+// ── sanitize rich-text HTML loaded from a file (strip scripts/handlers, keep only safe formatting) ──
+function sanitizeAnswerHtml(html){
+  if(!html) return '';
+  const allowedTags=new Set(['SPAN','B','STRONG','I','EM','U','S','STRIKE','BR','DIV']);
+  const allowedStyleProps=['color','background-color','font-size','font-weight','font-style','text-decoration'];
+  let root;
+  try{
+    const doc=new DOMParser().parseFromString('<div>'+html+'</div>','text/html');
+    root=doc.body.firstChild;
+  }catch(e){ return escHtml(html); }
+  function clean(node){
+    [...node.childNodes].forEach(child=>{
+      if(child.nodeType===1){
+        if(!allowedTags.has(child.tagName)){
+          while(child.firstChild) node.insertBefore(child.firstChild,child);
+          node.removeChild(child);
+          return;
+        }
+        const styleVal=child.getAttribute('style');
+        [...child.attributes].forEach(attr=>child.removeAttribute(attr.name));
+        if(styleVal){
+          const kept=styleVal.split(';').map(s=>s.trim()).filter(Boolean).filter(rule=>{
+            const prop=rule.split(':')[0].trim().toLowerCase();
+            return allowedStyleProps.includes(prop);
+          });
+          if(kept.length) child.setAttribute('style',kept.join(';'));
+        }
+        clean(child);
+      } else if(child.nodeType!==3){
+        node.removeChild(child);
+      }
+    });
+  }
+  clean(root);
+  return root.innerHTML;
 }
 
 // ── render ──
@@ -703,23 +841,16 @@ function renderList(){
       }
       return;
     }
-    // answer inputs (one per answer block)
+    // answer inputs (one per answer block, now contenteditable rich-text boxes)
     (item.answers||[]).forEach(a=>{
       const ai=document.getElementById('ansinp-'+a.id);
       if(!ai) return;
-      ai.oninput=e=>{
-        a.text=e.target.value;
-        // auto-grow
-        ai.style.height='auto';
-        ai.style.height=ai.scrollHeight+'px';
-        // live-update the card's left border to reflect answered state
-        const card=document.getElementById('apc-'+item.id);
-        if(card) card.style.borderLeftColor=hasAnyAnswer(item)?'var(--green)':'var(--blue)';
-        markDirty();
+      ai.oninput=()=>syncAnswerFromDOM(a.id);
+      ai.onpaste=e=>{
+        e.preventDefault();
+        const text=(e.clipboardData||window.clipboardData).getData('text/plain');
+        document.execCommand('insertText',false,text);
       };
-      // initial height
-      ai.style.height='auto';
-      ai.style.height=Math.max(ai.scrollHeight,20)+'px';
     });
   });
 
@@ -763,9 +894,10 @@ function renderTask(item){
     h+=`<div class="answers-empty">还没有答案，点击下方"添加答案"开始作答</div>`;
   } else {
     answers.forEach((a,idx)=>{
+      const content=(a.html!==undefined&&a.html!==null&&a.html!=='')?a.html:escHtml(a.text||'');
       h+=`<div class="answer-block" id="ans-${a.id}">`;
       h+=`<div class="answer-num">${String(idx+1).padStart(2,'0')}</div>`;
-      h+=`<textarea class="answer-input" id="ansinp-${a.id}" placeholder="在这里写下你的答案..." rows="3">${escHtml(a.text||'')}</textarea>`;
+      h+=`<div class="answer-input" id="ansinp-${a.id}" contenteditable="true" data-placeholder="在这里写下你的答案...">${content}</div>`;
       h+=`<button class="icon-btn danger answer-del" onclick="deleteAnswer('${item.id}','${a.id}')" title="删除此答案">✕</button>`;
       h+=`</div>`;
     });
@@ -773,6 +905,50 @@ function renderTask(item){
   h+=`</div>`;
   h+=`<button class="pxl-btn add-answer-btn" onclick="addAnswer('${item.id}')">+ 添加答案</button>`;
   h+=`</div></div>`;
+  return h;
+}
+
+// ── format toolbar markup (single global toolbar, styleFn buttons act on whichever answer box has focus) ──
+const FMT_TEXT_COLORS=['#000000','#cc0000','#000080','#008000','#800080','#e08000'];
+const FMT_MARK_COLORS=['#fff59d','#c8f7c5','#ffd0e0','#bde0ff'];
+function renderFmtToolbar(){
+  let h=`<div class="fmt-toolbar">`;
+
+  h+=`<div class="fmt-group">`;
+  h+=`<button class="fmt-btn" style="font-weight:bold;" onmousedown="event.preventDefault()" onclick="fmtToggle('bold')" title="加粗">B</button>`;
+  h+=`<button class="fmt-btn" style="font-style:italic;" onmousedown="event.preventDefault()" onclick="fmtToggle('italic')" title="斜体">I</button>`;
+  h+=`<button class="fmt-btn" style="text-decoration:underline;" onmousedown="event.preventDefault()" onclick="fmtToggle('underline')" title="下划线">U</button>`;
+  h+=`<button class="fmt-btn" style="text-decoration:line-through;" onmousedown="event.preventDefault()" onclick="fmtToggle('strikeThrough')" title="删除线">S</button>`;
+  h+=`</div>`;
+
+  h+=`<div class="fmt-sep"></div>`;
+  h+=`<div class="fmt-group">`;
+  h+=`<span class="fmt-group-label">颜色</span>`;
+  FMT_TEXT_COLORS.forEach(c=>{
+    h+=`<button class="fmt-swatch" style="background:${c};" onmousedown="event.preventDefault()" onclick="fmtColor('text','${c}')" title="文字颜色"></button>`;
+  });
+  h+=`<button class="fmt-swatch fmt-clear" onmousedown="event.preventDefault()" onclick="fmtColor('text','')" title="清除文字颜色"></button>`;
+  h+=`</div>`;
+
+  h+=`<div class="fmt-sep"></div>`;
+  h+=`<div class="fmt-group">`;
+  h+=`<span class="fmt-group-label">高亮</span>`;
+  FMT_MARK_COLORS.forEach(c=>{
+    h+=`<button class="fmt-swatch" style="background:${c};" onmousedown="event.preventDefault()" onclick="fmtColor('mark','${c}')" title="高亮标记"></button>`;
+  });
+  h+=`<button class="fmt-swatch fmt-clear" onmousedown="event.preventDefault()" onclick="fmtColor('mark','')" title="清除高亮"></button>`;
+  h+=`</div>`;
+
+  h+=`<div class="fmt-sep"></div>`;
+  h+=`<div class="fmt-group">`;
+  h+=`<button class="fmt-btn" onmousedown="event.preventDefault()" onclick="fmtFontSize(-1)" title="缩小选中文字">A-</button>`;
+  h+=`<button class="fmt-btn" onmousedown="event.preventDefault()" onclick="fmtFontSize(1)" title="放大选中文字">A+</button>`;
+  h+=`</div>`;
+
+  h+=`<div class="fmt-sep"></div>`;
+  h+=`<button class="fmt-btn fmt-btn-wide" onmousedown="event.preventDefault()" onclick="fmtToggle('removeFormat')" title="清除所选文字的所有格式">清除格式</button>`;
+
+  h+=`</div>`;
   return h;
 }
 
@@ -1026,6 +1202,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     tse.addEventListener('input',()=>renderToc());
     tse.addEventListener('keydown',e=>{if(e.key==='Escape'){tse.value='';renderToc();}});
   }
+  const fw=document.getElementById('fmtToolbarWrap');
+  if(fw) fw.innerHTML=renderFmtToolbar();
 });
 
 updateStatus();
