@@ -1,7 +1,7 @@
-// ADHD RPG — Service Worker v4
-const CACHE_NAME = 'adhd-rpg-v4';
+// ADHD RPG — Service Worker v5
+const CACHE_NAME = 'adhd-rpg-v5';
 
-// 不缓存 index.html，始终从网络获取最新版本
+// 不缓存 index.html / box.html，始终从网络获取最新版本
 // 只缓存静态资源
 const STATIC_ASSETS = [
   './manifest.json',
@@ -28,10 +28,10 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
-  // index.html 始终从网络获取，确保拿到最新版本
-  if (url.pathname.endsWith('/') || url.pathname.endsWith('index.html')) {
+  // index.html / box.html 始终从网络获取，确保拿到最新版本
+  if (url.pathname.endsWith('/') || url.pathname.endsWith('index.html') || url.pathname.endsWith('box.html')) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('./index.html'))
+      fetch(event.request).catch(() => caches.match(url.pathname.endsWith('box.html') ? './box.html' : './index.html'))
     );
     return;
   }

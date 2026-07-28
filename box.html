@@ -21,15 +21,6 @@ html,body{height:100%;overflow:hidden;}
 body{background:var(--gray);color:var(--black);font-family:var(--font);font-size:13px;}
 .app{display:flex;flex-direction:column;height:100vh;}
 
-/* title bar */
-.titlebar{
-  background:linear-gradient(90deg,var(--blue) 0%,var(--blue2) 100%);
-  color:#fff;padding:3px 6px;display:flex;align-items:center;
-  flex-shrink:0;min-height:26px;border-bottom:1px solid #000040;
-}
-.titlebar-icon{font-size:14px;margin-right:6px;}
-.titlebar-name{font-family:var(--font);font-size:12px;font-weight:bold;}
-
 /* menubar */
 .menubar{
   background:var(--gray);border-bottom:1px solid var(--darker);
@@ -324,21 +315,9 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
 <body>
 <div class="app">
 
-<div class="titlebar">
-  <span class="titlebar-name" id="titlebarName">BOX</span>
-</div>
-
 <div class="menubar" id="menubar">
-  <div class="mitem" data-menu="file">文件</div>
   <div class="mitem" data-menu="edit">编辑</div>
   <div class="mitem" data-menu="export">导出</div>
-  <div class="dropdown" id="menu-file">
-    <div class="ditem" onclick="newProject()">新建盒子</div>
-    <div class="ditem" onclick="openFileAPI()">打开本地文件...</div>
-    <div class="dsep"></div>
-    <div class="ditem" onclick="saveFileAPI()">保存  Ctrl+S</div>
-    <div class="ditem" onclick="saveAsFileAPI()">另存为...</div>
-  </div>
   <div class="dropdown" id="menu-edit">
     <div class="ditem" onclick="openImportDialog()">导入问题清单 JSON...</div>
     <div class="ditem" onclick="clearAllAPs()">清空所有问题</div>
@@ -359,7 +338,7 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
     <button class="pxl-btn" onclick="collapseAll()">折叠</button>
     <button class="pxl-btn" onclick="expandAll()">展开</button>
     <div class="toolbar-sep"></div>
-    <button class="pxl-btn" onclick="saveFileAPI()">💾 保存</button>
+    <button class="pxl-btn" onclick="bxNotifyParentSave(true);toast('已保存')">💾 保存</button>
   </div>
 </div>
 
@@ -383,10 +362,9 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
   <div class="content" id="content">
   <div class="splash" id="splash">
     <div class="splash-title">BOX</div>
-    <div class="splash-sub">打开一个盒子，理清一个问题</div>
+    <div class="splash-sub">从右上角 TwoDrive 打开一个盒子，或新建一个</div>
     <div class="splash-btns">
       <button class="pxl-btn primary" onclick="newProject()">新建盒子</button>
-      <button class="pxl-btn" onclick="openFileAPI()">打开文件...</button>
     </div>
   </div>
   <div id="apList" style="display:none;flex-direction:column;gap:4px;"></div>
@@ -440,14 +418,15 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
 </div>
 
 <div class="toast" id="toast"></div>
-<input type="file" id="fileInput" accept=".json" style="display:none;" onchange="onFileSelected(event)"/>
 </div>
 
 <script>
 // ── state ──
 // item types: 'section' | 'task'
 let S={project:'',createdAt:'',items:[]};
-let fileHandle=null,dirty=false,idSeq=1;
+let dirty=false,idSeq=1;
+let _bxDocId=null; // 当前文档在父应用 boxItems 中的 id，由父应用通过 postMessage 指定
+let _bxSaveTimer=null;
 function uid(){return Date.now()+'-'+(idSeq++);}
 function ts(){return new Date().toISOString();}
 function fmtTime(iso){
@@ -476,14 +455,16 @@ function toast(msg){
 }
 
 // ── project ──
+// 新建盒子：仅在还没有从父应用收到任何文档时的兜底入口（例如父应用尚未响应）。
+// 正常情况下新建/打开文档都通过父应用的 TwoDrive 完成。
 function newProject(){
   closeAllMenus();
-  if(dirty&&S.items.length>0&&!confirm('当前盒子未保存，确定新建？')) return;
   S={project:'未命名项目',createdAt:ts(),items:[]};
-  fileHandle=null;dirty=false;
+  dirty=false;
   showProject();
   document.getElementById('projTitleInput').value=S.project;
-  updateTitlebar();renderList();toast('新盒子已创建');
+  renderList();toast('新盒子已创建');
+  bxNotifyParentSave(true);
 }
 function showProject(){
   document.getElementById('splash').style.display='none';
@@ -495,84 +476,43 @@ function showProject(){
   projectOpen=true;
   applySidebarState();
 }
-function onTitleChange(){S.project=document.getElementById('projTitleInput').value||'未命名项目';updateTitlebar();markDirty();}
-function updateTitlebar(){document.getElementById('titlebarName').textContent='BOX - '+(S.project||'未命名项目')+(dirty?' *':'');}
-function markDirty(){dirty=true;updateTitlebar();updateStatus();}
-
-// ── file API ──
-async function openFileAPI(){
-  closeAllMenus();
-  if(window.showOpenFilePicker){
-    try{
-      const [fh]=await window.showOpenFilePicker({types:[{description:'BOX项目',accept:{'application/json':['.json']}}]});
-      fileHandle=fh;loadFromJSON(await(await fh.getFile()).text(),fh.name);
-    }catch(e){if(e.name!=='AbortError') fallbackOpen();}
-  } else fallbackOpen();
+function onTitleChange(){S.project=document.getElementById('projTitleInput').value||'未命名项目';markDirty();}
+function markDirty(){
+  dirty=true;updateStatus();
+  clearTimeout(_bxSaveTimer);
+  _bxSaveTimer=setTimeout(()=>bxNotifyParentSave(false),400);
 }
-function fallbackOpen(){document.getElementById('fileInput').click();}
-function onFileSelected(e){const f=e.target.files[0];if(!f) return;const r=new FileReader();r.onload=ev=>loadFromJSON(ev.target.result,f.name);r.readAsText(f);e.target.value='';}
 
-function loadFromJSON(text,filename){
+// ── 与父应用（TwoDrive 文档库）通信 ──
+function bxNotifyParentSave(immediate){
   try{
-    const data=JSON.parse(text);
-    // support both old format (aps[]) and new format (items[])
-    if(!data.items&&!data.aps) throw new Error('格式不符');
-    S=data;
-    if(!S.items){
-      // migrate old aps[] format
-      S.items=(S.aps||[]).map(ap=>({
-        id:ap.id,type:'task',text:ap.text,note:ap.note||'',
-        createdAt:ap.createdAt,
-        collapsed:ap.collapsed,
-        msgs:ap.msgs||[]
-      }));
-      delete S.aps;
-    }
+    window.parent.postMessage({type:'box:save', id:_bxDocId, doc:{project:S.project, createdAt:S.createdAt, items:S.items}, immediate:!!immediate}, '*');
+  }catch(e){}
+  dirty=false;updateStatus();
+}
+window.addEventListener('message', function(e){
+  const msg=e.data;
+  if(!msg||typeof msg!=='object') return;
+  if(msg.type==='box:load'){
+    _bxDocId=msg.id;
+    const doc=msg.doc||{project:'未命名文档',createdAt:ts(),items:[]};
+    S={project:doc.project||'未命名文档', createdAt:doc.createdAt||ts(), items:(doc.items||[]).map(it=>Object.assign({},it))};
     S.items.forEach(item=>{
-      if(item.type==='section'){
-        if(item.collapsed===undefined) item.collapsed=false;
-      }
       if(item.type==='task'){
-        if(!item.answers){
-          // migrate old single note + 补充想法(msgs) into the unified answers list
-          const arr=[];
-          if(item.note && String(item.note).trim()) arr.push({id:uid(),text:item.note});
-          if(item.msgs && item.msgs.length){
-            item.msgs.forEach(m=>{ if(m && m.text && String(m.text).trim()) arr.push({id:uid(),text:m.text}); });
-          }
-          item.answers=arr;
-        }
-        // drop legacy fields from older exports if present
-        delete item.note; delete item.msgs;
-        delete item.tags; delete item.stickers; delete item.stickerEmoji; delete item.done; delete item.doneAt;
+        if(!item.answers) item.answers=[];
         (item.answers||[]).forEach(a=>{ if(a.html) a.html=sanitizeAnswerHtml(a.html); });
       }
+      if(item.type==='section'&&item.collapsed===undefined) item.collapsed=false;
     });
-    dirty=false;showProject();
+    dirty=false;
+    showProject();
     document.getElementById('projTitleInput').value=S.project||'';
-    updateTitlebar();renderList();toast('已打开: '+(S.project||filename));
-  }catch(err){alert('文件读取失败: '+err.message);}
-}
-
-async function saveFileAPI(){closeAllMenus();if(fileHandle) await doSave(fileHandle);else await saveAsFileAPI();}
-async function saveAsFileAPI(){
-  closeAllMenus();
-  if(window.showSaveFilePicker){
-    try{
-      const fh=await window.showSaveFilePicker({suggestedName:(S.project||'box')+'.json',types:[{description:'BOX项目',accept:{'application/json':['.json']}}]});
-      fileHandle=fh;await doSave(fh);
-    }catch(e){if(e.name!=='AbortError') fallbackSave();}
-  } else fallbackSave();
-}
-async function doSave(fh){
-  try{const w=await fh.createWritable();await w.write(JSON.stringify(S,null,2));await w.close();dirty=false;updateTitlebar();updateStatus();toast('已保存');}
-  catch(e){alert('保存失败: '+e.message);}
-}
-function fallbackSave(){
-  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=(S.project||'box')+'.json';a.href=url;a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);dirty=false;updateTitlebar();updateStatus();toast('已下载');
-}
+    renderList();
+  }
+});
+document.addEventListener('DOMContentLoaded',function(){
+  try{ window.parent.postMessage({type:'box:ready'}, '*'); }catch(e){}
+});
 
 // ── import question list ──
 function openImportDialog(){closeAllMenus();document.getElementById('importOverlay').classList.add('open');document.getElementById('importMsg').textContent='';}
@@ -597,7 +537,7 @@ function doImport(){
     const data=JSON.parse(raw);
     if(!data.sections&&!data.tasks&&!data.questions){document.getElementById('importMsg').textContent='需要 sections、questions 或 tasks 字段';return;}
     let n=0;
-    if(data.project&&(!S.project||S.project==='未命名项目')){S.project=data.project;document.getElementById('projTitleInput').value=S.project;updateTitlebar();}
+    if(data.project&&(!S.project||S.project==='未命名项目')){S.project=data.project;document.getElementById('projTitleInput').value=S.project;}
     const mkTask=(t)=>{
       if(typeof t==='string') t={question:t};
       t=t||{};
@@ -1192,9 +1132,7 @@ function download(filename,text){
 }
 
 document.addEventListener('keydown',e=>{
-  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveFileAPI();}
-  if((e.ctrlKey||e.metaKey)&&e.key==='n'){e.preventDefault();newProject();}
-  if((e.ctrlKey||e.metaKey)&&e.key==='o'){e.preventDefault();openFileAPI();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();bxNotifyParentSave(true);toast('已保存');}
 });
 document.addEventListener('DOMContentLoaded',()=>{
   const tse=document.getElementById('tocSearch');
