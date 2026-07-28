@@ -1237,6 +1237,11 @@ const SB_HEADERS = {
 };
 
 let _saveTimer = null;
+// 多设备同步保护：
+// _cloudBaseRev = 本地这份数据所基于的云端版本号
+// _dirtySinceSync = 自上次成功同步后本地是否有改动
+let _cloudBaseRev = 0;
+let _dirtySinceSync = false;
 let _syncIndicator = null;
 
 function setSyncStatus(status) {
@@ -1264,14 +1269,88 @@ function setSyncStatus(status) {
 
 // Save to localStorage immediately, debounce cloud sync by 1.5s
 function saveState() {
+  _dirtySinceSync = true;
   try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(syncToCloud, 1500);
 }
 
+async function fetchCloudState(){
+  const res = await fetch(
+    SB_URL + '/rest/v1/' + SB_TABLE + '?key=eq.' + SB_ROW_KEY + '&select=value',
+    { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+  );
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const rows = await res.json();
+  if (rows && rows.length && rows[0].value) return JSON.parse(rows[0].value);
+  return null;
+}
+
+// union merge: pull in anything that exists only in the cloud copy, so entries
+// written on another device are never lost when this device pushes
+function mergeCloudIntoLocal(cloud){
+  if(!cloud || typeof cloud!=='object') return;
+  const unionById = (localArr, cloudArr) => {
+    if(!Array.isArray(cloudArr)) return localArr;
+    if(!Array.isArray(localArr)) return cloudArr.slice();
+    const ids = new Set(localArr.map(x => x && String(x.id)));
+    cloudArr.forEach(x => { if(x && !ids.has(String(x.id))) localArr.push(x); });
+    return localArr;
+  };
+  ['tasks','journal','dreams','cards','habits','dreamGroups','boxFiles',
+   'fleeting','permanent','lit','ideas','drafts'].forEach(k=>{
+    S[k] = unionById(S[k], cloud[k]);
+  });
+  if(S.finance && cloud.finance){
+    S.finance.accounts = unionById(S.finance.accounts, cloud.finance.accounts);
+    S.finance.cart     = unionById(S.finance.cart, cloud.finance.cart);
+    S.finance.records  = unionById(S.finance.records, cloud.finance.records);
+  }
+  // energyTags: union by name
+  if(Array.isArray(cloud.energyTags)){
+    if(!Array.isArray(S.energyTags)) S.energyTags=[];
+    const names = new Set(S.energyTags.map(tg=>tg && tg.name));
+    cloud.energyTags.forEach(tg=>{
+      const nm = typeof tg==='string' ? tg : (tg && tg.name);
+      if(nm && !names.has(nm)) S.energyTags.push(typeof tg==='string' ? {name:tg,color:'#ffff00'} : tg);
+    });
+  }
+  // checkins / dayNotes: keyed by date — merge keys, local wins per key
+  ['checkins','dayNotes'].forEach(k=>{
+    if(cloud[k] && typeof cloud[k]==='object'){
+      if(!S[k] || typeof S[k]!=='object') S[k]={};
+      Object.keys(cloud[k]).forEach(dk=>{
+        if(!(dk in S[k])) S[k][dk] = cloud[k][dk];
+        else if(S[k][dk] && cloud[k][dk] && typeof S[k][dk]==='object' && typeof cloud[k][dk]==='object'
+                && !Array.isArray(S[k][dk]) && !Array.isArray(cloud[k][dk])){
+          S[k][dk] = Object.assign({}, cloud[k][dk], S[k][dk]);
+        }
+      });
+    }
+  });
+  // prevent id collisions after merging, keep the higher progress values
+  if(typeof cloud.nextId==='number') S.nextId = Math.max(S.nextId||1, cloud.nextId);
+  if(typeof cloud.xp==='number')     S.xp     = Math.max(S.xp||0, cloud.xp);
+  if(typeof cloud.level==='number')  S.level  = Math.max(S.level||1, cloud.level);
+}
+
 async function syncToCloud() {
   try {
     setSyncStatus('saving');
+    // 冲突检测：先看云端版本号，若其他设备在这期间写入过，
+    // 先把它的内容合并进来（按 id 取并集，不丢任何条目），再推送
+    let merged = false;
+    try {
+      const cloud = await fetchCloudState();
+      const cloudRev = cloud && typeof cloud.rev==='number' ? cloud.rev : 0;
+      if (cloud && cloudRev > _cloudBaseRev) {
+        mergeCloudIntoLocal(cloud);
+        _cloudBaseRev = cloudRev;
+        merged = true;
+      }
+    } catch(e) { /* 云端读取失败时按原样推送（例如离线瞬间），不阻塞保存 */ }
+
+    S.rev = Math.max(S.rev||0, _cloudBaseRev) + 1;
     const payload = JSON.stringify(S);
     const res = await fetch(SB_URL + '/rest/v1/' + SB_TABLE, {
       method: 'POST',
@@ -1279,11 +1358,48 @@ async function syncToCloud() {
       body: JSON.stringify({ key: SB_ROW_KEY, value: payload })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
+    _cloudBaseRev = S.rev;
+    _dirtySinceSync = false;
+    try { localStorage.setItem('adhd-rpg-v2', payload); } catch(e) {}
     setSyncStatus('saved');
+    if (merged) { renderAll(); showToast('已合并其他设备的改动'); }
   } catch(e) {
     setSyncStatus(navigator.onLine ? 'error' : 'offline');
   }
 }
+
+// 回到前台时主动拉取云端最新数据（解决"电脑挂后台期间手机写入了新数据"的场景）
+let _refreshingFromCloud = false;
+async function refreshFromCloudIfNewer(){
+  if(_refreshingFromCloud) return;
+  _refreshingFromCloud = true;
+  try {
+    // 本地有未同步的改动时，交给 syncToCloud 的合并流程处理
+    if(_dirtySinceSync || _saveTimer){ 
+      if(_saveTimer){ clearTimeout(_saveTimer); _saveTimer=null; }
+      await syncToCloud();
+      return;
+    }
+    const cloud = await fetchCloudState();
+    const cloudRev = cloud && typeof cloud.rev==='number' ? cloud.rev : 0;
+    if(cloud && cloudRev > _cloudBaseRev){
+      migrateState(cloud);
+      _cloudBaseRev = cloudRev;
+      _dirtySinceSync = false;
+      try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
+      renderAll();
+      setSyncStatus('saved');
+      showToast('已同步其他设备的最新数据');
+    }
+  } catch(e) { /* offline etc. — silently skip */ }
+  finally { _refreshingFromCloud = false; }
+}
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible') refreshFromCloudIfNewer();
+});
+window.addEventListener('focus', ()=>{ refreshFromCloudIfNewer(); });
+window.addEventListener('online', ()=>{ if(_dirtySinceSync) syncToCloud(); });
 
 // Safely merge loaded data into S — never discard existing arrays
 function migrateState(loaded) {
@@ -1347,15 +1463,11 @@ async function loadState() {
 
   // Then try to fetch cloud data (may be newer)
   try {
-    const res = await fetch(
-      SB_URL + '/rest/v1/' + SB_TABLE + '?key=eq.' + SB_ROW_KEY + '&select=value',
-      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
-    );
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const rows = await res.json();
-    if (rows && rows.length && rows[0].value) {
-      const cloud = JSON.parse(rows[0].value);
+    const cloud = await fetchCloudState();
+    if (cloud) {
       migrateState(cloud);
+      _cloudBaseRev = typeof cloud.rev==='number' ? cloud.rev : 0;
+      _dirtySinceSync = false;
       // Update local cache with cloud data
       try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
       setSyncStatus('saved');
@@ -3163,6 +3275,8 @@ async function forceReloadFromCloud(){
       if(dbg) dbg.textContent += '\n云端数据长度: '+raw.length+' chars\n预览: '+raw.slice(0,200);
       const cloud = JSON.parse(raw);
       migrateState(cloud);
+      _cloudBaseRev = typeof cloud.rev==='number' ? cloud.rev : 0;
+      _dirtySinceSync = false;
       try{ localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); }catch(e){}
       renderAll();
       setSyncStatus('saved');
