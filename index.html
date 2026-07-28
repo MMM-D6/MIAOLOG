@@ -2525,6 +2525,7 @@ function renderBoxDoc(){
     + '<input class="box-doc-title-input" value="'+escAttr(doc.project||f.name||'')+'" oninput="boxSyncTitle(this)" title="盒子标题"/>'
     + '<button class="pxl-btn" onclick="boxAddSection()">+ 分组</button>'
     + '<button class="pxl-btn" onclick="boxExportCurrent()">📄 导出JSON</button>'
+    + '<button class="pxl-btn" onclick="boxExportCurrentMd()" title="导出为可直接阅读的 Markdown 文档">📃 导出MD</button>'
     + '</div>';
 
   let curCollapsed = false;
@@ -2655,7 +2656,33 @@ function boxSyncAnswer(itemId, ansId, el){
 
 function boxExportCurrent(){
   const f = boxOpenDoc(); if(!f) return;
-  dl((f.doc.project||f.name||'box')+'.json', JSON.stringify(f.doc, null, 2));
+  dl(boxSanitizeName(f.doc.project||f.name||'box')+'.json', JSON.stringify(f.doc, null, 2));
+}
+
+// 人类可读版导出：Markdown 排版，适合直接阅读/打印/发给别人
+function boxDocToMarkdown(doc){
+  let md = '# ' + (doc.project||'未命名盒子') + '\n';
+  (doc.items||[]).forEach(it=>{
+    if(it.type==='section'){
+      md += '\n## ' + (it.text||'未命名分组') + '\n';
+      return;
+    }
+    md += '\n**Q: ' + (it.text||'（空问题）') + '**\n\n';
+    const answers = (it.answers||[]).filter(a=>a.text && a.text.trim());
+    if(!answers.length){ md += '_（暂无答案）_\n'; return; }
+    answers.forEach(a=>{
+      // multi-line answers keep their line breaks, indented under the bullet
+      const lines = a.text.trim().split('\n');
+      md += '- ' + lines[0] + '\n';
+      for(let i=1;i<lines.length;i++) md += '  ' + lines[i] + '\n';
+    });
+  });
+  return md;
+}
+
+function boxExportCurrentMd(){
+  const f = boxOpenDoc(); if(!f) return;
+  dl(boxSanitizeName(f.doc.project||f.name||'box')+'.md', boxDocToMarkdown(f.doc));
 }
 
 // ── export everything as a ZIP mirroring the folder hierarchy ──
