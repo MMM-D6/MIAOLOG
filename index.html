@@ -678,6 +678,22 @@ body{
 .btoc-file.task-drag-over{outline:2px dashed #000080;outline-offset:-2px;}
 .btoc-folder.task-drag-over{outline:2px dashed #000080;outline-offset:-2px;}
 .btoc-file-text{flex:1;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.box-doc-toc-head{
+  background:linear-gradient(90deg,#000080,#1084d0);color:#fff;
+  font-family:var(--font-ui);font-size:12px;font-weight:bold;
+  padding:3px 8px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.btoc-q{padding-left:16px;}
+.btoc-q.answered .ttoc-dot{color:#008000;}
+.btoc-sec-row{
+  display:flex;align-items:center;gap:4px;padding:3px 4px 2px;margin-top:4px;cursor:pointer;
+}
+.btoc-sec-row:hover{background:#000080;}
+.btoc-sec-row:hover .btoc-sec-name,.btoc-sec-row:hover .ttoc-count{color:#fff;}
+.btoc-sec-name{
+  flex:1;font-size:11px;font-weight:bold;color:var(--win-darker);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
 .box-doc-titlebar{
   display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;
 }
@@ -1042,7 +1058,14 @@ body{
             <button class="pxl-btn" style="flex:1 1 45%;font-size:11px;padding:2px 4px;white-space:nowrap;" onclick="boxExportAll()" title="按文件夹结构打包导出全部文件（ZIP）">📤 导出</button>
             <input type="file" id="boxImportInput" accept=".json,application/json" style="display:none;" onchange="onBoxImportSelected(event)"/>
           </div>
-          <div class="tasks-sidebar-tree" id="boxTocTree"></div>
+          <div class="tasks-sidebar-tree" id="boxTocTree" style="flex:0 1 auto;max-height:42%;min-height:70px;border-bottom:2px solid var(--win-darker);"></div>
+          <div class="box-doc-toc-head">
+            <span id="boxDocTocTitle">目录</span>
+          </div>
+          <div class="tasks-sidebar-search">
+            <input type="text" id="boxDocTocSearch" placeholder="检索问题..." oninput="renderBoxDocToc()"/>
+          </div>
+          <div class="tasks-sidebar-tree" id="boxDocTocTree"></div>
         </aside>
         <button class="tasks-sidebar-rail" id="boxSidebarRail" onclick="toggleBoxSidebar()" title="展开目录" style="display:none;">▶<span class="rail-label">目录</span></button>
 
@@ -2563,6 +2586,7 @@ function renderBoxDoc(){
   if(!f){
     _boxOpenId = null;
     main.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div>从左侧选择或导入一个 BOX 文件</div>';
+    renderBoxDocToc();
     return;
   }
   const doc = f.doc || (f.doc = {project:f.name, items:[]});
@@ -2581,7 +2605,7 @@ function renderBoxDoc(){
   doc.items.forEach(it=>{
     if(it.type==='section'){
       curCollapsed = !!it.collapsed;
-      html += '<div class="box-sec-hdr">'
+      html += '<div class="box-sec-hdr" id="boxitem-'+escAttr(it.id)+'">'
         + '<button class="icon-btn" onclick="boxToggleSection(\''+escAttr(it.id)+'\')">'+(it.collapsed?'▸':'▾')+'</button>'
         + '<span class="box-sec-title" ondblclick="startEditBoxItemText(\''+escAttr(it.id)+'\',this)" title="双击编辑标题">'+escHtml(it.text||'未命名分组')+'</span>'
         + '<button class="icon-btn" onclick="boxDeleteItem(\''+escAttr(it.id)+'\')" title="删除分组（问题保留）">✕</button>'
@@ -2591,7 +2615,7 @@ function renderBoxDoc(){
     if(curCollapsed) return;
     const answers = it.answers||[];
     const answered = answers.some(a=>a.text && a.text.trim());
-    html += '<div class="box-q-card'+(answered?' answered':'')+'">';
+    html += '<div class="box-q-card'+(answered?' answered':'')+'" id="boxitem-'+escAttr(it.id)+'">';
     html += '<div style="display:flex;align-items:flex-start;gap:6px;">';
     html += '<div class="box-q-title" style="flex:1;" ondblclick="startEditBoxItemText(\''+escAttr(it.id)+'\',this)" title="双击编辑问题">'+escHtml(it.text||'（空问题）')+'</div>';
     html += '<button class="icon-btn" onclick="boxDeleteItem(\''+escAttr(it.id)+'\')" style="color:#cc0000;flex-shrink:0;">✕</button>';
@@ -2620,6 +2644,7 @@ function renderBoxDoc(){
   html += '<input class="form-input" id="boxAddQInput" placeholder="+ 添加问题，回车确认" style="width:100%;font-size:12px;padding:5px 8px;margin-top:8px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();boxAddQuestion();}"/>';
 
   main.innerHTML = html;
+  renderBoxDocToc();
 }
 
 // ── format toolbar (ported from box.html — acts on whichever answer box has focus) ──
@@ -2759,12 +2784,94 @@ function boxSanitizeAnswerHtml(html){
   return root.innerHTML;
 }
 
+// ── per-file document TOC (like box.html's 目录 sidebar):
+// sections with answered counts, questions with ✓/•, click to jump ──
+function renderBoxDocToc(){
+  const tree = document.getElementById('boxDocTocTree');
+  const titleEl = document.getElementById('boxDocTocTitle');
+  if(!tree) return;
+  const f = boxOpenDoc();
+  if(!f){
+    if(titleEl) titleEl.textContent = '目录';
+    tree.innerHTML = '<div class="ttoc-empty">打开一个盒子后，这里显示它的分级目录</div>';
+    return;
+  }
+  if(titleEl) titleEl.textContent = '目录 · ' + (f.doc.project||f.name||'');
+  const q = ((document.getElementById('boxDocTocSearch')||{}).value||'').trim().toLowerCase();
+  const items = f.doc.items||[];
+  if(!items.length){
+    tree.innerHTML = '<div class="ttoc-empty">这个盒子还没有内容</div>';
+    return;
+  }
+
+  // group positionally: tasks before the first section form a headless group
+  const groups = [{section:null, tasks:[]}];
+  items.forEach(it=>{
+    if(it.type==='section') groups.push({section:it, tasks:[]});
+    else groups[groups.length-1].tasks.push(it);
+  });
+
+  const hasAns = it => (it.answers||[]).some(a=>a.text && a.text.trim());
+  const match = it => !q || (it.text||'').toLowerCase().includes(q);
+
+  let html='';
+  let anyRendered=false;
+  groups.forEach(grp=>{
+    const visTasks = q ? grp.tasks.filter(match) : grp.tasks;
+    if(q && grp.section && !visTasks.length && !match(grp.section)) return;
+    if(grp.section){
+      const done = grp.tasks.filter(hasAns).length;
+      html += '<div class="btoc-sec-row" onclick="boxGotoItem(\''+escAttr(grp.section.id)+'\')" title="'+escAttr(grp.section.text)+'">'
+        + '<span class="btoc-sec-name">'+escHtml(grp.section.text||'未命名分组')+'</span>'
+        + '<span class="ttoc-count">'+done+'/'+grp.tasks.length+'</span>'
+        + '</div>';
+      anyRendered=true;
+    }
+    visTasks.forEach(it=>{
+      const answered = hasAns(it);
+      html += '<div class="ttoc-item btoc-q'+(answered?' answered':'')+'" onclick="boxGotoItem(\''+escAttr(it.id)+'\')" title="'+escAttr(it.text)+'">'
+        + '<span class="ttoc-dot">'+(answered?'✓':'•')+'</span>'
+        + '<span class="ttoc-item-text">'+escHtml(it.text||'（空问题）')+'</span>'
+        + '</div>';
+      anyRendered=true;
+    });
+  });
+  tree.innerHTML = anyRendered ? html : '<div class="ttoc-empty">没有匹配的结果</div>';
+}
+
+function boxGotoItem(itemId){
+  const f = boxOpenDoc(); if(!f) return;
+  const items = f.doc.items||[];
+  const idx = items.findIndex(x=>x.id==itemId);
+  if(idx<0) return;
+  // if the target question sits inside a collapsed section, expand it first
+  let needRender=false;
+  if(items[idx].type!=='section'){
+    for(let i=idx-1;i>=0;i--){
+      if(items[i].type==='section'){
+        if(items[i].collapsed){ items[i].collapsed=false; needRender=true; saveState(); }
+        break;
+      }
+    }
+  }
+  if(needRender) renderBoxDoc();
+  setTimeout(()=>{
+    const el = document.getElementById('boxitem-'+itemId);
+    if(!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.classList.remove('ttoc-flash'); void el.offsetWidth; el.classList.add('ttoc-flash');
+    setTimeout(()=>el.classList.remove('ttoc-flash'), 1500);
+  }, needRender?60:0);
+}
+
 function boxSyncTitle(inp){
   const f = boxOpenDoc(); if(!f) return;
   f.doc.project = inp.value;
   f.name = inp.value || '（未命名）';
   saveState();
   renderBoxToc();
+  const titleEl = document.getElementById('boxDocTocTitle');
+  if(titleEl) titleEl.textContent = '目录 · ' + (f.doc.project||f.name||'');
 }
 
 function boxAddQuestion(){
@@ -2850,6 +2957,7 @@ function boxSyncAnswer(itemId, ansId, el){
   a.html = el.innerHTML;
   a.text = el.innerText || el.textContent || '';
   saveState();
+  renderBoxDocToc(); // live-update ✓ marks and counts in the sidebar TOC
 }
 
 function boxExportCurrent(){
