@@ -754,6 +754,12 @@ body{
 .box-answer-del{flex-shrink:0;align-self:flex-start;margin-top:1px;}
 
 /* format toolbar — ported from box.html, acts on the focused answer box */
+.box-main-wrap{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+#boxDocHeader{flex-shrink:0;}
+#boxDocHeader:not(:empty){
+  padding:8px 8px 0;background:var(--surface);
+  border-bottom:2px solid var(--win-darker);
+}
 .box-fmt-toolbar{
   padding:4px 6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;
   background:var(--win-gray,#c0c0c0);border:2px solid;
@@ -1076,7 +1082,10 @@ body{
         <button class="tasks-sidebar-rail" id="boxSidebarRail" onclick="boxRailExpand()" title="展开目录" style="display:none;">▶<span class="rail-label">目录</span></button>
 
         <!-- Document viewer/editor -->
-        <div class="tasks-main" id="boxMain"></div>
+        <div class="box-main-wrap">
+          <div id="boxDocHeader"></div>
+          <div class="tasks-main" id="boxMain"></div>
+        </div>
       </div>
     </div>
 
@@ -2671,10 +2680,12 @@ function boxOpenDoc(){
 
 function renderBoxDoc(){
   const main = document.getElementById('boxMain');
+  const header = document.getElementById('boxDocHeader');
   if(!main) return;
   const f = boxOpenDoc();
   if(!f){
     _boxOpenId = null;
+    if(header) header.innerHTML = '';
     main.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div>从左侧选择或导入一个 BOX 文件</div>';
     renderBoxDocToc();
     return;
@@ -2682,15 +2693,18 @@ function renderBoxDoc(){
   const doc = f.doc || (f.doc = {project:f.name, items:[]});
   if(!Array.isArray(doc.items)) doc.items = [];
 
-  let html = '<div class="box-doc-titlebar">'
+  // header is OUTSIDE the scroll container, so the format toolbar is always
+  // in view while writing — no sticky offsets, no content peeking above it
+  let headHtml = '<div class="box-doc-titlebar">'
     + '<input class="box-doc-title-input" value="'+escAttr(doc.project||f.name||'')+'" oninput="boxSyncTitle(this)" title="盒子标题"/>'
     + '<button class="pxl-btn" onclick="boxAddSection()">+ 分组</button>'
     + '<button class="pxl-btn" onclick="boxExportCurrent()">📄 导出JSON</button>'
     + '<button class="pxl-btn" onclick="boxExportCurrentMd()" title="导出为可直接阅读的 Markdown 文档">📃 导出MD</button>'
     + '</div>';
+  headHtml += renderBoxFmtToolbar();
+  if(header) header.innerHTML = headHtml;
 
-  html += renderBoxFmtToolbar();
-
+  let html = '';
   let curCollapsed = false;
   doc.items.forEach(it=>{
     if(it.type==='section'){
