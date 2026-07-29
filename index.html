@@ -726,6 +726,17 @@ body{
 .box-q-card.answered{border-left-color:#008000;}
 .box-q-title{font-family:var(--font-ui);font-size:13px;font-weight:bold;color:#000;cursor:text;word-break:break-word;}
 
+/* item drag reordering */
+.box-drag-handle{
+  font-size:11px;color:var(--win-dark);cursor:grab;padding:0 3px;
+  flex-shrink:0;user-select:none;align-self:flex-start;margin-top:2px;
+}
+.box-drag-handle:active{cursor:grabbing;}
+.box-sec-hdr .box-drag-handle{color:rgba(255,255,255,.7);margin-top:0;align-self:center;}
+.box-item-dragging{opacity:.35;}
+.box-drop-before{border-top:3px solid #cc0000 !important;}
+.box-drop-after{border-bottom:3px solid #cc0000 !important;}
+
 /* answers — ported from box.html: numbered exam-style blocks */
 .box-field-label{font-size:10px;color:var(--win-dark);font-family:var(--font-ui);margin:6px 0 2px;font-weight:bold;}
 .box-answers-list{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;}
@@ -2696,7 +2707,9 @@ function renderBoxDoc(){
   doc.items.forEach(it=>{
     if(it.type==='section'){
       curCollapsed = !!it.collapsed;
-      html += '<div class="box-sec-hdr" id="boxitem-'+escAttr(it.id)+'">'
+      html += '<div class="box-sec-hdr" id="boxitem-'+escAttr(it.id)+'"'
+        + ' ondragover="boxItemDragOver(event,\''+escAttr(it.id)+'\')" ondragleave="boxItemDragLeave(event)" ondrop="boxItemDrop(event,\''+escAttr(it.id)+'\')">'
+        + '<span class="box-drag-handle" title="拖拽调整顺序" draggable="true" onmousedown="boxItemDragArm(\''+escAttr(it.id)+'\')" ondragstart="boxItemDragStart(event,\''+escAttr(it.id)+'\')" ondragend="boxItemDragEnd(event)">⠿</span>'
         + '<button class="icon-btn" onclick="boxToggleSection(\''+escAttr(it.id)+'\')">'+(it.collapsed?'▸':'▾')+'</button>'
         + '<span class="box-sec-title" ondblclick="startEditBoxItemText(\''+escAttr(it.id)+'\',this)" title="双击编辑标题">'+escHtml(it.text||'未命名分组')+'</span>'
         + '<button class="icon-btn" onclick="boxDeleteItem(\''+escAttr(it.id)+'\')" title="删除分组（问题保留）">✕</button>'
@@ -2706,8 +2719,10 @@ function renderBoxDoc(){
     if(curCollapsed) return;
     const answers = it.answers||[];
     const answered = answers.some(a=>a.text && a.text.trim());
-    html += '<div class="box-q-card'+(answered?' answered':'')+'" id="boxitem-'+escAttr(it.id)+'">';
+    html += '<div class="box-q-card'+(answered?' answered':'')+'" id="boxitem-'+escAttr(it.id)+'"'
+      + ' ondragover="boxItemDragOver(event,\''+escAttr(it.id)+'\')" ondragleave="boxItemDragLeave(event)" ondrop="boxItemDrop(event,\''+escAttr(it.id)+'\')">';
     html += '<div style="display:flex;align-items:flex-start;gap:6px;">';
+    html += '<span class="box-drag-handle" title="拖拽调整顺序" draggable="true" onmousedown="boxItemDragArm(\''+escAttr(it.id)+'\')" ondragstart="boxItemDragStart(event,\''+escAttr(it.id)+'\')" ondragend="boxItemDragEnd(event)">⠿</span>';
     html += '<div class="box-q-title" style="flex:1;" ondblclick="startEditBoxItemText(\''+escAttr(it.id)+'\',this)" title="双击编辑问题">'+escHtml(it.text||'（空问题）')+'</div>';
     html += '<button class="icon-btn" onclick="boxDeleteItem(\''+escAttr(it.id)+'\')" style="color:#cc0000;flex-shrink:0;">✕</button>';
     html += '</div>';
@@ -2873,6 +2888,71 @@ function boxSanitizeAnswerHtml(html){
   }
   clean(root);
   return root.innerHTML;
+}
+
+// ── item drag reordering (ported from box.html: handle-only drag,
+// drop above/below depending on which half of the target you release over) ──
+let _boxItemDragId = null;
+
+function boxItemDragArm(id){
+  // mousedown on the handle arms the drag before dragstart fires
+  _boxItemDragId = id;
+}
+
+function boxItemDragStart(e, id){
+  _boxItemDragId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  try{ e.dataTransfer.setData('text/plain', String(id)); }catch(err){}
+  const card = document.getElementById('boxitem-'+id);
+  if(card) card.classList.add('box-item-dragging');
+}
+
+function boxItemDragEnd(e){
+  boxClearDropIndicators();
+  document.querySelectorAll('.box-item-dragging').forEach(el=>el.classList.remove('box-item-dragging'));
+  _boxItemDragId = null;
+}
+
+function boxClearDropIndicators(){
+  document.querySelectorAll('.box-drop-before,.box-drop-after').forEach(el=>{
+    el.classList.remove('box-drop-before','box-drop-after');
+  });
+}
+
+function boxItemDragOver(e, targetId){
+  // only react to a drag started from one of our handles, so dragging text
+  // inside an answer box never triggers a reorder
+  if(_boxItemDragId==null || _boxItemDragId===targetId) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  boxClearDropIndicators();
+  const el = e.currentTarget;
+  const rect = el.getBoundingClientRect();
+  const before = e.clientY < rect.top + rect.height/2;
+  el.classList.add(before ? 'box-drop-before' : 'box-drop-after');
+}
+
+function boxItemDragLeave(e){
+  e.currentTarget.classList.remove('box-drop-before','box-drop-after');
+}
+
+function boxItemDrop(e, targetId){
+  e.preventDefault();
+  e.stopPropagation();
+  const before = e.clientY < e.currentTarget.getBoundingClientRect().top + e.currentTarget.getBoundingClientRect().height/2;
+  boxClearDropIndicators();
+  if(_boxItemDragId==null || _boxItemDragId===targetId) return;
+  const f = boxOpenDoc(); if(!f) return;
+  const arr = f.doc.items||[];
+  const fromIdx = arr.findIndex(x=>x.id==_boxItemDragId);
+  if(fromIdx<0) return;
+  const [moved] = arr.splice(fromIdx,1);
+  const newTo = arr.findIndex(x=>x.id==targetId);
+  if(newTo<0){ arr.splice(fromIdx,0,moved); return; } // target vanished — put it back
+  arr.splice(before ? newTo : newTo+1, 0, moved);
+  _boxItemDragId = null;
+  saveState();
+  renderBoxDoc();
 }
 
 // ── per-file document TOC (like box.html's 目录 sidebar):
