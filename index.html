@@ -139,7 +139,6 @@ body{
   border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
   background:var(--win-gray);image-rendering:pixelated;overflow:hidden;
 }
-.avatar-frame img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;}
 .avatar-default{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
 .char-info{flex:1;min-width:0;}
 .char-name{
@@ -867,7 +866,6 @@ body{
             <rect x="26" y="42" width="8" height="6" fill="#222"/>
           </svg>
         </div>
-        <img id="avatarImg" style="display:none;" alt="avatar"/>
       </div>
       
       <div class="char-info">
@@ -1288,12 +1286,16 @@ var S = {
   charName:'MMM', level:1, xp:0,
   tasks:[], journal:[], dreams:[], cards:[],
   habits:[], checkins:{}, energyTags:[], dreamGroups:[],
-  theme:{}, nextId:1,
-  avatar:null,
+  nextId:1,
   finance:{rate:9.2, accounts:[], cart:[], records:[], recordsCollapsed:true}
 };
 
 let undoStack=[], undoTimer=null;
+const UNDO_LIMIT=20; // 每步存一份完整状态副本，必须限量否则内存无上限增长
+function pushUndo(){
+  undoStack.push(JSON.stringify(S));
+  if(undoStack.length>UNDO_LIMIT) undoStack.shift();
+}
 let _taskMonthFilter = null;
 let _projCollapsed = {};
 let jMonthFilter=null, dMonthFilter=null;
@@ -1357,6 +1359,24 @@ function saveState() {
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(syncToCloud, 1500);
 }
+
+// ── 打字场景专用：合并高频写入 ──
+// 逐字符调用 saveState() 会对整份状态做 JSON.stringify 并写 localStorage，
+// 数据一多就会卡。这里把落盘推迟到停止输入之后，内存里的数据仍是即时更新的。
+let _persistTimer = null;
+function saveStateSoon(){
+  _dirtySinceSync = true;
+  if(_persistTimer) clearTimeout(_persistTimer);
+  _persistTimer = setTimeout(()=>{ _persistTimer = null; saveState(); }, 500);
+}
+// 任何可能中断的时机都要先把待写数据落盘，保证不丢
+function flushPendingSave(){
+  if(_persistTimer){ clearTimeout(_persistTimer); _persistTimer = null; saveState(); }
+}
+window.addEventListener('beforeunload', flushPendingSave);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden') flushPendingSave();
+});
 
 async function fetchCloudState(){
   const res = await fetch(
@@ -1457,6 +1477,7 @@ async function refreshFromCloudIfNewer(){
   if(_refreshingFromCloud) return;
   _refreshingFromCloud = true;
   try {
+    flushPendingSave(); // 先把还没落盘的输入写下来，再判断脏状态
     // 本地有未同步的改动时，交给 syncToCloud 的合并流程处理
     if(_dirtySinceSync || _saveTimer){ 
       if(_saveTimer){ clearTimeout(_saveTimer); _saveTimer=null; }
@@ -1497,6 +1518,7 @@ function migrateState(loaded) {
   delete S.ganttPos;
   delete S.ganttNotes;
   delete S.events;
+  delete S.theme;   // 调色界面已移除，残留配色会覆盖现有样式且无法重置
   // Guarantee all required arrays exist (add missing ones, never overwrite)
   // migrate old task format: keep existing tasks, add type field if missing
   (S.tasks||[]).forEach(t=>{ if(!t.type) t.type='todo'; });
@@ -1526,7 +1548,6 @@ function migrateState(loaded) {
   if (typeof S.level  !== 'number') S.level   = 1;
   if (typeof S.xp     !== 'number') S.xp      = 0;
   if (typeof S.nextId !== 'number') S.nextId  = 1;
-  if (!S.theme || typeof S.theme !== 'object') S.theme = {};
   // Finance (记账理财)
   if (!S.finance || typeof S.finance !== 'object') S.finance = {rate:9.2, accounts:[], cart:[], records:[], recordsCollapsed:true};
   if (!Array.isArray(S.finance.accounts)) S.finance.accounts = [];
@@ -1737,7 +1758,7 @@ function deleteSection(id){
 }
 
 function deleteTask(id){
-  undoStack.push(JSON.stringify(S));
+  pushUndo();
   // also remove association from child tasks (sections have no meaning without a parent project, so drop them)
   S.tasks.forEach(t=>{ if(t.projectId==id && t.type!=='section') t.projectId=null; });
   S.tasks = S.tasks.filter(t => t.id != id && !(t.type==='section' && t.projectId==id));
@@ -1747,7 +1768,7 @@ function deleteTask(id){
 
 function toggleTask(id){
   const t = S.tasks.find(x => x.id == id); if(!t) return;
-  undoStack.push(JSON.stringify(S));
+  pushUndo();
   t.done = !t.done;
   if(t.done){
     t.doneAt = new Date().toISOString();
@@ -2028,7 +2049,7 @@ function startEditTaskTitle(id, el){
 function syncTaskNoteFromDOM(id, el){
   const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
   t.note = (el.innerText||el.textContent||'').replace(/\u00A0/g,' ');
-  saveState();
+  saveStateSoon();
 }
 
 // fluorescent palette for energy tags (bright backgrounds, black bold text)
@@ -2313,10 +2334,6 @@ function boxRailExpand(){
   renderBoxSidebar();
 }
 
-function toggleBoxSidebar(){ // kept for compatibility
-  _boxSidebarCollapsed = !_boxSidebarCollapsed;
-  applyBoxSidebarState();
-}
 
 function applyBoxSidebarState(){
   const sb = document.getElementById('boxSidebar');
@@ -2327,6 +2344,13 @@ function applyBoxSidebarState(){
 }
 
 // central dispatcher: decides what the single tree container shows
+// 打字时逐字符重建整个侧栏很浪费，这里合并成停手后渲染一次
+let _boxSidebarTimer = null;
+function renderBoxSidebarSoon(){
+  if(_boxSidebarTimer) clearTimeout(_boxSidebarTimer);
+  _boxSidebarTimer = setTimeout(()=>{ _boxSidebarTimer = null; renderBoxSidebar(); }, 350);
+}
+
 function renderBoxSidebar(){
   const tree = document.getElementById('boxSidebarTree');
   if(!tree) return;
@@ -2700,6 +2724,7 @@ function renderBoxDoc(){
     + '<button class="pxl-btn" onclick="boxAddSection()">+ 分组</button>'
     + '<button class="pxl-btn" onclick="boxExportCurrent()">📄 导出JSON</button>'
     + '<button class="pxl-btn" onclick="boxExportCurrentMd()" title="导出为可直接阅读的 Markdown 文档">📃 导出MD</button>'
+    + '<button class="pxl-btn" onclick="boxExportPdf()" title="按屏幕上的样式导出 PDF，用于物理存档">🖨️ 导出PDF</button>'
     + '</div>';
   headHtml += renderBoxFmtToolbar();
   if(header) header.innerHTML = headHtml;
@@ -3037,8 +3062,8 @@ function boxSyncTitle(inp){
   const f = boxOpenDoc(); if(!f) return;
   f.doc.project = inp.value;
   f.name = inp.value || '（未命名）';
-  saveState();
-  renderBoxToc();
+  saveStateSoon();
+  renderBoxSidebarSoon();
 }
 
 function boxAddQuestion(){
@@ -3145,8 +3170,8 @@ function boxSyncAnswer(itemId, ansId, el){
   const a = (it.answers||[]).find(x=>x.id==ansId); if(!a) return;
   a.html = el.innerHTML;
   a.text = el.innerText || el.textContent || '';
-  saveState();
-  renderBoxDocToc(); // live-update ✓ marks and counts in the sidebar TOC
+  saveStateSoon();
+  renderBoxSidebarSoon(); // live-update ✓ marks and counts in the sidebar TOC
 }
 
 function boxExportCurrent(){
@@ -3173,6 +3198,104 @@ function boxDocToMarkdown(doc){
     });
   });
   return md;
+}
+
+// ── PDF export (physical archiving) ──
+// Renders the open box into a hidden iframe that reuses the app's own
+// stylesheet, so section colours, highlights and the numbered answer blocks
+// look exactly like they do on screen. Sidebar, toolbars and all interactive
+// affordances are left out. Purely local: nothing is written to Supabase.
+function boxExportPdf(){
+  const f = boxOpenDoc();
+  if(!f){ showToast('请先打开一个盒子'); return; }
+  const doc = f.doc || {};
+  const items = doc.items || [];
+  const title = boxSanitizeName(doc.project || f.name || 'box');
+
+  let body = '<div class="pdfdoc">';
+  body += '<h1 class="pdfdoc-title">' + escHtml(doc.project || f.name || '') + '</h1>';
+  if(doc.createdAt) body += '<div class="pdfdoc-meta">创建于 ' + fmtDT(doc.createdAt) + ' · 导出于 ' + fmtDT(new Date().toISOString()) + '</div>';
+  else body += '<div class="pdfdoc-meta">导出于 ' + fmtDT(new Date().toISOString()) + '</div>';
+
+  items.forEach(it=>{
+    if(it.type==='section'){
+      // archive prints every section expanded, regardless of collapse state
+      body += '<div class="box-sec-hdr pdf-keep"><span class="box-sec-title">'
+        + escHtml(it.text||'未命名分组') + '</span></div>';
+      return;
+    }
+    const answers = (it.answers||[]).filter(a=>(a.text||'').trim() || (a.html||'').trim());
+    const answered = answers.length>0;
+    body += '<div class="box-q-card pdf-keep'+(answered?' answered':'')+'">';
+    body += '<div class="box-q-title">' + escHtml(it.text||'（空问题）') + '</div>';
+    if(answered){
+      body += '<div class="box-field-label">答案</div><div class="box-answers-list">';
+      answers.forEach((a,ai)=>{
+        body += '<div class="box-answer-block">'
+          + '<div class="box-answer-num">'+String(ai+1).padStart(2,'0')+'</div>'
+          + '<div class="box-answer-input">'+(a.html ? boxSanitizeAnswerHtml(a.html) : escHtml(a.text||''))+'</div>'
+          + '</div>';
+      });
+      body += '</div>';
+    }
+    body += '</div>';
+  });
+  body += '</div>';
+
+  // reuse the live stylesheet so the print output tracks the app's look
+  const appCss = [...document.querySelectorAll('style')].map(s=>s.textContent).join('\n');
+  // <base> makes the relative unifont.ttf url in @font-face resolve correctly
+  const baseHref = location.href.replace(/[^/]*$/, '');
+
+  const printCss = `
+    @page { margin: 14mm 12mm; }
+    html,body{
+      background:#fff !important;height:auto !important;overflow:visible !important;
+      margin:0;padding:0;
+    }
+    /* make sure background colours actually reach the paper */
+    *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    .pdfdoc{padding:0;}
+    .pdfdoc-title{
+      font-family:var(--font-ui);font-size:17px;font-weight:bold;color:#000080;
+      margin:0 0 2px;line-height:1.35;
+    }
+    .pdfdoc-meta{
+      font-family:var(--font-ui);font-size:10px;color:#606060;
+      margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #000080;
+    }
+    /* keep a question and its answers on one page where possible */
+    .pdf-keep{break-inside:avoid;page-break-inside:avoid;}
+    .box-sec-hdr{break-after:avoid;page-break-after:avoid;margin:10px 0 5px;}
+    .box-q-card{margin-bottom:7px;}
+    /* on screen an answer box is 44px tall so it's easy to click — on paper
+       it should hug its content */
+    .box-answer-input{min-height:0 !important;}
+  `;
+
+  const html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"/>'
+    + '<base href="'+escAttr(baseHref)+'"/>'
+    + '<title>'+escHtml(title)+'</title>'
+    + '<style>'+appCss+'</style>'
+    + '<style>'+printCss+'</style>'
+    + '</head><body>' + body
+    + '<script>(function(){var done=false;function go(){if(done)return;done=true;'
+    + 'try{window.focus();window.print();}catch(e){}}'
+    + 'if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(go,150);});setTimeout(go,2500);}'
+    + 'else{setTimeout(go,400);}})();<\/script>'
+    + '</body></html>';
+
+  // an iframe avoids popup blockers entirely, unlike window.open
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden','true');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(frame);
+  const fdoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+  if(!fdoc){ document.body.removeChild(frame); alert('无法创建打印视图，请重试'); return; }
+  fdoc.open(); fdoc.write(html); fdoc.close();
+  showToast('已生成打印视图，在弹出的对话框中选择"另存为 PDF"');
+  // clean up once the dialog has had time to open (onafterprint is unreliable in Safari)
+  setTimeout(()=>{ if(frame.parentNode) frame.parentNode.removeChild(frame); }, 60000);
 }
 
 function boxExportCurrentMd(){
@@ -3405,13 +3528,14 @@ function saveJournal(){
   addXP(5,'日记'); saveState(); closeModal('journalModal');
   document.getElementById('journalText').value='';
   document.getElementById('journalTags').value='';
-  localStorage.removeItem('journal_draft_text');
-  localStorage.removeItem('journal_draft_tags');
+  jDraftClear(); // 三个 key 一起清，之前漏了 journal_draft_time
+  const hint=document.getElementById('j-draft-hint');
+  if(hint){ hint.style.display='none'; hint.textContent=''; } // 之前提示条发布后不会消失
   renderJournal();
 }
 
 function deleteJournal(id){
-  undoStack.push(JSON.stringify(S));
+  pushUndo();
   S.journal=S.journal.filter(j=>j.id!=id);
   saveState(); renderJournal(); showUndoBar('日记已删除');
 }
@@ -3643,7 +3767,7 @@ function saveDream(){
 }
 
 function deleteDream(id){
-  undoStack.push(JSON.stringify(S));
+  pushUndo();
   S.dreams=S.dreams.filter(d=>d.id!=id);
   saveState(); renderDreams(); showUndoBar('梦想条目已删除');
 }
@@ -3890,36 +4014,13 @@ function sendNotification(title,body){
 // ═══════════════════════════════════════
 // THEME
 // ═══════════════════════════════════════
-function applyTheme(){
-  const map={'--accent':'c-accent','--gold':'c-gold','--blue':'c-blue','--green':'c-green','--purple':'c-purple','--bg':'c-bg','--surface':'c-surface'};
-  const root=document.documentElement;
-  const theme={};
-  Object.entries(map).forEach(([k,id])=>{const v=document.getElementById(id).value;root.style.setProperty(k,v);theme[k]=v;});
-  root.style.setProperty('--surface2',adjustBrightness(document.getElementById('c-surface').value,15));
-  S.theme=theme; saveState();
-}
 
-function adjustBrightness(hex,amt){
-  let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
-  r=Math.min(255,r+amt);g=Math.min(255,g+amt);b=Math.min(255,b+amt);
-  return '#'+[r,g,b].map(x=>p2(x.toString(16))).join('');
-}
 
-function loadTheme(){
-  if(!S.theme||!Object.keys(S.theme).length) return;
-  const root=document.documentElement;
-  const map={'--accent':'c-accent','--gold':'c-gold','--blue':'c-blue','--green':'c-green','--purple':'c-purple','--bg':'c-bg','--surface':'c-surface'};
-  Object.entries(map).forEach(([k,id])=>{if(S.theme[k]){root.style.setProperty(k,S.theme[k]);const el=document.getElementById(id);if(el)el.value=S.theme[k];}});
-  if(S.theme['--surface']) root.style.setProperty('--surface2',adjustBrightness(S.theme['--surface'],15));
-}
 
-function resetTheme(){
-  S.theme={}; document.documentElement.removeAttribute('style'); saveState();
-}
 
 // ═══════════════════════════════════════
 // BG
-// ═══════════════════════════════════════);
+// ═══════════════════════════════════════
 async function installPWA(){
   if(!deferredInstall) return;
   deferredInstall.prompt();
@@ -4025,7 +4126,7 @@ function editCard(id){
 }
 
 function deleteCard(id){
-  undoStack.push(JSON.stringify(S));
+  pushUndo();
   S.cards.forEach(c=>{
     if(c.links) c.links=c.links.filter(x=>x!=id);
     if(c.threadId==id) c.threadId=null;
@@ -4473,13 +4574,6 @@ function doCardExport(method){
   closeModal('cardExportModal');
 }
 
-function applyAvatar(){
-  if(S.avatar){
-    document.getElementById('avatarImg').src=S.avatar;
-    document.getElementById('avatarImg').style.display='block';
-    document.getElementById('avatarDefault').style.display='none';
-  }
-}
 function exportJournal(){
   let txt='=== Log日志 ===\n\n';
   S.journal.forEach(j=>{
@@ -5083,8 +5177,11 @@ function finRenderAll(){
 
 function renderAll(){
   document.getElementById('charName').value=S.charName;
-  updateXPUI(); applyAvatar(); loadTheme();
+  updateXPUI();
   renderTasks(); renderJournal(); renderDreams(); renderCards();
+  // 云端合并后如果正停留在 BOX 栏，也要刷新，否则要切一次标签才看到新数据
+  const boxSec=document.getElementById('sec-box');
+  if(boxSec && boxSec.classList.contains('active')) renderBoxTab();
 }
 
 // Char name save
