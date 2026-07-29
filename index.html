@@ -678,11 +678,14 @@ body{
 .btoc-file.task-drag-over{outline:2px dashed #000080;outline-offset:-2px;}
 .btoc-folder.task-drag-over{outline:2px dashed #000080;outline-offset:-2px;}
 .btoc-file-text{flex:1;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
-.box-doc-toc-head{
+.bsearch-file{
+  display:flex;align-items:center;gap:4px;cursor:pointer;
   background:linear-gradient(90deg,#000080,#1084d0);color:#fff;
-  font-family:var(--font-ui);font-size:12px;font-weight:bold;
-  padding:3px 8px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-family:var(--font-ui);font-size:11px;font-weight:bold;
+  padding:3px 6px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
+.bsearch-file:hover{background:#000080;}
+.bsearch-file .ttoc-count{color:#c0e0ff;margin-left:auto;}
 .btoc-q{padding-left:16px;}
 .btoc-q.answered .ttoc-dot{color:#008000;}
 .btoc-sec-row{
@@ -1045,29 +1048,25 @@ body{
         <!-- File directory sidebar -->
         <aside class="tasks-sidebar" id="boxSidebar">
           <div class="tasks-sidebar-head">
-            <span class="tasks-sidebar-title">文件目录</span>
+            <span class="tasks-sidebar-title" id="boxSidebarTitle">文件目录</span>
             <div style="display:flex;gap:4px;flex-shrink:0;">
               <button class="tasks-sidebar-toggle" id="boxLockBtn" onclick="toggleBoxLockMode()" title="开启锁定模式">🔓</button>
-              <button class="tasks-sidebar-toggle" onclick="toggleBoxSidebar()" title="收起目录">◀ 收起</button>
+              <button class="tasks-sidebar-toggle" id="boxSidebarCycleBtn" onclick="boxSidebarCycle()" title="切换面板 / 收起">盒子目录 ▸</button>
             </div>
           </div>
-          <div class="tasks-sidebar-search" style="display:flex;flex-wrap:wrap;gap:4px;">
+          <div class="tasks-sidebar-search" id="boxFilesToolbar" style="display:flex;flex-wrap:wrap;gap:4px;">
             <button class="pxl-btn" style="flex:1 1 45%;font-size:11px;padding:2px 4px;white-space:nowrap;" onclick="boxNewFolder()" title="新建文件夹">＋文件夹</button>
             <button class="pxl-btn" style="flex:1 1 45%;font-size:11px;padding:2px 4px;white-space:nowrap;" onclick="boxNewFile()" title="新建空盒子">＋盒子</button>
             <button class="pxl-btn" style="flex:1 1 45%;font-size:11px;padding:2px 4px;white-space:nowrap;" onclick="document.getElementById('boxImportInput').click()" title="导入 box 的 JSON 文件">📥 导入</button>
             <button class="pxl-btn" style="flex:1 1 45%;font-size:11px;padding:2px 4px;white-space:nowrap;" onclick="boxExportAll()" title="按文件夹结构打包导出全部文件（ZIP）">📤 导出</button>
             <input type="file" id="boxImportInput" accept=".json,application/json" style="display:none;" onchange="onBoxImportSelected(event)"/>
           </div>
-          <div class="tasks-sidebar-tree" id="boxTocTree" style="flex:0 1 auto;max-height:42%;min-height:70px;border-bottom:2px solid var(--win-darker);"></div>
-          <div class="box-doc-toc-head">
-            <span id="boxDocTocTitle">目录</span>
-          </div>
           <div class="tasks-sidebar-search">
-            <input type="text" id="boxDocTocSearch" placeholder="检索问题..." oninput="renderBoxDocToc()"/>
+            <input type="text" id="boxGlobalSearch" placeholder="全局检索所有盒子..." oninput="renderBoxSidebar()"/>
           </div>
-          <div class="tasks-sidebar-tree" id="boxDocTocTree"></div>
+          <div class="tasks-sidebar-tree" id="boxSidebarTree"></div>
         </aside>
-        <button class="tasks-sidebar-rail" id="boxSidebarRail" onclick="toggleBoxSidebar()" title="展开目录" style="display:none;">▶<span class="rail-label">目录</span></button>
+        <button class="tasks-sidebar-rail" id="boxSidebarRail" onclick="boxRailExpand()" title="展开目录" style="display:none;">▶<span class="rail-label">目录</span></button>
 
         <!-- Document viewer/editor -->
         <div class="tasks-main" id="boxMain"></div>
@@ -2287,7 +2286,26 @@ function renderBoxTab(){
   renderBoxDoc();
 }
 
-function toggleBoxSidebar(){
+// sidebar shows ONE panel at a time — 'files' (file directory) or 'toc'
+// (the open box's own hierarchical directory). The cycle button walks:
+// 文件目录 → 盒子目录 → 收起(rail) → 文件目录 ...
+let _boxSidebarPanel = 'files';
+
+function boxSidebarCycle(){
+  if(_boxSidebarPanel==='files'){ _boxSidebarPanel='toc'; }
+  else { _boxSidebarPanel='files'; _boxSidebarCollapsed=true; }
+  applyBoxSidebarState();
+  renderBoxSidebar();
+}
+
+function boxRailExpand(){
+  _boxSidebarCollapsed=false;
+  _boxSidebarPanel='files';
+  applyBoxSidebarState();
+  renderBoxSidebar();
+}
+
+function toggleBoxSidebar(){ // kept for compatibility
   _boxSidebarCollapsed = !_boxSidebarCollapsed;
   applyBoxSidebarState();
 }
@@ -2298,6 +2316,78 @@ function applyBoxSidebarState(){
   if(!sb || !rail) return;
   if(_boxSidebarCollapsed){ sb.style.display='none'; rail.style.display='flex'; }
   else { sb.style.display='flex'; rail.style.display='none'; }
+}
+
+// central dispatcher: decides what the single tree container shows
+function renderBoxSidebar(){
+  const tree = document.getElementById('boxSidebarTree');
+  if(!tree) return;
+  const titleEl = document.getElementById('boxSidebarTitle');
+  const cycBtn = document.getElementById('boxSidebarCycleBtn');
+  const lockBtn = document.getElementById('boxLockBtn');
+  const toolbar = document.getElementById('boxFilesToolbar');
+  const q = ((document.getElementById('boxGlobalSearch')||{}).value||'').trim().toLowerCase();
+
+  if(q){
+    if(titleEl) titleEl.textContent = '检索结果';
+    if(toolbar) toolbar.style.display='none';
+    if(lockBtn) lockBtn.style.display='none';
+    if(cycBtn) cycBtn.textContent = _boxSidebarPanel==='files' ? '盒子目录 ▸' : '◀ 收起';
+    renderBoxGlobalSearch(tree, q);
+    return;
+  }
+
+  if(_boxSidebarPanel==='files'){
+    if(titleEl) titleEl.textContent = '文件目录';
+    if(cycBtn){ cycBtn.textContent='盒子目录 ▸'; cycBtn.title='切换到当前盒子的分级目录'; }
+    if(lockBtn) lockBtn.style.display='';
+    if(toolbar) toolbar.style.display='flex';
+    renderBoxFilesTree(tree);
+  } else {
+    const f = boxOpenDoc();
+    if(titleEl) titleEl.textContent = f ? ('目录 · '+(f.doc.project||f.name||'')) : '目录';
+    if(cycBtn){ cycBtn.textContent='◀ 收起'; cycBtn.title='收起侧栏（再次点击窄条恢复文件目录）'; }
+    if(lockBtn) lockBtn.style.display='none';
+    if(toolbar) toolbar.style.display='none';
+    renderBoxDocTocTree(tree);
+  }
+}
+
+// ── global search across ALL box files: file names, section/question text, answer text ──
+function renderBoxGlobalSearch(tree, q){
+  let html=''; let fileHits=0;
+  (S.boxFiles||[]).forEach(en=>{
+    if(en.type!=='file') return;
+    const doc = en.doc||{};
+    const items = doc.items||[];
+    const fileMatch = (en.name||'').toLowerCase().includes(q);
+    const matched = items.filter(it=>
+      (it.text||'').toLowerCase().includes(q) ||
+      (it.answers||[]).some(a=>(a.text||'').toLowerCase().includes(q))
+    );
+    if(!fileMatch && !matched.length) return;
+    fileHits++;
+    html += '<div class="bsearch-file" onclick="boxSearchGoto(\''+en.id+'\',null)" title="打开这个盒子">📦 '+escHtml(en.name||'（未命名）')
+      + (matched.length?'<span class="ttoc-count">'+matched.length+'</span>':'')
+      + '</div>';
+    matched.forEach(it=>{
+      const isSec = it.type==='section';
+      const answered = !isSec && (it.answers||[]).some(a=>a.text && a.text.trim());
+      const inAnswer = !((it.text||'').toLowerCase().includes(q));
+      html += '<div class="ttoc-item btoc-q'+(answered?' answered':'')+'" onclick="boxSearchGoto(\''+en.id+'\',\''+escAttr(it.id)+'\')" title="'+escAttr(it.text)+'">'
+        + '<span class="ttoc-dot">'+(isSec?'§':(answered?'✓':'•'))+'</span>'
+        + '<span class="ttoc-item-text">'+escHtml(it.text||'（空问题）')+(inAnswer?' <span style="color:#808080;font-size:9px;">(答案含关键词)</span>':'')+'</span>'
+        + '</div>';
+    });
+  });
+  tree.innerHTML = fileHits ? html : '<div class="ttoc-empty">所有盒子中都没有匹配的结果</div>';
+}
+
+function boxSearchGoto(fileId, itemId){
+  const wasOpen = _boxOpenId===fileId;
+  _boxOpenId = fileId;
+  if(!wasOpen){ renderBoxDoc(); }
+  if(itemId){ setTimeout(()=>boxGotoItem(itemId), wasOpen?0:80); }
 }
 
 // positional grouping: a folder governs everything after it until the next
@@ -2331,9 +2421,10 @@ function boxFolderFileCount(folderId){
   return n;
 }
 
-function renderBoxToc(){
-  const tree = document.getElementById('boxTocTree');
-  if(!tree) return;
+function renderBoxToc(){ renderBoxSidebar(); } // alias: all call sites funnel through the dispatcher
+function renderBoxDocToc(){ renderBoxSidebar(); } // alias
+
+function renderBoxFilesTree(tree){
   const lockBtn = document.getElementById('boxLockBtn');
   if(lockBtn){
     lockBtn.textContent = _boxLockMode ? '🔒' : '🔓';
@@ -2786,18 +2877,13 @@ function boxSanitizeAnswerHtml(html){
 
 // ── per-file document TOC (like box.html's 目录 sidebar):
 // sections with answered counts, questions with ✓/•, click to jump ──
-function renderBoxDocToc(){
-  const tree = document.getElementById('boxDocTocTree');
-  const titleEl = document.getElementById('boxDocTocTitle');
-  if(!tree) return;
+function renderBoxDocTocTree(tree){
   const f = boxOpenDoc();
   if(!f){
-    if(titleEl) titleEl.textContent = '目录';
     tree.innerHTML = '<div class="ttoc-empty">打开一个盒子后，这里显示它的分级目录</div>';
     return;
   }
-  if(titleEl) titleEl.textContent = '目录 · ' + (f.doc.project||f.name||'');
-  const q = ((document.getElementById('boxDocTocSearch')||{}).value||'').trim().toLowerCase();
+  const q = ''; // panel view is unfiltered; searching switches to global results
   const items = f.doc.items||[];
   if(!items.length){
     tree.innerHTML = '<div class="ttoc-empty">这个盒子还没有内容</div>';
@@ -2870,8 +2956,6 @@ function boxSyncTitle(inp){
   f.name = inp.value || '（未命名）';
   saveState();
   renderBoxToc();
-  const titleEl = document.getElementById('boxDocTocTitle');
-  if(titleEl) titleEl.textContent = '目录 · ' + (f.doc.project||f.name||'');
 }
 
 function boxAddQuestion(){
