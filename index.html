@@ -706,13 +706,58 @@ body{
 }
 .box-q-card.answered{border-left-color:#008000;}
 .box-q-title{font-family:var(--font-ui);font-size:13px;font-weight:bold;color:#000;cursor:text;word-break:break-word;}
-.box-answer{
-  margin-top:6px;font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;
-  border-left:2px solid var(--border);padding:4px 8px;outline:none;cursor:text;
-  min-height:1.4em;word-break:break-word;
+
+/* answers — ported from box.html: numbered exam-style blocks */
+.box-field-label{font-size:10px;color:var(--win-dark);font-family:var(--font-ui);margin:6px 0 2px;font-weight:bold;}
+.box-answers-list{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;}
+.box-answers-empty{font-size:11px;color:var(--win-dark);padding:6px 2px;}
+.box-answer-block{display:flex;gap:6px;align-items:stretch;}
+.box-answer-num{
+  flex-shrink:0;width:26px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-ui);font-size:11px;font-weight:bold;color:#fff;background:#000080;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
 }
-.box-answer:empty:before{content:attr(data-placeholder);color:#a0a0a0;font-style:italic;}
-.box-answer:focus{background:#fffff0;border-left-color:#000080;}
+.box-answer-input{
+  flex:1;width:100%;font-family:var(--font-ui);font-size:13px;color:#000;
+  background:#fff;border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  padding:5px 7px;outline:none;line-height:1.6;min-height:44px;
+  white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;
+}
+.box-answer-input:focus{outline:1px dotted #000;outline-offset:-2px;}
+.box-answer-input:empty:before{content:attr(data-placeholder);color:var(--win-dark);}
+.box-answer-del{flex-shrink:0;align-self:flex-start;margin-top:1px;}
+
+/* format toolbar — ported from box.html, acts on the focused answer box */
+.box-fmt-toolbar{
+  padding:4px 6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+  background:var(--win-gray,#c0c0c0);border:2px solid;
+  border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  margin-bottom:8px;
+}
+.box-fmt-group{display:flex;gap:3px;align-items:center;}
+.box-fmt-group-label{font-family:var(--font-ui);font-size:11px;color:var(--win-dark);margin-right:1px;white-space:nowrap;}
+.box-fmt-sep{width:1px;align-self:stretch;background:var(--win-darker);margin:1px 0;flex-shrink:0;}
+.box-fmt-btn{
+  font-family:var(--font-ui);font-size:12px;color:#000;
+  width:24px;height:22px;line-height:1;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:var(--win-gray,#c0c0c0);
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  cursor:pointer;padding:0;
+}
+.box-fmt-btn:hover{background:var(--win-light,#dfdfdf);}
+.box-fmt-btn:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);transform:translate(1px,1px);}
+.box-fmt-btn-wide{width:auto;padding:0 8px;font-size:12px;}
+.box-fmt-swatch{
+  width:18px;height:18px;box-sizing:border-box;flex-shrink:0;padding:0;cursor:pointer;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.box-fmt-swatch:hover{outline:1px solid #000080;outline-offset:1px;}
+.box-fmt-swatch.box-fmt-clear{
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), #cc0000 calc(50% - 1px), #cc0000 calc(50% + 1px), transparent calc(50% + 1px)),
+    #fff;
+}
 
 /* ══════════════════════════════════════
    CHECKIN
@@ -2422,6 +2467,8 @@ function onBoxImportSelected(e){
           it.answers = arr;
         }
         delete it._note; delete it._msgs;
+        // sanitize any rich-text answer html from the imported file
+        (it.answers||[]).forEach(a=>{ if(a.html) a.html = boxSanitizeAnswerHtml(a.html); });
       });
       const f = { id: boxUid(), type:'file',
         name: data.project || file.name.replace(/\.json$/i,''),
@@ -2528,6 +2575,8 @@ function renderBoxDoc(){
     + '<button class="pxl-btn" onclick="boxExportCurrentMd()" title="导出为可直接阅读的 Markdown 文档">📃 导出MD</button>'
     + '</div>';
 
+  html += renderBoxFmtToolbar();
+
   let curCollapsed = false;
   doc.items.forEach(it=>{
     if(it.type==='section'){
@@ -2540,18 +2589,30 @@ function renderBoxDoc(){
       return;
     }
     if(curCollapsed) return;
-    const answered = (it.answers||[]).some(a=>a.text && a.text.trim());
+    const answers = it.answers||[];
+    const answered = answers.some(a=>a.text && a.text.trim());
     html += '<div class="box-q-card'+(answered?' answered':'')+'">';
     html += '<div style="display:flex;align-items:flex-start;gap:6px;">';
     html += '<div class="box-q-title" style="flex:1;" ondblclick="startEditBoxItemText(\''+escAttr(it.id)+'\',this)" title="双击编辑问题">'+escHtml(it.text||'（空问题）')+'</div>';
     html += '<button class="icon-btn" onclick="boxDeleteItem(\''+escAttr(it.id)+'\')" style="color:#cc0000;flex-shrink:0;">✕</button>';
     html += '</div>';
-    (it.answers||[]).forEach(a=>{
-      html += '<div style="display:flex;align-items:flex-start;gap:4px;">'
-        + '<div class="box-answer" style="flex:1;" contenteditable="true" data-placeholder="在这里写下你的答案..." oninput="boxSyncAnswer(\''+escAttr(it.id)+'\',\''+escAttr(a.id)+'\',this)">'+(a.html || escHtml(a.text||''))+'</div>'
-        + '<button class="icon-btn" onclick="boxDeleteAnswer(\''+escAttr(it.id)+'\',\''+escAttr(a.id)+'\')" style="font-size:9px;margin-top:6px;" title="删除答案">✕</button>'
+    html += '<div class="box-field-label">答案</div>';
+    html += '<div class="box-answers-list">';
+    if(!answers.length){
+      html += '<div class="box-answers-empty">还没有答案，点击下方"添加答案"开始作答</div>';
+    }
+    answers.forEach((a,ai)=>{
+      const num = String(ai+1).padStart(2,'0');
+      html += '<div class="box-answer-block">'
+        + '<div class="box-answer-num">'+num+'</div>'
+        + '<div class="box-answer-input" id="boxansinp-'+escAttr(a.id)+'" data-item="'+escAttr(it.id)+'" contenteditable="true" data-placeholder="在这里写下你的答案..." '
+          + 'oninput="boxSyncAnswer(\''+escAttr(it.id)+'\',\''+escAttr(a.id)+'\',this)" onpaste="boxAnswerPaste(event)">'
+          + (a.html ? boxSanitizeAnswerHtml(a.html) : escHtml(a.text||''))
+        + '</div>'
+        + '<button class="icon-btn box-answer-del" onclick="boxDeleteAnswer(\''+escAttr(it.id)+'\',\''+escAttr(a.id)+'\')" title="删除答案">✕</button>'
         + '</div>';
     });
+    html += '</div>';
     html += '<button class="pxl-btn" style="font-size:10px;padding:1px 8px;margin-top:4px;" onclick="boxAddAnswer(\''+escAttr(it.id)+'\')">+ 添加答案</button>';
     html += '</div>';
   });
@@ -2559,6 +2620,143 @@ function renderBoxDoc(){
   html += '<input class="form-input" id="boxAddQInput" placeholder="+ 添加问题，回车确认" style="width:100%;font-size:12px;padding:5px 8px;margin-top:8px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();boxAddQuestion();}"/>';
 
   main.innerHTML = html;
+}
+
+// ── format toolbar (ported from box.html — acts on whichever answer box has focus) ──
+const BOX_FMT_TEXT_COLORS = ['#000000','#cc0000','#000080','#008000','#800080','#e08000'];
+const BOX_FMT_MARK_COLORS = ['#fff59d','#c8f7c5','#ffd0e0','#bde0ff'];
+
+function renderBoxFmtToolbar(){
+  let h = '<div class="box-fmt-toolbar">';
+  h += '<div class="box-fmt-group">';
+  h += '<button class="box-fmt-btn" style="font-weight:bold;" onmousedown="event.preventDefault()" onclick="boxFmtToggle(\'bold\')" title="加粗">B</button>';
+  h += '<button class="box-fmt-btn" style="font-style:italic;" onmousedown="event.preventDefault()" onclick="boxFmtToggle(\'italic\')" title="斜体">I</button>';
+  h += '<button class="box-fmt-btn" style="text-decoration:underline;" onmousedown="event.preventDefault()" onclick="boxFmtToggle(\'underline\')" title="下划线">U</button>';
+  h += '<button class="box-fmt-btn" style="text-decoration:line-through;" onmousedown="event.preventDefault()" onclick="boxFmtToggle(\'strikeThrough\')" title="删除线">S</button>';
+  h += '</div>';
+  h += '<div class="box-fmt-sep"></div>';
+  h += '<div class="box-fmt-group"><span class="box-fmt-group-label">颜色</span>';
+  BOX_FMT_TEXT_COLORS.forEach(c=>{
+    h += '<button class="box-fmt-swatch" style="background:'+c+';" onmousedown="event.preventDefault()" onclick="boxFmtColor(\'text\',\''+c+'\')" title="文字颜色"></button>';
+  });
+  h += '<button class="box-fmt-swatch box-fmt-clear" onmousedown="event.preventDefault()" onclick="boxFmtColor(\'text\',\'\')" title="清除文字颜色"></button>';
+  h += '</div>';
+  h += '<div class="box-fmt-sep"></div>';
+  h += '<div class="box-fmt-group"><span class="box-fmt-group-label">高亮</span>';
+  BOX_FMT_MARK_COLORS.forEach(c=>{
+    h += '<button class="box-fmt-swatch" style="background:'+c+';" onmousedown="event.preventDefault()" onclick="boxFmtColor(\'mark\',\''+c+'\')" title="高亮标记"></button>';
+  });
+  h += '<button class="box-fmt-swatch box-fmt-clear" onmousedown="event.preventDefault()" onclick="boxFmtColor(\'mark\',\'\')" title="清除高亮"></button>';
+  h += '</div>';
+  h += '<div class="box-fmt-sep"></div>';
+  h += '<div class="box-fmt-group">';
+  h += '<button class="box-fmt-btn" onmousedown="event.preventDefault()" onclick="boxFmtFontSize(-1)" title="缩小选中文字">A-</button>';
+  h += '<button class="box-fmt-btn" onmousedown="event.preventDefault()" onclick="boxFmtFontSize(1)" title="放大选中文字">A+</button>';
+  h += '</div>';
+  h += '<div class="box-fmt-sep"></div>';
+  h += '<button class="box-fmt-btn box-fmt-btn-wide" onmousedown="event.preventDefault()" onclick="boxFmtToggle(\'removeFormat\')" title="清除所选文字的所有格式">清除格式</button>';
+  h += '</div>';
+  return h;
+}
+
+function boxFmtGetActive(){
+  const el = document.activeElement;
+  if(el && el.classList && el.classList.contains('box-answer-input')) return el;
+  return null;
+}
+
+function boxFmtSyncFromEl(el){
+  const ansId = el.id.replace('boxansinp-','');
+  const itemId = el.getAttribute('data-item');
+  boxSyncAnswer(itemId, ansId, el);
+}
+
+function boxFmtToggle(cmd){
+  const el = boxFmtGetActive();
+  if(!el){ showToast('请先点击一个答案框'); return; }
+  document.execCommand(cmd, false, null);
+  boxFmtSyncFromEl(el);
+}
+
+function boxFmtWrapSelection(styleFn){
+  const el = boxFmtGetActive();
+  if(!el){ showToast('请先点击一个答案框'); return null; }
+  const sel = window.getSelection();
+  if(!sel || sel.rangeCount===0 || sel.getRangeAt(0).collapsed){ showToast('请先划选要处理的文字'); return null; }
+  const range = sel.getRangeAt(0);
+  const span = document.createElement('span');
+  styleFn(span);
+  const frag = range.extractContents();
+  span.appendChild(frag);
+  range.insertNode(span);
+  sel.removeAllRanges();
+  const nr = document.createRange();
+  nr.selectNodeContents(span);
+  sel.addRange(nr);
+  boxFmtSyncFromEl(el);
+  return span;
+}
+
+function boxFmtColor(mode, color){
+  boxFmtWrapSelection(span=>{
+    if(mode==='text'){ span.style.color = color||'inherit'; }
+    else { span.style.backgroundColor = color||'transparent'; }
+  });
+}
+
+function boxFmtFontSize(delta){
+  boxFmtWrapSelection(span=>{
+    const sel = window.getSelection();
+    let node = sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
+    if(node && node.nodeType===3) node = node.parentNode;
+    const base = node ? parseFloat(window.getComputedStyle(node).fontSize)||13 : 13;
+    const next = Math.max(10, Math.min(40, base + delta*2));
+    span.style.fontSize = next+'px';
+  });
+}
+
+function boxAnswerPaste(e){
+  // paste as plain text so external formatting junk never enters the data
+  e.preventDefault();
+  const text = (e.clipboardData||window.clipboardData).getData('text/plain');
+  document.execCommand('insertText', false, text);
+}
+
+// sanitize rich-text HTML (ported from box.html): strip scripts/handlers, keep only safe formatting
+function boxSanitizeAnswerHtml(html){
+  if(!html) return '';
+  const allowedTags = new Set(['SPAN','B','STRONG','I','EM','U','S','STRIKE','BR','DIV']);
+  const allowedStyleProps = ['color','background-color','font-size','font-weight','font-style','text-decoration'];
+  let root;
+  try{
+    const d = new DOMParser().parseFromString('<div>'+html+'</div>','text/html');
+    root = d.body.firstChild;
+  }catch(e){ return escHtml(html); }
+  function clean(node){
+    [...node.childNodes].forEach(child=>{
+      if(child.nodeType===1){
+        if(!allowedTags.has(child.tagName)){
+          while(child.firstChild) node.insertBefore(child.firstChild, child);
+          node.removeChild(child);
+          return;
+        }
+        const styleVal = child.getAttribute('style');
+        [...child.attributes].forEach(attr=>child.removeAttribute(attr.name));
+        if(styleVal){
+          const kept = styleVal.split(';').map(s=>s.trim()).filter(Boolean).filter(rule=>{
+            const prop = rule.split(':')[0].trim().toLowerCase();
+            return allowedStyleProps.includes(prop);
+          });
+          if(kept.length) child.setAttribute('style', kept.join(';'));
+        }
+        clean(child);
+      } else if(child.nodeType!==3){
+        node.removeChild(child);
+      }
+    });
+  }
+  clean(root);
+  return root.innerHTML;
 }
 
 function boxSyncTitle(inp){
