@@ -140,6 +140,18 @@ body{
   background:var(--win-gray);image-rendering:pixelated;overflow:hidden;
 }
 .avatar-default{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+.avatar-frame img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;}
+.avatar-frame{position:relative;}
+.avatar-edit,.avatar-clear{
+  position:absolute;width:14px;height:14px;padding:0;line-height:1;font-size:9px;
+  background:var(--win-gray,#c0c0c0);color:#000;cursor:pointer;
+  border:1px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  display:none;align-items:center;justify-content:center;
+}
+.avatar-edit{right:0;bottom:0;}
+.avatar-clear{right:0;top:0;color:#cc0000;}
+.avatar-frame:hover .avatar-edit{display:flex;}
+.avatar-frame:hover .avatar-clear.has-avatar{display:flex;}
 .char-info{flex:1;min-width:0;}
 .char-name{
   font-family:var(--font-ui);font-size:13px;font-weight:bold;color:#fff;
@@ -478,7 +490,7 @@ body{
 .dream-group-body{padding:6px;background:#fff;display:flex;flex-direction:column;gap:5px;}
 
 /* ══════════════════════════════════════
-   ENTRIES (journal / dreams / notes)
+   ENTRIES (journal / notes)
    ══════════════════════════════════════ */
 .entry-card{
   background:#fff;
@@ -496,7 +508,6 @@ body{
   padding:1px 6px;font-family:var(--font-ui);
   border:1px solid #000060;
 }
-.tag.dream-tag{background:#808080;color:#fff;border-color:#606060;}
 .archive-row{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;}
 .arch-btn{
   font-size:11px;padding:2px 7px;font-family:var(--font-ui);
@@ -866,6 +877,10 @@ body{
             <rect x="26" y="42" width="8" height="6" fill="#222"/>
           </svg>
         </div>
+        <img id="avatarImg" style="display:none;" alt="avatar"/>
+        <button class="avatar-edit" onclick="document.getElementById('avatarInput').click()" title="点击更换头像">✎</button>
+        <button class="avatar-clear" id="avatarClearBtn" onclick="clearAvatar()" title="移除头像">✕</button>
+        <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="onAvatarSelected(event)"/>
       </div>
       
       <div class="char-info">
@@ -905,7 +920,6 @@ body{
     <div class="tab" onclick="showTab('journal',this)">Log</div>
     <div class="tab" onclick="showTab('finance',this)">记账</div>
     <div class="tab" onclick="showTab('checkin',this)">日历打卡</div>
-    <div class="tab" onclick="showTab('dreams',this)">Spark</div>
     <div class="tab" onclick="showTab('notes',this)">卡片笔记</div>
     <div class="tab" onclick="showTab('box',this)">BOX</div>
     <div class="tab" onclick="showTab('settings',this)">设置</div>
@@ -1026,23 +1040,6 @@ body{
       <div id="finExportPreview" class="fin-totals-panel" style="display:none;"></div>
     </div>
 
-    <!-- DREAMS -->
-    <div class="section" id="sec-dreams">
-      <div class="toolbar">
-        <button class="pxl-btn primary" onclick="openDreamModal()">✨ + 添加梦想</button>
-        <button class="pxl-btn" onclick="openDreamGroupModal()" style="border-color:#000080;color:var(--gold);">+ 新建集合</button>
-        <input class="search-bar" id="dreamSearch" placeholder="关键词搜索..." oninput="renderDreams()"/>
-        <button class="pxl-btn" onclick="exportDreams()">📄 导出</button>
-      </div>
-      <div id="archiveD" class="archive-row"></div>
-      <div id="dreamList"></div>
-    </div>
-
-
-
-
-
-    <!-- NOTES (Zettelkasten) -->
     <div class="section" id="sec-notes">
       <div class="toolbar">
         <button class="pxl-btn primary" onclick="newCard()">🃏 + 新建卡片</button>
@@ -1142,39 +1139,6 @@ body{
   </div>
 </div>
 
-<!-- DREAM MODAL -->
-<div class="overlay" id="dreamModal">
-  <div class="modal">
-    <button class="close-btn" onclick="closeModal('dreamModal')">✕</button>
-    <div class="modal-title" id="dreamModalTitle">添加梦想/愿景</div>
-    <input type="hidden" id="editDreamId"/>
-    <div class="form-row"><label class="form-label">标题</label><input class="form-input" id="dreamTitle" placeholder="这个梦想是..."/></div>
-    <div class="form-row"><label class="form-label">描述</label><textarea class="form-textarea" id="dreamText" rows="4" placeholder="描述这个愿景，越具体越好..."></textarea></div>
-    <div class="form-row">
-      <label class="form-label">归入集合（可选）</label>
-      <select class="form-select" id="dreamGroupSel" style="width:100%;"></select>
-    </div>
-    <div class="form-row"><label class="form-label">标签（逗号分隔）</label><input class="form-input" id="dreamTags" placeholder="旅行, 成长, 创作"/></div>
-    <div class="modal-btns">
-      <button class="pxl-btn" onclick="closeModal('dreamModal')">取消</button>
-      <button class="pxl-btn primary" onclick="saveDream()">保存</button>
-    </div>
-  </div>
-</div>
-
-<!-- DREAM GROUP MODAL -->
-<div class="overlay" id="dreamGroupModal">
-  <div class="modal" style="max-width:360px;">
-    <button class="close-btn" onclick="closeModal('dreamGroupModal')">✕</button>
-    <div class="modal-title" id="dreamGroupModalTitle">新建集合</div>
-    <input type="hidden" id="editDreamGroupId"/>
-    <div class="form-row"><label class="form-label">集合名称</label><input class="form-input" id="dreamGroupName" placeholder="旅行梦想、职业规划..."/></div>
-    <div class="modal-btns">
-      <button class="pxl-btn" onclick="closeModal('dreamGroupModal')">取消</button>
-      <button class="pxl-btn primary" onclick="saveDreamGroup()">保存</button>
-    </div>
-  </div>
-</div>
 
 <!-- FINANCE ACCOUNT MODAL -->
 <div class="overlay" id="finAccountModal">
@@ -1284,8 +1248,9 @@ body{
 // ═══════════════════════════════════════
 var S = {
   charName:'MMM', level:1, xp:0,
-  tasks:[], journal:[], dreams:[], cards:[],
-  habits:[], checkins:{}, energyTags:[], dreamGroups:[],
+  avatar:null,
+  tasks:[], journal:[], cards:[],
+  habits:[], checkins:{}, energyTags:[],
   nextId:1,
   finance:{rate:9.2, accounts:[], cart:[], records:[], recordsCollapsed:true}
 };
@@ -1298,9 +1263,7 @@ function pushUndo(){
 }
 let _taskMonthFilter = null;
 let _projCollapsed = {};
-let jMonthFilter=null, dMonthFilter=null;
-let imgToSave;
-let _dreamGroupCollapsed={};
+let jMonthFilter=null;
 
 // ── Pomodoro ──
 let pomoTimer=null, pomoSec=0, pomoTaskId=null, pomoMin=0;
@@ -1400,7 +1363,7 @@ function mergeCloudIntoLocal(cloud){
     cloudArr.forEach(x => { if(x && !ids.has(String(x.id))) localArr.push(x); });
     return localArr;
   };
-  ['tasks','journal','dreams','cards','habits','dreamGroups','boxFiles',
+  ['tasks','journal','cards','habits','boxFiles',
    'fleeting','permanent','lit','ideas','drafts'].forEach(k=>{
     S[k] = unionById(S[k], cloud[k]);
   });
@@ -1518,12 +1481,13 @@ function migrateState(loaded) {
   delete S.ganttPos;
   delete S.ganttNotes;
   delete S.events;
+  delete S.dreams;      // Spark 栏已移除
+  delete S.dreamGroups; // Spark 栏已移除
   delete S.theme;   // 调色界面已移除，残留配色会覆盖现有样式且无法重置
   // Guarantee all required arrays exist (add missing ones, never overwrite)
   // migrate old task format: keep existing tasks, add type field if missing
   (S.tasks||[]).forEach(t=>{ if(!t.type) t.type='todo'; });
   if(!Array.isArray(S.habits)) S.habits=[];
-  if(!Array.isArray(S.dreamGroups)) S.dreamGroups=[];
   if(!S.checkins || typeof S.checkins!=='object') S.checkins={};
   if(!Array.isArray(S.energyTags)) S.energyTags=[];
   // migrate legacy plain-string energy tags to {name,color} objects
@@ -1539,7 +1503,7 @@ function migrateState(loaded) {
   });
   if(!S.dayNotes || typeof S.dayNotes!=='object') S.dayNotes={};
   if(!Array.isArray(S.boxFiles)) S.boxFiles=[];
-  ['tasks','journal','dreams','cards',
+  ['tasks','journal','cards',
    'fleeting','permanent','lit','ideas','drafts'].forEach(k => {
     if (!Array.isArray(S[k])) S[k] = [];
   });
@@ -1648,7 +1612,6 @@ function showTab(tab, el){
   if(tab==='tasks') renderTasks();
   if(tab==='journal') renderJournal();
   if(tab==='finance') finRenderAll();
-  if(tab==='dreams') renderDreams();
   if(tab==='notes') renderCards();
   if(tab==='box') renderBoxTab();
   if(tab==='checkin') renderCheckin();
@@ -3731,161 +3694,6 @@ function rcDelReply(idx){
 // ═══════════════════════════════════════
 
 
-function openDreamModal(editId){
-  const d = editId ? (S.dreams||[]).find(x=>x.id==editId) : null;
-  document.getElementById('editDreamId').value = editId||'';
-  document.getElementById('dreamModalTitle').textContent = d ? '编辑梦想' : '添加梦想/愿景';
-  document.getElementById('dreamTitle').value = d?d.title:'';
-  document.getElementById('dreamText').value = d?d.text:'';
-  document.getElementById('dreamTags').value = d?(d.tags||[]).join(', '):'';
-  // group selector
-  const sel=document.getElementById('dreamGroupSel');
-  sel.innerHTML='<option value="">无（不归入集合）</option>'+
-    (S.dreamGroups||[]).map(g=>'<option value="'+g.id+'"'+(d&&d.groupId==g.id?' selected':'')+'>'+g.name+'</option>').join('');
-  openModal('dreamModal');
-  setTimeout(()=>document.getElementById('dreamTitle').focus(),80);
-}
-
-function saveDream(){
-  const title=document.getElementById('dreamTitle').value.trim();
-  const text=document.getElementById('dreamText').value.trim();
-  if(!title&&!text) return;
-  const tags=document.getElementById('dreamTags').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const groupId=parseInt(document.getElementById('dreamGroupSel').value)||null;
-  const editId=document.getElementById('editDreamId').value;
-  if(editId){
-    const d=(S.dreams||[]).find(x=>x.id==editId); if(!d) return;
-    d.title=title; d.text=text; d.tags=tags; d.groupId=groupId;
-    if(imgToSave!==undefined) d.img=imgToSave;
-    d.editedAt=new Date().toISOString();
-  } else {
-    if(!Array.isArray(S.dreams)) S.dreams=[];
-    S.dreams.unshift({id:S.nextId++,title,text,tags,groupId,img:imgToSave,createdAt:new Date().toISOString()});
-    addXP(5,'梦想');
-  }
-  saveState(); closeModal('dreamModal'); renderDreams();
-}
-
-function deleteDream(id){
-  pushUndo();
-  S.dreams=S.dreams.filter(d=>d.id!=id);
-  saveState(); renderDreams(); showUndoBar('梦想条目已删除');
-}
-
-// Dream Groups
-function openDreamGroupModal(editId){
-  const g = editId ? (S.dreamGroups||[]).find(x=>x.id==editId) : null;
-  document.getElementById('editDreamGroupId').value = editId||'';
-  document.getElementById('dreamGroupModalTitle').textContent = g ? '编辑集合' : '新建集合';
-  document.getElementById('dreamGroupName').value = g?g.name:'';
-  openModal('dreamGroupModal');
-  setTimeout(()=>document.getElementById('dreamGroupName').focus(),80);
-}
-
-function openDreamInGroup(gid){
-  openDreamModal();
-  setTimeout(()=>{ const s=document.getElementById('dreamGroupSel'); if(s) s.value=gid; },50);
-}
-
-function saveDreamGroup(){
-  const name=document.getElementById('dreamGroupName').value.trim(); if(!name) return;
-  const editId=document.getElementById('editDreamGroupId').value;
-  if(!S.dreamGroups) S.dreamGroups=[];
-  if(editId){
-    const g=S.dreamGroups.find(x=>x.id==editId); if(g) g.name=name;
-  } else {
-    S.dreamGroups.push({id:S.nextId++,name,createdAt:new Date().toISOString()});
-  }
-  saveState(); closeModal('dreamGroupModal'); renderDreams();
-}
-
-function deleteDreamGroup(id){
-  if(!confirm('删除集合？其中的梦想条目将变为未归类。')) return;
-  S.dreamGroups=(S.dreamGroups||[]).filter(g=>g.id!=id);
-  (S.dreams||[]).forEach(d=>{ if(d.groupId==id) d.groupId=null; });
-  saveState(); renderDreams();
-}
-
-function toggleDreamGroup(id){
-  _dreamGroupCollapsed[id]=!_dreamGroupCollapsed[id];
-  renderDreams();
-}
-
-function renderDreams(){
-  const search=(document.getElementById('dreamSearch').value||'').toLowerCase();
-  const allDreams=S.dreams||[];
-  const entries=allDreams.filter(d=>{
-    if(search && !((d.title||'').toLowerCase().includes(search)||(d.text||'').toLowerCase().includes(search)||(d.tags||[]).join(' ').toLowerCase().includes(search))) return false;
-    if(dMonthFilter && (d.createdAt||'').slice(0,7)!==dMonthFilter) return false;
-    return true;
-  });
-  renderArchive('archiveD',allDreams,dMonthFilter,m=>{dMonthFilter=m;renderDreams();});
-  const list=document.getElementById('dreamList');
-  list.innerHTML='';
-  // when month filter active, only show groups that have matching entries
-  const visibleGroups = (S.dreamGroups||[]).filter(g=>
-    !dMonthFilter || entries.some(d=>d.groupId==g.id)
-  );
-  if(!entries.length && !visibleGroups.length){
-    list.innerHTML='<div class="empty-state"><div class="empty-icon">*</div>记录你的梦想和愿景</div>';return;
-  }
-
-  // groups
-  visibleGroups.forEach(g=>{
-    const gDreams=entries.filter(d=>d.groupId==g.id);
-    const collapsed=_dreamGroupCollapsed[g.id];
-    const gc=document.createElement('div'); gc.className='dream-group-card';
-    // header
-    const gh=document.createElement('div'); gh.className='dream-group-hdr';
-    const tog=document.createElement('span'); tog.className='dream-group-tog';
-    tog.textContent=collapsed?'▸':'▾'; tog.onclick=()=>toggleDreamGroup(g.id);
-    const nm=document.createElement('span'); nm.style.cssText='flex:1;font-weight:bold;font-size:12px;color:#fff;';
-    nm.textContent=g.name;
-    const cnt=document.createElement('span'); cnt.style.cssText='font-size:11px;color:#ccc;margin-right:5px;';
-    cnt.textContent='('+gDreams.length+')';
-    const eb=document.createElement('button'); eb.className='icon-btn'; eb.textContent='[EDIT]';
-    eb.style.cssText='color:#fff;'; eb.onclick=()=>openDreamGroupModal(g.id);
-    const db=document.createElement('button'); db.className='icon-btn'; db.textContent='🗑️';
-    db.style.cssText='color:#ffaaaa;'; db.onclick=()=>deleteDreamGroup(g.id);
-    const ab=document.createElement('button'); ab.className='icon-btn'; ab.textContent='+';
-    ab.style.cssText='color:#fff;font-weight:bold;'; ab.onclick=()=>openDreamInGroup(g.id);
-    gh.appendChild(tog); gh.appendChild(nm); gh.appendChild(cnt); gh.appendChild(eb); gh.appendChild(db); gh.appendChild(ab);
-    gc.appendChild(gh);
-    if(!collapsed){
-      if(gDreams.length){
-        const body=document.createElement('div'); body.className='dream-group-body';
-        gDreams.forEach(d=>body.appendChild(mkDreamCard(d)));
-        gc.appendChild(body);
-      } else {
-        const empty=document.createElement('div'); empty.style.cssText='padding:8px 12px;font-size:12px;color:#808080;';
-        empty.textContent='暂无内容，点击 [+] 添加';
-        gc.appendChild(empty);
-      }
-    }
-    list.appendChild(gc);
-  });
-
-  // ungrouped
-  entries.filter(d=>!d.groupId).forEach(d=>list.appendChild(mkDreamCard(d)));
-}
-
-function mkDreamCard(d){
-  const wrap=document.createElement('div'); wrap.className='entry-card'; wrap.id='dc-'+d.id;
-  // header
-  const hdr=document.createElement('div'); hdr.className='entry-header';
-  const ts=document.createElement('span'); ts.className='entry-ts'; ts.textContent=fmtDT(d.createdAt);
-  const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:3px;';
-  const eb=document.createElement('button'); eb.className='icon-btn'; eb.textContent='[EDIT]'; eb.title='编辑'; eb.onclick=()=>openDreamModal(d.id);
-  const db=document.createElement('button'); db.className='icon-btn'; db.textContent='✕'; db.title='删除'; db.style.color='#cc0000'; db.onclick=()=>deleteDream(d.id);
-  acts.appendChild(eb); acts.appendChild(db);
-  hdr.appendChild(ts); hdr.appendChild(acts); wrap.appendChild(hdr);
-  if(d.title){const t=document.createElement('div');t.style.cssText='font-size:13px;color:#000;margin-bottom:4px;';t.textContent=d.title;wrap.appendChild(t);}
-  if(d.text){const t=document.createElement('div');t.className='entry-body';t.textContent=d.text;wrap.appendChild(t);}
-  if(d.img){const img=document.createElement('img');img.src=d.img;img.alt='';img.className='entry-img';wrap.appendChild(img);}
-  if((d.tags||[]).length){const tg=document.createElement('div');tg.className='tags';d.tags.forEach(tx=>{const s=document.createElement('span');s.className='tag dream-tag';s.textContent=tx;tg.appendChild(s);});wrap.appendChild(tg);}
-  return wrap;
-}
-
 // ═══════════════════════════════════════
 // ARCHIVE MONTHS
 // ═══════════════════════════════════════
@@ -3902,8 +3710,6 @@ function renderArchive(containerId, items, current, onSelect){
 // ═══════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════
-
-
 
 
 async function forceReloadFromCloud(){
@@ -3927,7 +3733,7 @@ async function forceReloadFromCloud(){
       renderAll();
       setSyncStatus('saved');
       showToast('数据已从云端恢复');
-      if(dbg) dbg.textContent += '\n\n✓ 恢复成功！tasks:'+S.tasks.length+' journal:'+S.journal.length+' dreams:'+S.dreams.length;
+      if(dbg) dbg.textContent += '\n\n✓ 恢复成功！tasks:'+S.tasks.length+' journal:'+S.journal.length;
     } else {
       if(dbg) dbg.textContent += '\n云端没有数据行，rows: '+JSON.stringify(rows);
     }
@@ -4014,8 +3820,6 @@ function sendNotification(title,body){
 // ═══════════════════════════════════════
 // THEME
 // ═══════════════════════════════════════
-
-
 
 
 // ═══════════════════════════════════════
@@ -4478,7 +4282,6 @@ function exportCards(){
 }
 
 
-
 // ============================================================
 
 var _expCardId=null;
@@ -4574,6 +4377,56 @@ function doCardExport(method){
   closeModal('cardExportModal');
 }
 
+function applyAvatar(){
+  const img=document.getElementById('avatarImg');
+  const def=document.getElementById('avatarDefault');
+  const clr=document.getElementById('avatarClearBtn');
+  if(!img||!def) return;
+  if(S.avatar){
+    img.src=S.avatar; img.style.display='block'; def.style.display='none';
+    if(clr) clr.classList.add('has-avatar');
+  } else {
+    img.style.display='none'; img.removeAttribute('src'); def.style.display='';
+    if(clr) clr.classList.remove('has-avatar');
+  }
+}
+
+// 头像统一缩到 96px 再存，几 KB 而已，不会占云端空间
+function onAvatarSelected(e){
+  const file=e.target.files && e.target.files[0];
+  e.target.value='';
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ alert('请选择图片文件'); return; }
+  const r=new FileReader();
+  r.onload=ev=>{
+    const im=new Image();
+    im.onload=()=>{
+      const N=96;
+      const cv=document.createElement('canvas'); cv.width=N; cv.height=N;
+      const cx=cv.getContext('2d');
+      // 居中裁成正方形，保持像素风不做平滑
+      const side=Math.min(im.width,im.height);
+      cx.imageSmoothingEnabled=false;
+      cx.drawImage(im,(im.width-side)/2,(im.height-side)/2,side,side,0,0,N,N);
+      try{
+        S.avatar=cv.toDataURL('image/png');
+        saveState(); applyAvatar();
+        showToast('头像已更新');
+      }catch(err){ alert('头像处理失败: '+err.message); }
+    };
+    im.onerror=()=>alert('这张图片无法读取，换一张试试');
+    im.src=ev.target.result;
+  };
+  r.onerror=()=>alert('读取文件失败');
+  r.readAsDataURL(file);
+}
+
+function clearAvatar(){
+  if(!S.avatar) return;
+  if(!confirm('移除当前头像，恢复默认像素头像？')) return;
+  S.avatar=null; saveState(); applyAvatar();
+}
+
 function exportJournal(){
   let txt='=== Log日志 ===\n\n';
   S.journal.forEach(j=>{
@@ -4582,15 +4435,6 @@ function exportJournal(){
     txt+='\n---\n\n';
   });
   dl('journal.txt',txt);
-}
-function exportDreams(){
-  let txt='=== Spark ===\n\n';
-  S.dreams.forEach(d=>{
-    txt+='['+fmtDT(d.createdAt)+'] '+(d.title||'')+'\n'+(d.text||'')+'\n';
-    if(d.tags&&d.tags.length) txt+='标签: '+d.tags.join(', ')+'\n';
-    txt+='\n---\n\n';
-  });
-  dl('dreams.txt',txt);
 }
 function exportAll(){
   const txt=JSON.stringify({exportedAt:new Date().toISOString()},null,2);
@@ -4772,8 +4616,6 @@ document.addEventListener('mousedown',e=>{
   if(_ciOpening) return;
   if(_ciDayPanel && !_ciDayPanel.contains(e.target)){ _ciDayPanel.remove(); _ciDayPanel=null; }
 });
-
-
 
 
 // ═══════════════════════════════════════
@@ -5177,8 +5019,8 @@ function finRenderAll(){
 
 function renderAll(){
   document.getElementById('charName').value=S.charName;
-  updateXPUI();
-  renderTasks(); renderJournal(); renderDreams(); renderCards();
+  updateXPUI(); applyAvatar();
+  renderTasks(); renderJournal(); renderCards();
   // 云端合并后如果正停留在 BOX 栏，也要刷新，否则要切一次标签才看到新数据
   const boxSec=document.getElementById('sec-box');
   if(boxSec && boxSec.classList.contains('active')) renderBoxTab();
@@ -5433,7 +5275,6 @@ function renderExtensions(){
     </div>
   `).join('');
 }
-
 
 
 </script>
