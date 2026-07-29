@@ -392,10 +392,6 @@ body{
 }
 .task-section-hdr .icon-btn:hover{background:rgba(255,255,255,.3);}
 .section-title{flex:1;cursor:text;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.section-color-input{
-  width:20px;height:18px;padding:0;border:1px solid rgba(255,255,255,.7);cursor:pointer;
-  background:none;flex-shrink:0;
-}
 
 /* ── Tasks: workspace layout (main list + directory sidebar) ── */
 #tasks-app{display:flex;height:100%;overflow:hidden;}
@@ -1724,13 +1720,6 @@ function toggleSectionCollapse(id){
   renderTasks();
 }
 
-function setSectionColor(id, color){
-  const sec = (S.tasks||[]).find(x=>x.id==id && x.type==='section'); if(!sec) return;
-  sec.color = color;
-  saveState();
-  renderTasks();
-}
-
 function deleteSection(id){
   if(!confirm('删除这个分栏？分栏内的任务会保留，并归并到上一分组。')) return;
   S.tasks = S.tasks.filter(t=>t.id!=id);
@@ -1865,7 +1854,6 @@ function renderTasks(){
             html += '<div class="task-section-hdr" id="task-card-'+sec.id+'" ondragover="taskDragOver(event,\'section\','+p.id+')" ondragleave="taskDragLeave(event)" ondrop="taskDrop(event,'+sec.id+',\'section\','+p.id+')" style="background:'+(sec.color||'#000080')+';">'
               + '<button class="icon-btn" onclick="toggleSectionCollapse('+sec.id+')" title="'+(secCollapsed?'展开':'折叠')+'">'+(secCollapsed?'▸':'▾')+'</button>'
               + '<span class="section-title" id="section-title-'+sec.id+'" ondblclick="startEditTaskTitle('+sec.id+',this)" title="双击编辑标题">'+escHtml(sec.name||'新分栏')+'</span>'
-              + '<input type="color" class="section-color-input" value="'+(sec.color||'#000080')+'" onclick="event.stopPropagation()" onchange="setSectionColor('+sec.id+',this.value)" title="修改分栏颜色"/>'
               + '<button class="icon-btn" onclick="deleteSection('+sec.id+')" title="删除分栏">✕</button>'
               + '</div>';
             if(secCollapsed) return;
@@ -2712,6 +2700,7 @@ function renderBoxDoc(){
         + '<span class="box-drag-handle" title="拖拽调整顺序" draggable="true" onmousedown="boxItemDragArm(\''+escAttr(it.id)+'\')" ondragstart="boxItemDragStart(event,\''+escAttr(it.id)+'\')" ondragend="boxItemDragEnd(event)">⠿</span>'
         + '<button class="icon-btn" onclick="boxToggleSection(\''+escAttr(it.id)+'\')">'+(it.collapsed?'▸':'▾')+'</button>'
         + '<span class="box-sec-title" ondblclick="startEditBoxItemText(\''+escAttr(it.id)+'\',this)" title="双击编辑标题">'+escHtml(it.text||'未命名分组')+'</span>'
+        + '<button class="icon-btn" onclick="boxAddQuestionToSection(\''+escAttr(it.id)+'\')" title="在这个分组下添加问题">＋</button>'
         + '<button class="icon-btn" onclick="boxDeleteItem(\''+escAttr(it.id)+'\')" title="删除分组（问题保留）">✕</button>'
         + '</div>';
       return;
@@ -3047,6 +3036,28 @@ function boxAddQuestion(){
   saveState();
   renderBoxDoc();
   setTimeout(()=>{ const el=document.getElementById('boxAddQInput'); if(el) el.focus(); }, 30);
+}
+
+function boxAddQuestionToSection(sectionId){
+  const f = boxOpenDoc(); if(!f) return;
+  const arr = f.doc.items||[];
+  const idx = arr.findIndex(x=>x.id==sectionId);
+  if(idx<0) return;
+  // a collapsed section would hide the new question — expand it first
+  if(arr[idx].collapsed) arr[idx].collapsed = false;
+  const nt = { id:boxUid(), type:'task', text:'新问题', answers:[],
+    createdAt:new Date().toISOString(), collapsed:false };
+  arr.splice(idx+1, 0, nt);
+  saveState();
+  renderBoxDoc();
+  // jump to it and open the title for editing right away
+  setTimeout(()=>{
+    const card = document.getElementById('boxitem-'+nt.id);
+    if(!card) return;
+    card.scrollIntoView({behavior:'smooth', block:'center'});
+    const titleEl = card.querySelector('.box-q-title');
+    if(titleEl) startEditBoxItemText(nt.id, titleEl);
+  }, 60);
 }
 
 function boxAddSection(){
