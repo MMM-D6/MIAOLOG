@@ -48,7 +48,6 @@
 <meta name="apple-mobile-web-app-title" content="MMM"/>
 <link rel="manifest" href="manifest.json"/>
 
-
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
 <style>
@@ -102,7 +101,6 @@
   font-style: normal;
   font-display: swap;
 }
-
 
 /* ── reset ── */
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -659,8 +657,6 @@ body{
 #sec-box{padding:0;overflow:hidden;height:100%;}
 #box-app{display:flex;height:100%;overflow:hidden;}
 .btoc-folder{display:flex;align-items:center;gap:2px;padding:2px 2px;margin-top:4px;}
-.btoc-folder-l2{padding-left:16px;margin-top:2px;}
-.btoc-folder-l2 .btoc-folder-name{font-weight:normal;color:#000;}
 .btoc-folder-name{
   font-size:11px;font-weight:bold;color:var(--win-darker);cursor:text;flex:1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -676,14 +672,36 @@ body{
   padding:2px 4px 2px 20px;font-size:11px;color:#000;
   white-space:nowrap;overflow:hidden;
 }
-.btoc-file-root{padding-left:6px;}
-.btoc-file-l3{padding-left:34px;}
 .btoc-file:hover{background:#000080;color:#fff;}
 .btoc-file.active{background:#000080;color:#fff;}
 .btoc-file.task-dragging{opacity:.35;}
 .btoc-file.task-drag-over{outline:2px dashed #000080;outline-offset:-2px;}
-.btoc-folder.task-drag-over{outline:2px dashed #000080;outline-offset:-2px;}
+.btoc-folder.task-drag-over{outline:2px dashed #000080;outline-offset:-2px;background:rgba(0,0,128,.10);}
+.btoc-folder.box-drop-before,.btoc-file.box-drop-before{border-top:3px solid #cc0000;}
+.btoc-folder.box-drop-after,.btoc-file.box-drop-after{border-bottom:3px solid #cc0000;}
+.box-root-zone{min-height:60px;}
+.box-root-zone.box-root-drop{outline:2px dashed #000080;outline-offset:-4px;background:rgba(0,0,128,.07);}
 .btoc-file-text{flex:1;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.btoc-folder-name{cursor:pointer;}
+.btoc-folder.task-dragging,.btoc-file.task-dragging{opacity:.35;}
+
+/* 右键菜单（Win95 风格） */
+.box-ctx-menu{
+  position:fixed;z-index:9999;min-width:200px;padding:2px;
+  background:var(--win-gray,#c0c0c0);
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  box-shadow:2px 2px 5px rgba(0,0,0,.4);font-family:var(--font-ui);
+}
+.box-ctx-item{
+  display:flex;align-items:center;gap:7px;padding:4px 12px 4px 6px;
+  font-size:12px;color:#000;cursor:pointer;white-space:nowrap;
+}
+.box-ctx-item:hover{background:#000080;color:#fff;}
+.box-ctx-item.disabled{color:var(--win-dark);cursor:default;}
+.box-ctx-item.disabled:hover{background:none;color:var(--win-dark);}
+.box-ctx-ico{width:14px;text-align:center;flex-shrink:0;}
+.box-ctx-sep{height:2px;margin:2px 4px;border-top:1px solid var(--win-darker);border-bottom:1px solid var(--win-white);}
+
 .bsearch-file{
   display:flex;align-items:center;gap:4px;cursor:pointer;
   background:linear-gradient(90deg,#000080,#1084d0);color:#fff;
@@ -972,7 +990,6 @@ body{
       </div>
     </div>
 
-
     <!-- CHECKIN -->
     <div class="section" id="sec-checkin">
       <div class="toolbar" style="justify-content:space-between;flex-wrap:wrap;gap:6px;">
@@ -1101,7 +1118,6 @@ body{
   </div><!-- /content -->
 </div><!-- /app -->
 
-
 <!-- HABIT MODAL -->
 <div class="overlay" id="habitModal">
   <div class="modal">
@@ -1138,7 +1154,6 @@ body{
     </div>
   </div>
 </div>
-
 
 <!-- FINANCE ACCOUNT MODAL -->
 <div class="overlay" id="finAccountModal">
@@ -1503,6 +1518,42 @@ function migrateState(loaded) {
   });
   if(!S.dayNotes || typeof S.dayNotes!=='object') S.dayNotes={};
   if(!Array.isArray(S.boxFiles)) S.boxFiles=[];
+  // BOX 目录：由“位置分组”迁移到显式 parentId 树（支持任意层级 + 任意层放文件）
+  // 幂等：已经有 parentId 字段的条目不再处理
+  if(S.boxFiles.some(en => en && en.parentId === undefined)){
+    const stack = []; // 保存当前打开的各级文件夹 {id, level}
+    S.boxFiles.forEach(en=>{
+      if(!en) return;
+      if(en.type === 'folder'){
+        const lvl = en.level || 1;
+        while(stack.length && stack[stack.length-1].level >= lvl) stack.pop();
+        if(en.parentId === undefined) en.parentId = stack.length ? stack[stack.length-1].id : null;
+        stack.push({id: en.id, level: lvl});
+      } else {
+        if(en.parentId === undefined) en.parentId = stack.length ? stack[stack.length-1].id : null;
+      }
+      delete en.level; // 层级现在由 parentId 推导，不再单独存
+    });
+  }
+  // 清理坏数据：父级不存在、自己指向自己、以及成环的父子关系
+  {
+    const ids = new Set(S.boxFiles.map(x=>x && x.id));
+    S.boxFiles.forEach(en=>{
+      if(!en) return;
+      if(en.parentId != null && (!ids.has(en.parentId) || en.parentId === en.id)) en.parentId = null;
+    });
+    const byId = {}; S.boxFiles.forEach(x=>{ if(x) byId[x.id]=x; });
+    S.boxFiles.forEach(en=>{
+      if(!en) return;
+      const seen=new Set([en.id]);
+      let cur = en.parentId!=null ? byId[en.parentId] : null, n=0;
+      while(cur && n++<50){
+        if(seen.has(cur.id)){ en.parentId = null; break; } // 成环，拉回根目录
+        seen.add(cur.id);
+        cur = cur.parentId!=null ? byId[cur.parentId] : null;
+      }
+    });
+  }
   ['tasks','journal','cards',
    'fleeting','permanent','lit','ideas','drafts'].forEach(k => {
     if (!Array.isArray(S[k])) S[k] = [];
@@ -1752,7 +1803,6 @@ function bindPomo(id){
   document.getElementById('pomoTaskName').textContent = t.name;
   showToast('🍅 已绑定: '+t.name);
 }
-
 
 function fmtDT(iso){
   if(!iso) return '';
@@ -2270,7 +2320,13 @@ let _boxSidebarCollapsed = false;
 let _boxDragId = null;
 let _boxLockMode = false;
 
-function boxUid(){ return 'bx' + (S.nextId++); }
+function boxUid(){
+  // 撤销会把 nextId 回退，多设备合并也可能带来同号条目；
+  // 这里确保新 id 一定没被占用，否则条目可能变成自己的父级导致死循环
+  let id;
+  do { id = 'bx' + (S.nextId++); } while((S.boxFiles||[]).some(x=>x && x.id===id));
+  return id;
+}
 
 function renderBoxTab(){
   applyBoxSidebarState();
@@ -2297,7 +2353,6 @@ function boxRailExpand(){
   renderBoxSidebar();
 }
 
-
 function applyBoxSidebarState(){
   const sb = document.getElementById('boxSidebar');
   const rail = document.getElementById('boxSidebarRail');
@@ -2313,6 +2368,10 @@ function renderBoxSidebarSoon(){
   if(_boxSidebarTimer) clearTimeout(_boxSidebarTimer);
   _boxSidebarTimer = setTimeout(()=>{ _boxSidebarTimer = null; renderBoxSidebar(); }, 350);
 }
+
+// 兼容别名：多处调用点仍使用这两个名字，统一转到调度器
+function renderBoxToc(){ renderBoxSidebar(); }
+function renderBoxDocToc(){ renderBoxSidebar(); }
 
 function renderBoxSidebar(){
   const tree = document.getElementById('boxSidebarTree');
@@ -2385,180 +2444,237 @@ function boxSearchGoto(fileId, itemId){
   if(itemId){ setTimeout(()=>boxGotoItem(itemId), wasOpen?0:80); }
 }
 
-// positional grouping: a folder governs everything after it until the next
-// folder of the same or higher level. Folders have level 1 or 2, files are
-// leaves — three display levels total.
-function boxFolderSpan(folderId){
-  const arr = S.boxFiles||[];
-  const idx = arr.findIndex(x=>x.id==folderId);
-  if(idx<0 || arr[idx].type!=='folder') return null;
-  const lvl = arr[idx].level||1;
-  let end = arr.length;
-  for(let i=idx+1;i<arr.length;i++){
-    if(arr[i].type==='folder' && (arr[i].level||1)<=lvl){ end=i; break; }
-  }
-  return {start:idx, end};
-}
+// ══════════════════════════════════════════════════
+// BOX 文件目录：显式父子关系树（像电脑文件夹一样）
+// 每个条目有 parentId，文件夹和盒子都可以出现在任意层级
+// ══════════════════════════════════════════════════
+const BOX_MAX_DEPTH = 4;
 
-function boxFolderLocked(folderId){
-  const sp = boxFolderSpan(folderId); if(!sp) return false;
-  for(let i=sp.start+1;i<sp.end;i++){
-    const en = S.boxFiles[i];
-    if(en.type==='file' && en.locked) return true;
-  }
+function boxEntry(id){ return (S.boxFiles||[]).find(x=>x.id==id) || null; }
+function boxChildren(parentId){
+  const pid = parentId==null ? null : parentId;
+  return (S.boxFiles||[]).filter(x=> (x.parentId==null?null:x.parentId) === pid);
+}
+// 根目录为第 1 层
+function boxDepth(id){
+  let d=1, e=boxEntry(id), n=0;
+  while(e && e.parentId!=null && n++<20){ e=boxEntry(e.parentId); d++; }
+  return d;
+}
+function boxDescendantIds(id){
+  const out=[], seen=new Set([id]);
+  (function walk(pid){
+    boxChildren(pid).forEach(c=>{
+      if(seen.has(c.id)) return; // 数据异常成环时直接停下，不让页面卡死
+      seen.add(c.id); out.push(c.id); walk(c.id);
+    });
+  })(id);
+  return out;
+}
+// 判断 ancId 是否是 id 的祖先（或它自己）——用于阻止把文件夹移进自己内部
+function boxIsSelfOrAncestor(ancId, id){
+  let e=boxEntry(id), n=0;
+  while(e && n++<20){ if(e.id==ancId) return true; e = e.parentId!=null ? boxEntry(e.parentId) : null; }
   return false;
 }
-
-function boxFolderFileCount(folderId){
-  const sp = boxFolderSpan(folderId); if(!sp) return 0;
-  let n=0;
-  for(let i=sp.start+1;i<sp.end;i++){ if(S.boxFiles[i].type==='file') n++; }
-  return n;
+// 锁只绑定「盒子 ↔ 它的上一级文件夹」这层关系：
+//   · 被固定的盒子不能移动、不能删除（离不开当前文件夹）
+//   · 文件夹本身照常可以移动、改名、排序，盒子跟着一起走，关系不变
+//   · 但删除文件夹会连带销毁里面被固定的盒子，所以删除仍然拦截
+function boxFolderHasLockedChild(folderId){   // 直接子级里有被固定的盒子
+  return boxChildren(folderId).some(c=>c.type==='file' && c.locked);
 }
-
-function renderBoxToc(){ renderBoxSidebar(); } // alias: all call sites funnel through the dispatcher
-function renderBoxDocToc(){ renderBoxSidebar(); } // alias
+function boxSubtreeHasLockedFile(folderId){   // 子树任意深度有被固定的盒子
+  return boxDescendantIds(folderId).some(id=>{
+    const e=boxEntry(id); return e && e.type==='file' && e.locked;
+  });
+}
+function boxFolderFileCount(folderId){
+  return boxDescendantIds(folderId).filter(id=>{
+    const e=boxEntry(id); return e && e.type==='file';
+  }).length;
+}
+function boxCanMove(en){
+  return !!en && !(en.type==='file' && en.locked);
+}
+function boxCanDelete(en){
+  if(!en) return false;
+  return en.type==='file' ? !en.locked : !boxSubtreeHasLockedFile(en.id);
+}
 
 function renderBoxFilesTree(tree){
   const lockBtn = document.getElementById('boxLockBtn');
   if(lockBtn){
     lockBtn.textContent = _boxLockMode ? '🔒' : '🔓';
     lockBtn.style.background = _boxLockMode ? '#ffff00' : '';
-    lockBtn.title = _boxLockMode ? '锁定模式已开启：点击文件上的锁固定/解锁' : '开启锁定模式';
+    lockBtn.title = _boxLockMode ? '锁定模式已开启：点击盒子上的锁固定/解锁' : '开启锁定模式';
   }
   if(!(S.boxFiles||[]).length){
-    tree.innerHTML = '<div class="ttoc-empty">还没有文件<br/>可以「📥 导入」box 的 JSON 文件，或「＋盒子」新建</div>';
+    tree.innerHTML = '<div class="ttoc-empty" oncontextmenu="boxCtxMenuRoot(event)">还没有文件<br/>可以「📥 导入」box 的 JSON 文件，或「＋盒子」新建<br/><span style="color:#808080;">（在空白处点右键也可新建）</span></div>';
     return;
   }
+  tree.innerHTML = boxRenderLevel(null, 0)
+    + '<div class="box-root-zone" oncontextmenu="boxCtxMenuRoot(event)"'
+    + ' ondragover="boxRootDragOver(event)" ondragleave="boxRootDragLeave(event)" ondrop="boxRootDrop(event)"></div>';
+}
+
+function boxRenderLevel(parentId, depth, seen){
+  seen = seen || new Set();
+  if(depth > 12) return ''; // 兜底：数据异常时不至于无限递归
   let html='';
-  let hideL1=false, hideL2=false, ownerLevel=0;
-  (S.boxFiles||[]).forEach(en=>{
+  boxChildren(parentId).forEach(en=>{
+    if(seen.has(en.id)) return;
+    seen.add(en.id);
+    const pad = 4 + depth*13;
     if(en.type==='folder'){
-      const lvl = en.level||1;
-      if(lvl===1){
-        hideL1=false; hideL2=false; ownerLevel=1;
-        const locked = boxFolderLocked(en.id);
-        const caret = en.collapsed ? '▶' : '▼';
-        html += '<div class="btoc-folder" ondragover="boxDragOver(event)" ondragleave="boxDragLeave(event)" ondrop="boxDrop(event,\''+en.id+'\')">'
-          + '<button class="btoc-caret" onclick="boxToggleFolder(\''+en.id+'\')">'+caret+'</button>'
-          + '<span class="btoc-folder-name" ondblclick="startEditBoxName(\''+en.id+'\',this)" title="双击重命名">📁 '+escHtml(en.name||'新文件夹')+(locked?' 🔒':'')+'</span>'
-          + '<span class="ttoc-count">'+boxFolderFileCount(en.id)+'</span>'
-          + '<button class="icon-btn" onclick="boxAddSubfolder(\''+en.id+'\')" style="font-size:9px;padding:0 3px;color:#000080;" title="新建子文件夹">＋</button>'
-          + (locked ? '' : '<button class="icon-btn" onclick="boxDeleteEntry(\''+en.id+'\')" style="font-size:9px;padding:0 3px;" title="删除文件夹（文件保留）">✕</button>')
-          + '</div>';
-        if(en.collapsed) hideL1=true;
-      } else {
-        if(hideL1) return;
-        hideL2=false; ownerLevel=2;
-        const locked = boxFolderLocked(en.id);
-        const caret = en.collapsed ? '▶' : '▼';
-        html += '<div class="btoc-folder btoc-folder-l2" ondragover="boxDragOver(event)" ondragleave="boxDragLeave(event)" ondrop="boxDrop(event,\''+en.id+'\')">'
-          + '<button class="btoc-caret" onclick="boxToggleFolder(\''+en.id+'\')">'+caret+'</button>'
-          + '<span class="btoc-folder-name" ondblclick="startEditBoxName(\''+en.id+'\',this)" title="双击重命名">📂 '+escHtml(en.name||'新子文件夹')+(locked?' 🔒':'')+'</span>'
-          + '<span class="ttoc-count">'+boxFolderFileCount(en.id)+'</span>'
-          + (locked ? '' : '<button class="icon-btn" onclick="boxDeleteEntry(\''+en.id+'\')" style="font-size:9px;padding:0 3px;" title="删除子文件夹（文件保留）">✕</button>')
-          + '</div>';
-        if(en.collapsed) hideL2=true;
-      }
-      return;
+      const locked = boxFolderHasLockedChild(en.id);
+      const caret = en.collapsed ? '▶' : '▼';
+      const kids = boxChildren(en.id).length;
+      html += '<div class="btoc-folder" style="padding-left:'+pad+'px;"'
+        + ' oncontextmenu="boxCtxMenu(event,\'' + en.id + '\')"'
+        + ' draggable="true" ondragstart="boxDragStart(event,\''+en.id+'\')" ondragend="boxDragEnd(event)"'
+        + ' ondragover="boxDragOver(event,\''+en.id+'\')" ondragleave="boxDragLeave(event)" ondrop="boxDrop(event,\''+en.id+'\')">'
+        + '<button class="btoc-caret" onclick="boxToggleFolder(\''+en.id+'\')">'+(kids?caret:'　')+'</button>'
+        + '<span class="btoc-folder-name" onclick="boxToggleFolder(\''+en.id+'\')" title="右键打开菜单">'
+          + (en.collapsed?'📁':'📂') + ' ' + escHtml(en.name||'新文件夹') + (locked?' 🔒':'') + '</span>'
+        + '<span class="ttoc-count">'+boxFolderFileCount(en.id)+'</span>'
+        + '</div>';
+      if(!en.collapsed) html += boxRenderLevel(en.id, depth+1, seen);
+    } else {
+      const active = _boxOpenId===en.id;
+      const locked = !!en.locked;
+      const lockToggle = _boxLockMode
+        ? '<button class="icon-btn" onclick="event.stopPropagation();boxToggleFileLock(\''+en.id+'\')" style="font-size:9px;padding:0 3px;" title="'+(locked?'解锁':'固定，禁止移动和删除')+'">'+(locked?'🔒':'🔓')+'</button>'
+        : '';
+      html += '<div class="btoc-file'+(active?' active':'')+'" style="padding-left:'+(pad+14)+'px;"'
+        + ' oncontextmenu="boxCtxMenu(event,\''+en.id+'\')"'
+        + (locked ? '' : ' draggable="true" ondragstart="boxDragStart(event,\''+en.id+'\')" ondragend="boxDragEnd(event)"')
+        + ' ondragover="boxDragOver(event,\''+en.id+'\')" ondragleave="boxDragLeave(event)" ondrop="boxDrop(event,\''+en.id+'\')">'
+        + '<span class="ttoc-dot">'+(locked?'🔒':'📦')+'</span>'
+        + '<span class="btoc-file-text" onclick="boxOpenFile(\''+en.id+'\')" title="点击打开，右键打开菜单">'+escHtml(en.name||'（未命名）')+'</span>'
+        + lockToggle
+        + '</div>';
     }
-    // file
-    if(hideL1 || hideL2) return;
-    const active = _boxOpenId===en.id;
-    const locked = !!en.locked;
-    const indent = ownerLevel===2 ? ' btoc-file-l3' : (ownerLevel===1 ? '' : ' btoc-file-root');
-    const dragAttrs = locked ? '' : ' draggable="true" ondragstart="boxDragStart(event,\''+en.id+'\')" ondragend="boxDragEnd(event)"';
-    const lockToggle = _boxLockMode
-      ? '<button class="icon-btn" onclick="boxToggleFileLock(\''+en.id+'\')" style="font-size:9px;padding:0 3px;" title="'+(locked?'解锁':'固定在当前文件夹')+'">'+(locked?'🔒':'🔓')+'</button>'
-      : '';
-    html += '<div class="btoc-file'+indent+(active?' active':'')+'"'+dragAttrs+' ondragover="boxDragOver(event)" ondragleave="boxDragLeave(event)" ondrop="boxDrop(event,\''+en.id+'\')">'
-      + '<span class="ttoc-dot">'+(locked?'🔒':'📦')+'</span>'
-      + '<span class="btoc-file-text" onclick="boxOpenFile(\''+en.id+'\')" ondblclick="startEditBoxName(\''+en.id+'\',this)" title="'+(locked?'已固定（不可拖动）。':'')+'点击打开，双击重命名">'+escHtml(en.name||'（未命名）')+'</span>'
-      + lockToggle
-      + (locked ? '' : '<button class="icon-btn" onclick="boxDeleteEntry(\''+en.id+'\')" style="font-size:9px;padding:0 3px;" title="删除文件">✕</button>')
-      + '</div>';
   });
-  tree.innerHTML = html;
+  return html;
 }
 
-function toggleBoxLockMode(){
-  _boxLockMode = !_boxLockMode;
-  renderBoxToc();
+// ── 右键菜单 ──
+function boxCloseCtxMenu(){
+  const m=document.getElementById('boxCtxMenu');
+  if(m && m.parentNode) m.parentNode.removeChild(m);
+}
+document.addEventListener('click', boxCloseCtxMenu);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') boxCloseCtxMenu(); });
+
+function boxShowMenu(x, y, items){
+  boxCloseCtxMenu();
+  const m=document.createElement('div');
+  m.id='boxCtxMenu';
+  m.className='box-ctx-menu';
+  m.innerHTML = items.map(it=>{
+    if(it.sep) return '<div class="box-ctx-sep"></div>';
+    const dis = it.disabled ? ' disabled' : '';
+    return '<div class="box-ctx-item'+dis+'"'+(it.disabled?'':' data-act="'+it.act+'"')+'>'
+      + '<span class="box-ctx-ico">'+(it.icon||'')+'</span>'+escHtml(it.label)+'</div>';
+  }).join('');
+  m.addEventListener('click', ev=>{
+    const el=ev.target.closest('.box-ctx-item[data-act]');
+    if(!el) return;
+    ev.stopPropagation();
+    const fn=items.find(i=>i.act===el.getAttribute('data-act'));
+    boxCloseCtxMenu();
+    if(fn && fn.run) fn.run();
+  });
+  document.body.appendChild(m);
+  // 贴边时自动翻转，避免菜单跑到屏幕外
+  const r=m.getBoundingClientRect();
+  m.style.left = Math.min(x, window.innerWidth  - r.width  - 6) + 'px';
+  m.style.top  = Math.min(y, window.innerHeight - r.height - 6) + 'px';
 }
 
-function boxToggleFileLock(id){
-  const en = (S.boxFiles||[]).find(x=>x.id==id && x.type==='file'); if(!en) return;
-  en.locked = !en.locked;
-  saveState();
-  renderBoxToc();
+function boxCtxMenuRoot(e){
+  e.preventDefault(); e.stopPropagation();
+  boxShowMenu(e.clientX, e.clientY, [
+    {act:'nf', icon:'📁', label:'在根目录新建文件夹', run:()=>boxCreateFolder(null)},
+    {act:'nb', icon:'📦', label:'在根目录新建盒子',   run:()=>boxCreateFile(null)},
+    {sep:true},
+    {act:'imp', icon:'📥', label:'导入 JSON 到根目录', run:()=>{ _boxImportTarget=null; document.getElementById('boxImportInput').click(); }},
+  ]);
 }
 
-function boxAddSubfolder(parentId){
-  const sp = boxFolderSpan(parentId); if(!sp) return;
-  const parent = S.boxFiles[sp.start];
-  if(parent.collapsed){ parent.collapsed=false; }
-  const fd = { id: boxUid(), type:'folder', name:'新子文件夹', collapsed:false, level:2 };
-  S.boxFiles.splice(sp.end, 0, fd);
-  saveState();
-  renderBoxToc();
-  setTimeout(()=>{
-    const els = document.querySelectorAll('.btoc-folder-l2 .btoc-folder-name');
-    for(const el of els){
-      if(el.textContent.includes('新子文件夹')){ startEditBoxName(fd.id, el); break; }
-    }
-  }, 60);
-}
-
-function startEditBoxName(id, el){
-  const en = (S.boxFiles||[]).find(x=>x.id==id); if(!en) return;
-  const inp = document.createElement('input');
-  inp.className = 'task-title-input';
-  inp.value = en.name || '';
-  el.replaceWith(inp);
-  inp.focus(); inp.select();
-  function save(){
-    const val = inp.value.trim() || en.name || '（未命名）';
-    en.name = val;
-    if(en.type==='file' && en.doc) en.doc.project = val;
-    saveState();
-    renderBoxTab();
+function boxCtxMenu(e, id){
+  e.preventDefault(); e.stopPropagation();
+  const en=boxEntry(id); if(!en) return;
+  const canDel=boxCanDelete(en);
+  const items=[];
+  if(en.type==='folder'){
+    const deep = boxDepth(en.id) >= BOX_MAX_DEPTH;
+    items.push({act:'nb', icon:'📦', label:'在此文件夹内新建盒子', run:()=>boxCreateFile(en.id)});
+    items.push({act:'nf', icon:'📁', label: deep ? '已达最深 '+BOX_MAX_DEPTH+' 层，无法再建子文件夹' : '在此文件夹内新建子文件夹',
+                disabled: deep, run:()=>boxCreateFolder(en.id)});
+    items.push({act:'imp', icon:'📥', label:'导入 JSON 到此文件夹', run:()=>{ _boxImportTarget=en.id; document.getElementById('boxImportInput').click(); }});
+    items.push({sep:true});
+    items.push({act:'tog', icon:en.collapsed?'▶':'▼', label:en.collapsed?'展开':'折叠', run:()=>boxToggleFolder(en.id)});
+  } else {
+    items.push({act:'open', icon:'📂', label:'打开', run:()=>boxOpenFile(en.id)});
+    items.push({sep:true});
+    items.push({act:'lock', icon:en.locked?'🔓':'🔒', label:en.locked?'解除固定':'固定（禁止移动和删除）', run:()=>boxToggleFileLock(en.id)});
   }
-  inp.addEventListener('blur', save);
-  inp.addEventListener('keydown', e=>{
-    if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }
-    if(e.key==='Escape'){ inp.value=en.name; inp.blur(); }
-  });
+  items.push({act:'ren', icon:'✎', label:'重命名', run:()=>boxPromptRename(en.id)});
+  items.push({sep:true});
+  items.push({act:'del', icon:'✕', label: canDel ? '删除' : '内含已固定的盒子，无法删除', disabled: !canDel, run:()=>boxDeleteEntry(en.id)});
+  boxShowMenu(e.clientX, e.clientY, items);
 }
 
-function boxNewFolder(){
-  const fd = { id: boxUid(), type:'folder', name:'新文件夹', collapsed:false };
+// ── 新建 / 重命名 ──
+function boxCreateFolder(parentId){
+  if(parentId!=null && boxDepth(parentId) >= BOX_MAX_DEPTH){
+    alert('最多支持 '+BOX_MAX_DEPTH+' 层目录'); return;
+  }
+  const fd={ id:boxUid(), type:'folder', name:'新文件夹', parentId:parentId??null, collapsed:false };
   S.boxFiles.push(fd);
-  saveState();
-  renderBoxToc();
-  setTimeout(()=>{
-    const els = document.querySelectorAll('.btoc-folder-name');
-    if(els.length){ startEditBoxName(fd.id, els[els.length-1]); }
-  }, 60);
+  const par=boxEntry(parentId); if(par) par.collapsed=false;
+  saveState(); renderBoxSidebar();
+  setTimeout(()=>boxPromptRename(fd.id), 30);
 }
 
-function boxNewFile(){
-  const f = { id: boxUid(), type:'file', name:'新盒子',
+function boxCreateFile(parentId){
+  const f={ id:boxUid(), type:'file', name:'新盒子', parentId:parentId??null,
     doc:{ project:'新盒子', createdAt:new Date().toISOString(), items:[] } };
   S.boxFiles.push(f);
-  _boxOpenId = f.id;
+  const par=boxEntry(parentId); if(par) par.collapsed=false;
+  _boxOpenId=f.id;
+  saveState(); renderBoxTab();
+  setTimeout(()=>boxPromptRename(f.id), 30);
+}
+
+function boxPromptRename(id){
+  const en=boxEntry(id); if(!en) return;
+  const val=prompt(en.type==='folder'?'文件夹名称：':'盒子名称：', en.name||'');
+  if(val===null) return;
+  const name=val.trim();
+  if(!name) return;
+  en.name=name;
+  if(en.type==='file' && en.doc) en.doc.project=name;
   saveState();
   renderBoxTab();
 }
 
+// ── 新建（工具栏按钮，落在根目录）──
+function boxNewFolder(){ boxCreateFolder(null); }
+function boxNewFile(){ boxCreateFile(null); }
+
+let _boxImportTarget=null;
 function onBoxImportSelected(e){
   const file = e.target.files[0];
+  const target = _boxImportTarget; _boxImportTarget=null;
   if(!file) return;
   const r = new FileReader();
   r.onload = ev=>{
     try{
       const data = JSON.parse(ev.target.result);
       if(!data.items && !data.aps) throw new Error('不是 BOX 格式的 JSON');
-      // migrate legacy aps[] format
       if(!data.items){
         data.items = (data.aps||[]).map(ap=>({
           id:ap.id, type:'task', text:ap.text,
@@ -2576,13 +2692,13 @@ function onBoxImportSelected(e){
           it.answers = arr;
         }
         delete it._note; delete it._msgs;
-        // sanitize any rich-text answer html from the imported file
         (it.answers||[]).forEach(a=>{ if(a.html) a.html = boxSanitizeAnswerHtml(a.html); });
       });
-      const f = { id: boxUid(), type:'file',
+      const f = { id: boxUid(), type:'file', parentId: target==null?null:target,
         name: data.project || file.name.replace(/\.json$/i,''),
         doc: data };
       S.boxFiles.push(f);
+      const par=boxEntry(target); if(par) par.collapsed=false;
       _boxOpenId = f.id;
       saveState();
       renderBoxTab();
@@ -2594,35 +2710,57 @@ function onBoxImportSelected(e){
 }
 
 function boxOpenFile(id){
-  if(_boxOpenId===id) return; // already open — keeps dblclick-rename usable
+  if(_boxOpenId===id) return;
   _boxOpenId = id;
   renderBoxTab();
 }
 
 function boxDeleteEntry(id){
-  const en = (S.boxFiles||[]).find(x=>x.id==id); if(!en) return;
+  const en = boxEntry(id); if(!en) return;
   if(en.type==='file'){
-    if(en.locked){ alert('该文件已固定，请先在锁定模式中解锁再删除。'); return; }
-    if(!confirm('删除盒子"'+(en.name||'')+'"？此操作不可恢复。')) return;
+    if(en.locked){ alert('该盒子已固定，请先在锁定模式中解锁再删除。'); return; }
+    if(!confirm('删除盒子「'+(en.name||'')+'」？')) return;
   } else {
-    if(boxFolderLocked(id)){ alert('该文件夹内有已固定的文件，处于锁定状态，无法删除。'); return; }
-    if(!confirm('删除文件夹"'+(en.name||'')+'"？文件夹内的文件会保留，并归并到上一分组。')) return;
+    if(boxSubtreeHasLockedFile(id)){ alert('该文件夹内有已固定的盒子，无法删除。\n（固定只限制盒子被移出或删除，文件夹本身仍可自由移动和改名）'); return; }
+    const n = boxFolderFileCount(id);
+    const msg = n ? ('删除文件夹「'+(en.name||'')+'」及其中的 '+n+' 个盒子？')
+                  : ('删除文件夹「'+(en.name||'')+'」？');
+    if(!confirm(msg)) return;
   }
-  S.boxFiles = S.boxFiles.filter(x=>x.id!=id);
-  if(_boxOpenId==id) _boxOpenId=null;
+  pushUndo();
+  const doomed = new Set([id, ...boxDescendantIds(id)]);
+  S.boxFiles = S.boxFiles.filter(x=>!doomed.has(x.id));
+  if(doomed.has(_boxOpenId)) _boxOpenId=null;
   saveState();
   renderBoxTab();
+  showUndoBar('已删除');
 }
 
 function boxToggleFolder(id){
-  const fd = (S.boxFiles||[]).find(x=>x.id==id && x.type==='folder'); if(!fd) return;
+  const fd = boxEntry(id);
+  if(!fd || fd.type!=='folder') return;
   fd.collapsed = !fd.collapsed;
   saveState();
-  renderBoxToc();
+  renderBoxSidebar();
 }
 
-// ── file drag reordering (drop on a file = insert before it; drop on a folder = first inside it) ──
+function toggleBoxLockMode(){
+  _boxLockMode = !_boxLockMode;
+  renderBoxSidebar();
+}
+
+function boxToggleFileLock(id){
+  const en = boxEntry(id);
+  if(!en || en.type!=='file') return;
+  en.locked = !en.locked;
+  saveState();
+  renderBoxSidebar();
+}
+
+// ── 拖拽：拖到文件夹上=移入该文件夹；拖到盒子上=移到它前面（同一父级内排序）──
 function boxDragStart(e, id){
+  const en=boxEntry(id);
+  if(!boxCanMove(en)){ e.preventDefault(); return; }
   _boxDragId = id;
   e.dataTransfer.effectAllowed = 'move';
   try{ e.dataTransfer.setData('text/plain', String(id)); }catch(err){}
@@ -2633,31 +2771,115 @@ function boxDragEnd(e){
   document.querySelectorAll('.task-drag-over').forEach(el=>el.classList.remove('task-drag-over'));
   _boxDragId = null;
 }
-function boxDragOver(e){
-  if(_boxDragId==null) return;
+// 投放区判定：文件夹上/下缘 = 同级排序，中间 = 移入文件夹；
+// 盒子只有上下两半 = 同级排序。这样最高一级文件夹也能自由调前后顺序。
+function boxDropZone(e, targetId){
+  const en=boxEntry(targetId);
+  const r=e.currentTarget.getBoundingClientRect();
+  const y=r.height ? (e.clientY-r.top)/r.height : 0.5;
+  if(en && en.type==='folder'){
+    if(y<0.30) return 'before';
+    if(y>0.70) return 'after';
+    return 'inside';
+  }
+  return y<0.5 ? 'before' : 'after';
+}
+
+function boxClearDropMarks(){
+  document.querySelectorAll('.task-drag-over,.box-drop-before,.box-drop-after')
+    .forEach(el=>el.classList.remove('task-drag-over','box-drop-before','box-drop-after'));
+}
+
+function boxDragOver(e, targetId){
+  if(_boxDragId==null || _boxDragId===targetId) return;
+  const dragged=boxEntry(_boxDragId);
+  if(dragged && dragged.type==='folder' && boxIsSelfOrAncestor(_boxDragId, targetId)) return;
   e.preventDefault();
   e.dataTransfer.dropEffect='move';
-  e.currentTarget.classList.add('task-drag-over');
+  const zone=boxDropZone(e, targetId);
+  boxClearDropMarks();
+  e.currentTarget.classList.add(
+    zone==='inside' ? 'task-drag-over' : (zone==='before' ? 'box-drop-before' : 'box-drop-after'));
 }
+
 function boxDragLeave(e){
-  e.currentTarget.classList.remove('task-drag-over');
+  e.currentTarget.classList.remove('task-drag-over','box-drop-before','box-drop-after');
 }
+
 function boxDrop(e, targetId){
-  e.preventDefault();
-  e.currentTarget.classList.remove('task-drag-over');
-  if(_boxDragId==null || _boxDragId==targetId) return;
-  const arr = S.boxFiles;
-  const fromIdx = arr.findIndex(x=>x.id==_boxDragId);
-  if(fromIdx<0) return;
-  if(arr[fromIdx].locked) return; // fixed files never move
-  const target = arr.find(x=>x.id==targetId);
-  const [moved] = arr.splice(fromIdx,1);
-  const toIdx = arr.findIndex(x=>x.id==targetId);
-  if(toIdx<0){ arr.splice(fromIdx,0,moved); return; }
-  // dropping on a folder header inserts the file as its first item; on a file inserts before it
-  arr.splice(target && target.type==='folder' ? toIdx+1 : toIdx, 0, moved);
+  e.preventDefault(); e.stopPropagation();
+  const zone=boxDropZone(e, targetId);
+  boxClearDropMarks();
+  if(_boxDragId==null || _boxDragId===targetId) return;
+  const moved=boxEntry(_boxDragId), target=boxEntry(targetId);
+  if(!moved || !target) return;
+  if(!boxCanMove(moved)) return;
+  if(moved.type==='folder' && boxIsSelfOrAncestor(moved.id, targetId)) return;
+
+  const arr=S.boxFiles;
+  if(zone==='inside'){
+    if(moved.type==='folder' && boxDepth(target.id)+boxSubtreeHeight(moved.id) > BOX_MAX_DEPTH){
+      showToast('超出 '+BOX_MAX_DEPTH+' 层限制'); return;
+    }
+    moved.parentId = target.id;
+    target.collapsed = false;
+    arr.splice(arr.indexOf(moved),1);
+    arr.push(moved);
+  } else {
+    // 成为 target 的同级，插到它前面或后面（根目录同样适用）
+    const newParent = target.parentId==null ? null : target.parentId;
+    if(moved.type==='folder'){
+      const base = newParent==null ? 0 : boxDepth(newParent);
+      if(base + boxSubtreeHeight(moved.id) > BOX_MAX_DEPTH){
+        showToast('超出 '+BOX_MAX_DEPTH+' 层限制'); return;
+      }
+    }
+    moved.parentId = newParent;
+    arr.splice(arr.indexOf(moved),1);
+    const ti=arr.indexOf(target);
+    arr.splice(zone==='before' ? ti : ti+1, 0, moved);
+  }
   saveState();
-  renderBoxToc();
+  renderBoxSidebar();
+}
+
+// 拖到目录空白处 = 移到根目录末尾（把条目从文件夹里拿出来）
+function boxRootDragOver(e){
+  if(_boxDragId==null) return;
+  const moved=boxEntry(_boxDragId);
+  if(!boxCanMove(moved)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  e.currentTarget.classList.add('box-root-drop');
+}
+function boxRootDragLeave(e){ e.currentTarget.classList.remove('box-root-drop'); }
+function boxRootDrop(e){
+  e.preventDefault();
+  e.currentTarget.classList.remove('box-root-drop');
+  const moved=boxEntry(_boxDragId);
+  if(!moved || !boxCanMove(moved)) return;
+  if(moved.type==='folder' && boxSubtreeHeight(moved.id) > BOX_MAX_DEPTH){ showToast('超出层级限制'); return; }
+  if((moved.parentId==null?null:moved.parentId)===null){
+    // 已在根目录：仅移到末尾
+    const arr=S.boxFiles; arr.splice(arr.indexOf(moved),1); arr.push(moved);
+  } else {
+    moved.parentId=null;
+    const arr=S.boxFiles; arr.splice(arr.indexOf(moved),1); arr.push(moved);
+  }
+  saveState(); renderBoxSidebar();
+}
+
+// 子树的“文件夹层数”（只有自己=1）。层级上限只约束文件夹嵌套，
+// 盒子可以放在任意一层，因此计算时必须忽略文件条目，
+// 否则第4层文件夹里放了盒子后，这个文件夹就再也移动不了。
+function boxSubtreeHeight(id){
+  let h=1;
+  boxDescendantIds(id).forEach(d=>{
+    const e=boxEntry(d);
+    if(!e || e.type!=='folder') return;
+    h=Math.max(h, boxDepth(d)-boxDepth(id)+1);
+  });
+  return h;
 }
 
 // ── document viewer / editor ──
@@ -3361,27 +3583,29 @@ function boxExportAll(){
   if(!arr.length){ showToast('没有可导出的文件'); return; }
   const enc = new TextEncoder();
   const entries = [];
-  const usedPaths = new Set();
-  const uniquePath = base=>{
+  const used = new Set();
+  const uniq = base=>{
     let p=base, n=2;
-    while(usedPaths.has(p)){
-      p = base.replace(/(\.json)?$/, m=>('-'+(n++)+(m||'')));
-    }
-    usedPaths.add(p);
+    while(used.has(p)) p = base.replace(/(\.json)?$/, m=>('-'+(n++)+(m||'')));
+    used.add(p);
     return p;
   };
-
-  let l1=null, l2=null;
-  arr.forEach(en=>{
-    if(en.type==='folder'){
-      if((en.level||1)===1){ l1 = boxSanitizeName(en.name); l2 = null; entries.push({name: uniquePath(l1+'/'), data:null}); }
-      else { l2 = boxSanitizeName(en.name); entries.push({name: uniquePath((l1?l1+'/':'')+l2+'/'), data:null}); }
-      return;
-    }
-    const dir = (l1?l1+'/':'') + (l2?l2+'/':'');
-    const path = uniquePath(dir + boxSanitizeName(en.name) + '.json');
-    entries.push({name: path, data: enc.encode(JSON.stringify(en.doc||{}, null, 2))});
-  });
+  // 递归还原目录层级，任意层级的盒子都会落在对应文件夹里
+  const seenExp=new Set();
+  (function walk(parentId, prefix){
+    boxChildren(parentId).forEach(en=>{
+      if(seenExp.has(en.id)) return;
+      seenExp.add(en.id);
+      if(en.type==='folder'){
+        const dir = prefix + boxSanitizeName(en.name) + '/';
+        entries.push({name: uniq(dir), data:null});
+        walk(en.id, dir);
+      } else {
+        entries.push({name: uniq(prefix + boxSanitizeName(en.name) + '.json'),
+                      data: enc.encode(JSON.stringify(en.doc||{}, null, 2))});
+      }
+    });
+  })(null, '');
 
   const blob = buildZip(entries);
   const d = new Date();
@@ -3392,7 +3616,6 @@ function boxExportAll(){
   setTimeout(()=>URL.revokeObjectURL(url), 5000);
   showToast('已导出 '+arr.filter(x=>x.type==='file').length+' 个文件');
 }
-
 
 function exportTasks(){
   let txt = '=== 任务导出 ===\n\n';
@@ -3419,7 +3642,6 @@ function exportTasks(){
   }
   dl('tasks.txt', txt);
 }
-
 
 // ═══════════════════════════════════════
 // JOURNAL
@@ -3693,7 +3915,6 @@ function rcDelReply(idx){
 // LINK PANEL — completely separate, static DOM, no re-render on input
 // ═══════════════════════════════════════
 
-
 // ═══════════════════════════════════════
 // ARCHIVE MONTHS
 // ═══════════════════════════════════════
@@ -3710,7 +3931,6 @@ function renderArchive(containerId, items, current, onSelect){
 // ═══════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════
-
 
 async function forceReloadFromCloud(){
   const dbg = document.getElementById('debug-out');
@@ -3741,7 +3961,6 @@ async function forceReloadFromCloud(){
     if(dbg) dbg.textContent = '错误: '+e.message;
   }
 }
-
 
 // ═══════════════════════════════════════
 // POMODORO
@@ -3820,7 +4039,6 @@ function sendNotification(title,body){
 // ═══════════════════════════════════════
 // THEME
 // ═══════════════════════════════════════
-
 
 // ═══════════════════════════════════════
 // BG
@@ -4281,7 +4499,6 @@ function exportCards(){
   dl('cards.txt',txt);
 }
 
-
 // ============================================================
 
 var _expCardId=null;
@@ -4445,7 +4662,6 @@ function dl(name,cnt){
   a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(cnt);
   a.download=name; a.click();
 }
-
 
 // ═══════════════════════════════════════
 // CHECKIN — habit tracker with monthly calendar
@@ -4616,7 +4832,6 @@ document.addEventListener('mousedown',e=>{
   if(_ciOpening) return;
   if(_ciDayPanel && !_ciDayPanel.contains(e.target)){ _ciDayPanel.remove(); _ciDayPanel=null; }
 });
-
 
 // ═══════════════════════════════════════
 // FINANCE (记账理财)
@@ -5276,9 +5491,7 @@ function renderExtensions(){
   `).join('');
 }
 
-
 </script>
-
 
 <!-- Card Export Modal -->
 <div class="overlay" id="cardExportModal">
