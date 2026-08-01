@@ -387,10 +387,9 @@ body{
 .pomo-goal{color:#000080;cursor:pointer;border-bottom:1px dotted #000080;}
 .pomo-goal:hover{background:#000080;color:#fff;}
 .pomo-live{
-  font-size:10px;color:#fff;background:#008000;padding:0 4px;
-  font-family:var(--font-ui);animation:pomoblink 1.2s steps(2,start) infinite;
+  font-size:10px;color:#008000;background:#e4f0e4;padding:0 4px;
+  border:1px solid #008000;font-family:var(--font-ui);
 }
-@keyframes pomoblink{50%{opacity:.35;}}
 
 /* ── 任务卡上的能量标签（字号跟随各自标签的设置） ── */
 .etag-mini{
@@ -1937,11 +1936,14 @@ function toggleTask(id){
   showUndoBar(t.done ? '已完成：'+(t.name||'') : '已取消完成：'+(t.name||''));
 }
 
+// 点 🍅 绑定，再点一次解绑；解绑前先停表，免得已跑的时间没处落
 function bindPomo(id){
   const t = S.tasks.find(x => x.id == id); if(!t) return;
-  pomoTaskId = id;
-  document.getElementById('pomoTaskName').textContent = t.name;
-  showToast('🍅 已绑定: '+t.name);
+  const unbind = (pomoTaskId == id);
+  if(unbind) stopPomo();
+  pomoTaskId = unbind ? null : id;
+  document.getElementById('pomoTaskName').textContent = unbind ? '无绑定任务' : t.name;
+  showToast(unbind ? '已解绑：'+t.name : '🍅 已绑定: '+t.name);
   renderTasks();   // 刷新卡片上的「绑定中」标记
 }
 
@@ -2208,7 +2210,7 @@ function renderTasks(){
     html += '<button class="icon-btn" onclick="toggleProjectDirectory('+p.id+')" style="'+(dirOpen?'background:#800080;color:#fff;':'color:#800080;')+'" title="'+(dirOpen?'关闭目录':'打开项目目录')+'">📂</button>';
     html += '<button class="icon-btn" onclick="toggleProjCollapse('+p.id+')" style="font-size:11px;color:#808080;">'+(collapsed?'▸':'▾')+'</button>';
     html += '<button class="icon-btn" onclick="addSectionToProject('+p.id+')" style="color:#000080;" title="添加分栏">+</button>';
-    html += '<button class="icon-btn" onclick="bindPomo('+p.id+')" title="绑定番茄钟"'+(pomoTaskId==p.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
+    html += '<button class="icon-btn" onclick="bindPomo('+p.id+')" title="'+(pomoTaskId==p.id?'点击解绑番茄钟':'绑定番茄钟')+'"'+(pomoTaskId==p.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
     html += '<button class="icon-btn" onclick="deleteTask('+p.id+')" style="color:#cc0000;">✕</button>';
     html += '</div></div>';
     html += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+p.id+',this)">'+escHtml(p.note||'')+'</div>';
@@ -2274,7 +2276,7 @@ function taskCardHtml(t, projectId, goalFallback){
   h += '<div class="task-actions">';
   const tw = taskWeight(t);
   h += '<button class="task-weight'+(tw!==1?' set':'')+'" onclick="openWeightMenu(event,'+t.id+')" title="任务权重（1-10）">×'+tw+'</button>';
-  h += '<button class="icon-btn" onclick="bindPomo('+t.id+')" title="绑定番茄钟"'+(pomoTaskId==t.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
+  h += '<button class="icon-btn" onclick="bindPomo('+t.id+')" title="'+(pomoTaskId==t.id?'点击解绑番茄钟':'绑定番茄钟')+'"'+(pomoTaskId==t.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
   h += '<button class="icon-btn" onclick="deleteTask('+t.id+')" style="color:#cc0000;">✕</button>';
   h += '</div></div>';
   h += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+t.id+',this)">'+escHtml(t.note||'')+'</div>';
