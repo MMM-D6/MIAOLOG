@@ -320,7 +320,6 @@ body{
   border-left:4px solid #000080;
   padding:5px 8px;
 }
-.task-card.done{opacity:.6;}
 .task-card[draggable="true"]{cursor:grab;}
 .task-card.task-dragging{opacity:.35;}
 .task-card.task-drag-over{outline:2px dashed #000080;outline-offset:-2px;}
@@ -332,7 +331,10 @@ body{
   display:flex;align-items:center;justify-content:center;
   margin-top:1px;font-size:9px;background:#fff;
 }
-.task-check.checked{background:#000080;color:#fff;border-color:#000080;}
+.task-check.checked{background:#a0a0a0;color:#fff;border-color:#808080;}
+.task-card.done-task{background:#f2f2f2;border-left-color:#a0a0a0 !important;}
+.task-card.done-task .task-title{color:#909090;}
+.task-card.done-task .task-note-editable{color:#a0a0a0;}
 .task-title-wrap{flex:1;min-width:0;}
 .task-title{font-size:13px;color:#000;word-break:break-word;font-family:var(--font-ui);}
 .task-title.done-text{text-decoration:line-through;color:#808080;}
@@ -344,14 +346,143 @@ body{
 }
 .icon-btn:hover{background:var(--win-light);}
 .icon-btn:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
-.prog-row{display:flex;align-items:center;gap:6px;margin-top:4px;}
+/* ── 项目进度条：已完成段 + 番茄钟段 ── */
+.prog-row{display:flex;align-items:center;gap:8px;margin:6px 0 2px;}
 .prog-wrap{
-  flex:1;height:10px;background:#fff;
+  display:flex;flex:1;max-width:360px;height:12px;background:#fff;overflow:hidden;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
+.prog-seg-done{height:100%;background:#000080;transition:width .3s;flex-shrink:0;}
+.prog-seg-pomo{height:100%;background:#7fa8d9;transition:width .3s;flex-shrink:0;}
+.prog-pct{
+  font-family:var(--font-mono);font-size:12px;font-weight:bold;color:#000080;
+  min-width:40px;text-align:right;
+}
+.prog-legend{font-size:11px;color:#707070;font-family:var(--font-ui);white-space:nowrap;}
+
+/* ── 项目自定义设置行（目标时长 / 权重） ── */
+.proj-cfg{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  background:var(--surface2);padding:4px 8px;margin:0 0 4px;
+  border-left:3px solid #000080;font-family:var(--font-ui);font-size:11px;color:#000080;
+}
+.proj-cfg input{
+  width:56px;background:#fff;color:#000;font-family:var(--font-mono);font-size:12px;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  padding:1px 4px;outline:none;
+}
+.proj-cfg .sep{width:1px;height:14px;background:var(--win-dark);margin:0 2px;}
+
+/* ── 任务卡上的番茄钟条 ── */
+.pomo-strip{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.pomo-ico{font-size:11px;flex-shrink:0;}
+.pomo-mini{
+  flex:1;max-width:150px;height:8px;background:#fff;
   border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
   overflow:hidden;
 }
-.prog-bar{height:100%;background:#000080;transition:width .3s;}
-.pomo-record{margin-top:4px;font-size:11px;color:#800080;font-family:var(--font-ui);}
+.pomo-mini-fill{height:100%;background:#7fa8d9;transition:width .3s;}
+.pomo-mini-fill.done{background:#a0a0a0;}
+.pomo-strip-txt{font-family:var(--font-mono);font-size:11px;color:#707070;white-space:nowrap;}
+.pomo-goal{color:#000080;cursor:pointer;border-bottom:1px dotted #000080;}
+.pomo-goal:hover{background:#000080;color:#fff;}
+.pomo-live{
+  font-size:10px;color:#fff;background:#008000;padding:0 4px;
+  font-family:var(--font-ui);animation:pomoblink 1.2s steps(2,start) infinite;
+}
+@keyframes pomoblink{50%{opacity:.35;}}
+
+/* ── 任务卡上的能量标签（字号跟随各自标签的设置） ── */
+.etag-mini{
+  display:inline-block;font-size:11px;font-weight:bold;padding:0 6px;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  margin-left:6px;vertical-align:middle;cursor:context-menu;
+  font-family:var(--font-ui);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.etag-mini:hover{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
+.etag-pick{
+  background:var(--win-gray);border:2px solid;
+  border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  color:#606060;cursor:pointer;font-size:10px;padding:0 3px;margin-left:3px;
+  font-family:var(--font-ui);vertical-align:middle;
+}
+.etag-pick:hover{background:var(--win-light);}
+
+/* ── 右键弹出菜单（标签改色 / 改字号） ── */
+.ctx-menu{
+  position:fixed;z-index:300;display:none;min-width:200px;padding:4px;
+  background:var(--win-gray);box-shadow:2px 2px 0 #000;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  font-family:var(--font-ui);font-size:12px;color:#000;
+}
+.ctx-menu.open{display:block;}
+.ctx-title{
+  background:linear-gradient(90deg,#000080,#1084d0);color:#fff;
+  font-size:11px;font-weight:bold;padding:2px 6px;margin:-4px -4px 4px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ctx-row{display:flex;align-items:center;gap:4px;padding:3px 4px;flex-wrap:wrap;}
+.ctx-label{font-size:11px;color:#000080;min-width:30px;}
+.ctx-sw{
+  width:16px;height:16px;cursor:pointer;flex-shrink:0;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.ctx-sw:hover{outline:1px solid #000;outline-offset:1px;}
+.ctx-sw.sel{outline:2px solid #000;outline-offset:1px;}
+.ctx-custom{
+  position:relative;display:inline-block;width:16px;height:16px;cursor:pointer;flex-shrink:0;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  background:linear-gradient(135deg,#ff0000,#ffff00 25%,#00ff00 50%,#00ffff 70%,#0000ff 85%,#ff00ff);
+}
+.ctx-custom input{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;padding:0;border:0;margin:0;cursor:pointer;}
+.ctx-size-lbl{font-family:var(--font-mono);font-size:11px;color:#606060;min-width:32px;text-align:center;}
+.ctx-preview{
+  padding:0 6px;border:1px solid #000;font-weight:bold;font-family:var(--font-ui);
+  max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ctx-sep{height:0;border-top:1px solid var(--win-dark);border-bottom:1px solid var(--win-white);margin:4px 0;}
+.ctx-item{padding:3px 6px;cursor:pointer;}
+.ctx-item:hover{background:#000080;color:#fff;}
+.ctx-item.danger{color:#cc0000;}
+.ctx-item.danger:hover{background:#cc0000;color:#fff;}
+.ctx-hint{font-size:10px;color:#606060;padding:2px 4px 1px;}
+.wt-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:2px;}
+.wt-btn{
+  background:var(--win-gray);color:#000;cursor:pointer;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  font-family:var(--font-mono);font-size:12px;padding:3px 0;
+}
+.wt-btn:hover{background:var(--win-light);}
+.wt-btn:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
+.wt-btn.sel{background:#000080;color:#fff;font-weight:bold;border-color:#000080;}
+
+/* 标签字号调节，样式对齐 BOX 编辑栏的 A- / A+ */
+.etag-size-btn{
+  font-family:var(--font-mono);font-size:11px;font-weight:bold;
+  padding:1px 6px;min-width:26px;
+}
+
+/* ── 任务权重 ── */
+.task-weight{
+  background:var(--win-gray);color:#606060;cursor:pointer;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  font-family:var(--font-mono);font-size:10px;padding:0 4px;
+}
+.task-weight:hover{background:var(--win-light);}
+.task-weight.set{color:#fff;background:#000080;border-color:#000080;font-weight:bold;}
+
+.pxl-btn.on{background:#000080;color:#fff;}
+.pxl-btn.on:hover{background:#0000a8;}
+
+/* ── 任务工具栏：让输入框与按钮等高对齐 ── */
+#sec-tasks .toolbar{gap:6px;align-items:stretch;}
+#sec-tasks .toolbar .search-bar,
+#sec-tasks .toolbar .pxl-btn{
+  height:30px;display:inline-flex;align-items:center;box-sizing:border-box;
+}
+#sec-tasks .toolbar .pxl-btn{justify-content:center;padding:0 10px;}
+/* 切换按钮固定宽度，两种状态不再抖动 */
+#hideDoneBtn{width:38px;padding:0;font-size:14px;}
 
 .task-title{cursor:text;}
 .task-title-input{
@@ -365,29 +496,41 @@ body{
   border-left:2px solid var(--border);padding:4px 8px;outline:none;cursor:text;
   min-height:1.4em;word-break:break-word;
 }
-.task-note-editable:empty:before{content:attr(data-placeholder);color:#a0a0a0;font-style:italic;}
+/* 空笔记只留一条细提示，不再占掉大半张卡片 */
+.task-note-editable:empty{
+  margin-top:3px;font-size:11px;line-height:1.3;min-height:0;padding:1px 8px;
+  border-left-color:#dcdcdc;
+}
+.task-note-editable:empty:before{content:attr(data-placeholder);color:#b4b4b4;font-style:italic;}
 .task-note-editable:focus{background:#fffff0;border-left-color:#000080;}
 .energy-select{
-  font-size:11px;padding:1px 4px;border-radius:10px;
-  border:1px solid #000;color:#000;font-weight:bold;background:#fff;
-  margin-left:6px;vertical-align:middle;cursor:pointer;
-  font-family:var(--font-ui);max-width:110px;
+  font-size:12px;padding:1px 4px;background:#fff;color:#000;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  margin-left:6px;vertical-align:middle;cursor:pointer;outline:none;
+  font-family:var(--font-ui);max-width:120px;
 }
-.energy-select.none{border-color:#bbb;color:#888;font-weight:normal;}
 
 #energyTagBar{
-  display:none;background:var(--surface2);border-left:3px solid #000080;
-  padding:6px 12px;margin-bottom:8px;align-items:center;gap:8px;flex-wrap:wrap;
+  display:none;background:var(--win-gray);
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  padding:5px 8px;margin-bottom:8px;align-items:center;gap:6px;flex-wrap:wrap;
 }
 #energyTagBar.open{display:flex;}
 .etag-chip{
-  display:inline-flex;align-items:center;gap:5px;padding:2px 8px;
-  border:1px solid #000;color:#000;font-weight:bold;font-size:12px;
-  cursor:pointer;font-family:var(--font-ui);user-select:none;
+  display:inline-flex;align-items:center;gap:6px;padding:1px 6px;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  color:#000;font-weight:bold;font-size:12px;
+  cursor:context-menu;font-family:var(--font-ui);user-select:none;
 }
-.etag-chip:hover{outline:1px dotted #000;outline-offset:-3px;}
-.etag-del{cursor:pointer;font-weight:normal;font-size:10px;padding:0 1px;}
-.etag-del:hover{color:#cc0000;}
+.etag-chip:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
+.etag-del{
+  cursor:pointer;font-weight:bold;font-size:9px;line-height:11px;
+  width:12px;height:12px;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--win-gray);color:#000;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.etag-del:hover{background:var(--win-light);color:#cc0000;}
+.etag-del:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
 
 .task-section-hdr{
   display:flex;align-items:center;gap:6px;padding:4px 8px;margin:8px 0 4px;
@@ -969,17 +1112,9 @@ body{
         <!-- Main list -->
         <div class="tasks-main">
           <div class="toolbar">
-            <input class="search-bar" id="quickAddProjectInput" placeholder="+ 新项目，回车创建..." style="width:160px;" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddProject();}"/>
-            <input class="search-bar" id="quickAddTaskInput" placeholder="+ 新任务，回车创建..." style="width:160px;display:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddTask();}"/>
-            <input class="search-bar" id="taskSearch" placeholder="搜索..." oninput="renderTasks()"/>
-            <select class="form-select" id="taskViewMode" onchange="renderTasks()">
-              <option value="projects" selected>项目</option>
-              <option value="tasks">任务</option>
-            </select>
-            <select class="form-select" id="taskStatusFilter" onchange="renderTasks()">
-              <option value="todo" selected>未完成</option>
-              <option value="done">已完成</option>
-            </select>
+            <input class="search-bar" id="quickAddProjectInput" placeholder="+ 新项目，回车创建..." style="width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddProject();}"/>
+            <input class="search-bar" id="taskSearch" placeholder="搜索..." style="width:200px;" oninput="renderTasks()"/>
+            <button class="pxl-btn" id="hideDoneBtn" onclick="toggleHideDone()" title="隐藏已完成任务">☑</button>
             <button class="pxl-btn" onclick="toggleEnergyTagBar()" title="管理能量标签">🏷️</button>
             <button class="pxl-btn" onclick="exportTasks()">📄 导出</button>
           </div>
@@ -1250,6 +1385,12 @@ body{
   </div>
 </div>
 
+<!-- TAG CONTEXT MENU (right-click on any energy tag) -->
+<div class="ctx-menu" id="etagCtxMenu" onclick="event.stopPropagation()" oncontextmenu="event.preventDefault();event.stopPropagation()"></div>
+
+<!-- TASK WEIGHT MENU -->
+<div class="ctx-menu" id="weightMenu" onclick="event.stopPropagation()"></div>
+
 <!-- UNDO BAR -->
 <div class="undo-bar" id="undoBar">
   <span id="undoMsg"></span>
@@ -1278,6 +1419,8 @@ function pushUndo(){
 }
 let _taskMonthFilter = null;
 let _projCollapsed = {};
+let _hideDoneTasks = false;   // 检索框旁的小按钮控制：是否隐藏已完成任务
+let _projCfgOpen = {};        // 哪些项目展开了 ⚙ 设置行
 let jMonthFilter=null;
 
 // ── Pomodoro ──
@@ -1501,20 +1644,32 @@ function migrateState(loaded) {
   delete S.theme;   // 调色界面已移除，残留配色会覆盖现有样式且无法重置
   // Guarantee all required arrays exist (add missing ones, never overwrite)
   // migrate old task format: keep existing tasks, add type field if missing
-  (S.tasks||[]).forEach(t=>{ if(!t.type) t.type='todo'; });
+  (S.tasks||[]).forEach(t=>{
+    if(!t) return;
+    if(!t.type) t.type='todo';
+    // 番茄钟：旧版存的是一串文字记录，这里折成累计分钟数（认不出的算 0）
+    if(typeof t.pomoMin!=='number' || !isFinite(t.pomoMin) || t.pomoMin<0){
+      t.pomoMin = (Array.isArray(t.pomoRecords)?t.pomoRecords:[])
+        .reduce((a,r)=>a + (parseInt(String(r),10)||0), 0);
+    }
+    delete t.pomoRecords;
+    delete t.pomoCount;
+    // 权重只存 2-10 的整数，1 是默认值不用存
+    if(t.weight!==undefined){
+      const w = Math.round(Number(t.weight));
+      if(!isFinite(w) || w<=1) delete t.weight;
+      else t.weight = Math.min(10, w);
+    }
+  });
+  if(typeof S.hideDoneTasks==='boolean') _hideDoneTasks = S.hideDoneTasks;
   if(!Array.isArray(S.habits)) S.habits=[];
   if(!S.checkins || typeof S.checkins!=='object') S.checkins={};
   if(!Array.isArray(S.energyTags)) S.energyTags=[];
   // migrate legacy plain-string energy tags to {name,color} objects
   S.energyTags = S.energyTags.map(tg => typeof tg==='string' ? {name:tg, color:'#ffff00'} : tg);
-  // ensure tag colors are bright enough for black bold text (fluorescent palette)
+  // 标签颜色现在完全自由，不再强制拉回荧光色；只补全缺失值
   S.energyTags.forEach(tg=>{
-    const c=(tg.color||'').replace('#','');
-    let luma=0;
-    if(c.length===6){
-      luma = 0.299*parseInt(c.slice(0,2),16) + 0.587*parseInt(c.slice(2,4),16) + 0.114*parseInt(c.slice(4,6),16);
-    }
-    if(luma < 150) tg.color = '#ffff00';
+    if(!tg.color || !/^#[0-9a-fA-F]{6}$/.test(tg.color)) tg.color = '#ffff00';
   });
   if(!S.dayNotes || typeof S.dayNotes!=='object') S.dayNotes={};
   if(!Array.isArray(S.boxFiles)) S.boxFiles=[];
@@ -1680,20 +1835,7 @@ function quickAddProject(){
   if(!name) return;
   S.tasks.unshift({
     id: S.nextId++, name, type:'project', desc:'', tags:[], projectId:null, note:'', energyTag:null,
-    done:false, createdAt:new Date().toISOString(), pomoRecords:[]
-  });
-  inp.value='';
-  saveState();
-  renderTasks();
-}
-
-function quickAddTask(){
-  const inp = document.getElementById('quickAddTaskInput');
-  const name = (inp.value||'').trim();
-  if(!name) return;
-  S.tasks.unshift({
-    id: S.nextId++, name, type:'todo', desc:'', tags:[], projectId:null, note:'', energyTag:null,
-    done:false, createdAt:new Date().toISOString(), pomoRecords:[]
+    done:false, createdAt:new Date().toISOString(), pomoMin:0
   });
   inp.value='';
   saveState();
@@ -1731,7 +1873,7 @@ function quickAddChildTask(projectId, sectionId){
   const anchorIdx = arr.findIndex(t=>t.id==anchorId);
   const newTask = {
     id: S.nextId++, name, type:'todo', desc:'', tags:[], projectId, note:'', energyTag:null,
-    done:false, createdAt:new Date().toISOString(), pomoRecords:[]
+    done:false, createdAt:new Date().toISOString(), pomoMin:0
   };
   arr.splice(anchorIdx<0?arr.length:anchorIdx+1, 0, newTask);
   saveState();
@@ -1787,12 +1929,7 @@ function toggleTask(id){
   if(t.done){
     t.doneAt = new Date().toISOString();
     addXP(10, '完成任务');
-    if(pomoTimer && pomoTaskId == id){
-      const elapsed = pomoMin*60 - Math.max(0, Math.round((pomoEndWall-Date.now())/1000));
-      const m = Math.floor(elapsed/60), s = elapsed%60;
-      if(!t.pomoRecords) t.pomoRecords = [];
-      t.pomoRecords.push(m+'m'+p2(s)+'s @ '+fmtDT(new Date().toISOString())+'（完成时快照）');
-    }
+    if(pomoTimer && pomoTaskId == id) stopPomo();   // 结束这一轮，已跑的时间由 stopPomo 补记
   }
   saveState(); renderTasks();
   // pushUndo() 已记录快照，但撤销按钮只存在于撤销条里；
@@ -1805,6 +1942,7 @@ function bindPomo(id){
   pomoTaskId = id;
   document.getElementById('pomoTaskName').textContent = t.name;
   showToast('🍅 已绑定: '+t.name);
+  renderTasks();   // 刷新卡片上的「绑定中」标记
 }
 
 function fmtDT(iso){
@@ -1814,163 +1952,335 @@ function fmtDT(iso){
 }
 function p2(n){ return String(n).padStart(2,'0'); }
 
+// ═══════════════════════════════════════
+// 番茄钟 → 进度换算（目标时长与权重都由自己设定）
+// ═══════════════════════════════════════
+const DEFAULT_POMO_GOAL = 60;   // 分钟 / 任务
+const DEFAULT_POMO_WEIGHT = 30; // %
+
+function fmtMin(m){
+  m = Math.max(0, Math.round(m||0));
+  if(m < 60) return m + 'm';
+  const h = Math.floor(m/60), r = m % 60;
+  return r ? (h + 'h' + p2(r)) : (h + 'h');
+}
+
+function projGoalMin(p){
+  const v = Number(p && p.pomoGoal);
+  return (isFinite(v) && v > 0) ? v : DEFAULT_POMO_GOAL;
+}
+
+function projWeight(p){
+  let v = Number(p && p.pomoWeight);
+  if(!isFinite(v)) v = DEFAULT_POMO_WEIGHT;
+  return Math.min(100, Math.max(0, Math.round(v)));
+}
+
+// 任务可以单独设目标时长，没设就跟随项目
+function taskGoalMin(t, fallback){
+  const v = Number(t && t.pomoGoal);
+  return (isFinite(v) && v > 0) ? v : fallback;
+}
+
+// 任务权重：1 到 10 的整数，数字越大在项目进度里占的比重越大，默认 1
+function taskWeight(t){
+  const v = Math.round(Number(t && t.weight));
+  if(!isFinite(v) || v < 1) return 1;
+  return Math.min(10, v);
+}
+
+// 两个右键菜单共用：贴着光标弹出，并避开屏幕边缘
+function placeCtxMenu(m, e){
+  m.classList.add('open');
+  const mw = m.offsetWidth, mh = m.offsetHeight;
+  m.style.left = Math.max(4, Math.min(e.clientX, window.innerWidth  - mw - 4)) + 'px';
+  m.style.top  = Math.max(4, Math.min(e.clientY, window.innerHeight - mh - 4)) + 'px';
+}
+
+function openWeightMenu(e, id){
+  e.preventDefault();
+  e.stopPropagation();
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  closeTagCtxMenu();
+  const m = document.getElementById('weightMenu');
+  const cur = taskWeight(t);
+  let h = '<div class="ctx-title">权重 · '+escHtml(t.name||'任务')+'</div><div class="wt-grid">';
+  for(let i=1;i<=10;i++){
+    h += '<button class="wt-btn'+(i===cur?' sel':'')+'" onclick="setTaskWeight('+id+','+i+')">'+i+'</button>';
+  }
+  h += '</div><div class="ctx-hint">数字越大，这条任务在项目进度里占的比重越大</div>';
+  m.innerHTML = h;
+  placeCtxMenu(m, e);
+}
+
+function closeWeightMenu(){
+  const m = document.getElementById('weightMenu');
+  if(m) m.classList.remove('open');
+}
+
+function setTaskWeight(id, n){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  t.weight = Math.min(10, Math.max(1, Math.round(n)));
+  closeWeightMenu();
+  saveState();
+  renderTasks();
+}
+
+function projectStats(p){
+  const children = S.tasks.filter(t=>t.projectId==p.id && t.type!=='section');
+  const total = children.length;
+  const doneCount = children.filter(t=>t.done).length;
+  const goal = projGoalMin(p);
+  const weight = projWeight(p);
+  const w = weight/100;
+
+  // 每条任务按自己的权重折算，权重都是 1 时就退回成普通的平均
+  let wSum = 0, doneSum = 0, pomoSum = 0;
+  children.forEach(t=>{
+    const tw = taskWeight(t);
+    wSum += tw;
+    if(t.done) doneSum += tw;
+    const g = taskGoalMin(t, goal);
+    pomoSum += tw * Math.min(1, g>0 ? (t.pomoMin||0)/g : 0);
+  });
+
+  const pomoMin = children.reduce((a,t)=>a+(t.pomoMin||0),0) + (p.pomoMin||0);
+  const doneRatio = wSum ? doneSum/wSum : 0;
+  const pomoRatio = wSum ? pomoSum/wSum : 0;
+  const donePct = doneRatio*(1-w)*100;
+  const pomoPct = pomoRatio*w*100;
+  const weighted = children.some(t=>taskWeight(t)!==1);
+
+  return {total, doneCount, goal, weight, donePct, pomoPct, weighted,
+          pct: Math.round(donePct+pomoPct), pomoMin};
+}
+
+function projectProgressHtml(p, st){
+  if(!st.total) return '';
+  let h = '<div class="prog-row">'
+    + '<div class="prog-wrap">'
+    +   '<div class="prog-seg-done" style="width:'+st.donePct.toFixed(1)+'%"></div>'
+    +   '<div class="prog-seg-pomo" style="width:'+st.pomoPct.toFixed(1)+'%"></div>'
+    + '</div>'
+    + '<span class="prog-pct">'+st.pct+'%</span>'
+    + '<span class="prog-legend">'+st.doneCount+'/'+st.total
+    + (st.weighted ? ' 加权' : '')
+    + (st.pomoMin ? ' · 🍅 '+fmtMin(st.pomoMin) : '')+'</span>'
+    + '<button class="icon-btn" onclick="toggleProjCfg('+p.id+')" title="进度设置">⚙</button>'
+    + '</div>';
+
+  if(_projCfgOpen[p.id]){
+    h += '<div class="proj-cfg">'
+      + '<span>目标时长</span>'
+      + '<input type="number" min="1" step="5" value="'+st.goal+'" onchange="setProjCfg('+p.id+',\'pomoGoal\',this.value)"/>'
+      + '<span>分钟 / 任务</span>'
+      + '<span class="sep"></span>'
+      + '<span>番茄钟权重</span>'
+      + '<input type="number" min="0" max="100" step="5" value="'+st.weight+'" onchange="setProjCfg('+p.id+',\'pomoWeight\',this.value)"/>'
+      + '<span>%</span>'
+      + '<span class="sep"></span>'
+      + '<span style="color:#707070;">单条任务的权重点卡片上的 ×N 改（1-10）</span>'
+      + '</div>';
+  }
+  return h;
+}
+
+function toggleProjCfg(id){
+  _projCfgOpen[id] = !_projCfgOpen[id];
+  renderTasks();
+}
+
+// field: 'pomoGoal'（分钟，至少 1）或 'pomoWeight'（0-100）
+function setProjCfg(id, field, val){
+  const p = (S.tasks||[]).find(x=>x.id==id); if(!p) return;
+  const n = parseInt(val, 10);
+  if(!isFinite(n)){ renderTasks(); return; }
+  p[field] = field==='pomoGoal' ? Math.max(1, n) : Math.min(100, Math.max(0, n));
+  saveState();
+  renderTasks();
+}
+
+function editPomoGoal(id){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  const proj = (S.tasks||[]).find(x=>x.id==t.projectId && x.type==='project');
+  const cur = taskGoalMin(t, proj ? projGoalMin(proj) : DEFAULT_POMO_GOAL);
+  const val = prompt('这条任务的目标时长（分钟）', String(cur));
+  if(val === null) return;
+  const n = parseInt(val, 10);
+  if(!isFinite(n) || n <= 0){ showToast('请输入大于 0 的分钟数'); return; }
+  t.pomoGoal = n;
+  saveState();
+  renderTasks();
+}
+
+// 任务卡上的番茄钟条：一条细进度条 + 已投入 / 目标
+function pomoStripHtml(t, goalFallback){
+  const mins = t.pomoMin||0;
+  const live = (pomoTaskId==t.id);
+  if(!mins && !live) return '';
+  const g = taskGoalMin(t, goalFallback);
+  const ratio = t.done ? 1 : (g>0 ? Math.min(1, mins/g) : 0);
+  return '<div class="pomo-strip">'
+    + '<span class="pomo-ico">🍅</span>'
+    + '<div class="pomo-mini"><div class="pomo-mini-fill'+(t.done?' done':'')+'" style="width:'+Math.round(ratio*100)+'%"></div></div>'
+    + '<span class="pomo-strip-txt">'+fmtMin(mins)+' / '
+    +   '<span class="pomo-goal" onclick="editPomoGoal('+t.id+')" title="点击设定这条任务的目标时长">'+fmtMin(g)+'</span>'
+    + '</span>'
+    + (live ? '<span class="pomo-live">绑定中</span>' : '')
+    + '</div>';
+}
+
+// ═══════════════════════════════════════
+// 任务栏渲染 — 只有「项目」一种结构，已完成任务显示为灰色勾选
+// ═══════════════════════════════════════
+function toggleHideDone(){
+  _hideDoneTasks = !_hideDoneTasks;
+  S.hideDoneTasks = _hideDoneTasks;
+  saveStateSoon();
+  renderTasks();
+}
+
 function renderTasks(){
-  const search = (document.getElementById('taskSearch')||{value:''}).value.toLowerCase();
-  const viewMode = (document.getElementById('taskViewMode')||{value:'projects'}).value;
-  const statusFilter = (document.getElementById('taskStatusFilter')||{value:'todo'}).value;
+  const search = ((document.getElementById('taskSearch')||{value:''}).value||'').toLowerCase().trim();
 
-  // only show the quick-add input relevant to the current view
-  const qpEl = document.getElementById('quickAddProjectInput');
-  const qtEl = document.getElementById('quickAddTaskInput');
-  if(qpEl) qpEl.style.display = viewMode==='projects' ? '' : 'none';
-  if(qtEl) qtEl.style.display = viewMode==='tasks' ? '' : 'none';
+  const hideBtn = document.getElementById('hideDoneBtn');
+  if(hideBtn){
+    hideBtn.classList.toggle('on', _hideDoneTasks);
+    hideBtn.textContent = _hideDoneTasks ? '☐' : '☑';
+    hideBtn.title = _hideDoneTasks ? '已隐藏完成任务（点击显示）' : '显示全部（点击隐藏已完成）';
+  }
 
-  // month archive
+  // 月份归档条（按完成时间）
   const doneItems = S.tasks.filter(t=>t.done && t.doneAt);
-  const monthMap = {};
-  doneItems.forEach(t=>{ const ym=(t.doneAt||t.createdAt||'').slice(0,7); if(ym) monthMap[ym]=(monthMap[ym]||0)+1; });
   renderArchive('archiveT', doneItems.map(t=>({createdAt:t.doneAt})), _taskMonthFilter, m=>{ _taskMonthFilter=m; renderTasks(); });
 
   const list = document.getElementById('taskList');
   let html = '';
 
-  const matchesStatus = t => statusFilter==='done' ? !!t.done : !t.done;
-  const matchesMonth = t => {
-    if(!_taskMonthFilter) return true;
-    if(!t.done) return false;
-    return (t.doneAt||'').slice(0,7)===_taskMonthFilter;
+  const nameHit = t => !search || (t.name||'').toLowerCase().includes(search);
+  // 选了归档月份就只看那个月完成的；否则由「隐藏已完成」开关决定
+  const visible = t => {
+    if(_taskMonthFilter) return !!t.done && (t.doneAt||'').slice(0,7)===_taskMonthFilter;
+    if(_hideDoneTasks && t.done) return false;
+    return true;
   };
 
-  if(viewMode==='projects'){
-    // 项目本身符合筛选，或它里面有符合筛选的子任务时都要显示。
-    // 否则「已完成」视图会把未完成的项目整个滤掉，
-    // 里面已完成的子任务就再也看不到、也没法取消勾选了。
-    const passes = t => matchesStatus(t) && matchesMonth(t);
-    const nameHit = t => !search || (t.name||'').toLowerCase().includes(search);
-    const projects = S.tasks.filter(p=>{
-      if(p.type!=='project') return false;
-      const kids = S.tasks.filter(t=>t.projectId==p.id && t.type!=='section');
-      if(!nameHit(p) && !kids.some(nameHit)) return false;
-      return (passes(p) && nameHit(p)) || kids.some(k=>passes(k) && (nameHit(p) || nameHit(k)));
-    });
+  const projects = S.tasks.filter(p=>p.type==='project');
+  const orphans  = S.tasks.filter(t=>t.type!=='project' && t.type!=='section' && !t.projectId);
 
-    if(!projects.length){
-      const hint = statusFilter==='done' ? '没有已完成的项目或子任务' : '没有进行中的项目或子任务';
-      list.innerHTML='<div class="empty-state"><div class="empty-icon">📜</div>'+hint+'</div>';
-      renderTasksToc();
-      return;
+  const visProjects = projects.filter(p=>{
+    const kids = S.tasks.filter(t=>t.projectId==p.id && t.type!=='section');
+    if(!nameHit(p) && !kids.some(nameHit)) return false;
+    if(_taskMonthFilter || _hideDoneTasks){
+      return (visible(p) && nameHit(p)) || kids.some(k=>visible(k) && (nameHit(p)||nameHit(k)));
     }
+    return true;
+  });
+  const visOrphans = orphans.filter(t=>nameHit(t) && visible(t));
 
-    projects.forEach(p=>{
-      const allChildren = S.tasks.filter(t=>t.projectId==p.id && t.type!=='section');
-      const doneCount = allChildren.filter(t=>t.done).length;
-      const pct = allChildren.length ? Math.round(doneCount/allChildren.length*100) : 0;
-      const collapsed = _projCollapsed[p.id];
-      const dirOpen = _tasksOpenProjectId===p.id;
+  if(!visProjects.length && !visOrphans.length){
+    const hint = _taskMonthFilter ? '这个月没有完成的任务'
+      : (search ? '没有匹配的结果'
+      : (_hideDoneTasks ? '没有进行中的任务' : '还没有项目，在上方输入框直接创建'));
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div>'+hint+'</div>';
+    renderTasksToc();
+    return;
+  }
 
-      html += '<div class="task-project-block">';
+  visProjects.forEach(p=>{
+    const st = projectStats(p);
+    const collapsed = _projCollapsed[p.id];
+    const dirOpen = _tasksOpenProjectId===p.id;
+    const accent = p.done ? '#a0a0a0' : (dirOpen ? '#800080' : '#000080');
 
-      // Project header — its OWN draggable card. It must close before any
-      // children render, so a dragged child card is never nested inside
-      // another draggable element (nested draggables are unreliable).
-      html += '<div class="task-card" id="task-card-'+p.id+'" draggable="true" ondragstart="taskDragStart(event,'+p.id+',\'project\')" ondragover="taskDragOver(event,\'project\')" ondragleave="taskDragLeave(event)" ondrop="taskDrop(event,'+p.id+',\'project\')" ondragend="taskDragEnd(event)" style="border-left-color:'+(dirOpen?'#800080':'#000080')+';">';
-      html += '<div class="task-top">';
-      html += '<div class="task-check '+(p.done?'checked':'')+'" onclick="toggleTask('+p.id+')">'+( p.done?'✓':'')+'</div>';
-      html += '<div class="task-title-wrap">';
-      html += '<div style="font-size:10px;font-weight:bold;color:'+(dirOpen?'#800080':'#000080')+';margin-bottom:2px;letter-spacing:1px;">PROJECT'+(dirOpen?' · 目录已打开':'')+'</div>';
-      html += '<div class="task-title '+(p.done?'done-text':'')+'" ondblclick="startEditTaskTitle('+p.id+',this)" title="双击编辑标题">'+escHtml(p.name)+energyTagSelectHtml(p)+'</div>';
-      html += '<div class="task-meta">'+fmtDT(p.createdAt)+'</div>';
-      html += '</div>';
-      html += '<div class="task-actions">';
-      html += '<button class="icon-btn" onclick="toggleProjectDirectory('+p.id+')" style="'+(dirOpen?'background:#800080;color:#fff;':'color:#800080;')+'" title="'+(dirOpen?'关闭目录':'打开项目目录')+'">📂</button>';
-      html += '<button class="icon-btn" onclick="toggleProjCollapse('+p.id+')" style="font-size:11px;color:#808080;">'+(collapsed?'▸':'▾')+'</button>';
-      html += '<button class="icon-btn" onclick="addSectionToProject('+p.id+')" style="color:#000080;" title="添加分栏">+</button>';
-      html += '<button class="icon-btn" onclick="bindPomo('+p.id+')" title="绑定番茄钟">🍅</button>';
-      html += '<button class="icon-btn" onclick="deleteTask('+p.id+')" style="color:#cc0000;">✕</button>';
-      html += '</div></div>';
-      html += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+p.id+',this)">'+escHtml(p.note||'')+'</div>';
-      html += '</div>'; // close project header card — everything below is a SIBLING, not nested inside it
+    html += '<div class="task-project-block">';
 
-      if(allChildren.length){
-        html += '<div class="prog-row" style="margin-top:8px;">';
-        html += '<div class="prog-wrap"><div class="prog-bar" style="width:'+pct+'%;background:var(--gold);"></div></div>';
-        html += '<span style="font-size:13px;color:#808080;margin-left:8px;">'+doneCount+'/'+allChildren.length+'</span>';
-        html += '</div>';
-      }
+    // 项目头部：独立的可拖拽卡片，子任务是它的兄弟节点而不是嵌套元素
+    html += '<div class="task-card'+(p.done?' done-task':'')+'" id="task-card-'+p.id+'" draggable="true" ondragstart="taskDragStart(event,'+p.id+',\'project\')" ondragover="taskDragOver(event,\'project\')" ondragleave="taskDragLeave(event)" ondrop="taskDrop(event,'+p.id+',\'project\')" ondragend="taskDragEnd(event)" style="border-left-color:'+accent+';">';
+    html += '<div class="task-top">';
+    html += '<div class="task-check '+(p.done?'checked':'')+'" onclick="toggleTask('+p.id+')">'+(p.done?'✓':'')+'</div>';
+    html += '<div class="task-title-wrap">';
+    html += '<div style="font-size:10px;font-weight:bold;color:'+accent+';margin-bottom:2px;letter-spacing:1px;">PROJECT'+(dirOpen?' · 目录已打开':'')+'</div>';
+    html += '<div class="task-title '+(p.done?'done-text':'')+'" ondblclick="startEditTaskTitle('+p.id+',this)" title="双击编辑标题">'+escHtml(p.name)+energyTagHtml(p)+'</div>';
+    html += '<div class="task-meta">'+fmtDT(p.createdAt)+'</div>';
+    html += '</div>';
+    html += '<div class="task-actions">';
+    html += '<button class="icon-btn" onclick="toggleProjectDirectory('+p.id+')" style="'+(dirOpen?'background:#800080;color:#fff;':'color:#800080;')+'" title="'+(dirOpen?'关闭目录':'打开项目目录')+'">📂</button>';
+    html += '<button class="icon-btn" onclick="toggleProjCollapse('+p.id+')" style="font-size:11px;color:#808080;">'+(collapsed?'▸':'▾')+'</button>';
+    html += '<button class="icon-btn" onclick="addSectionToProject('+p.id+')" style="color:#000080;" title="添加分栏">+</button>';
+    html += '<button class="icon-btn" onclick="bindPomo('+p.id+')" title="绑定番茄钟"'+(pomoTaskId==p.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
+    html += '<button class="icon-btn" onclick="deleteTask('+p.id+')" style="color:#cc0000;">✕</button>';
+    html += '</div></div>';
+    html += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+p.id+',this)">'+escHtml(p.note||'')+'</div>';
+    html += '</div>';
 
-      if(!collapsed){
-        html += '<div style="margin-top:8px;padding-left:12px;border-left:2px solid rgba(255,255,255,0.07);">';
-        const groups = getProjectGroups(p.id);
-        groups.forEach(function(grp){
-          const sec = grp.section;
-          const groupKey = sec ? sec.id : ('none-'+p.id);
-          if(sec){
-            const secCollapsed = !!sec.collapsed;
-            html += '<div class="task-section-hdr" id="task-card-'+sec.id+'" ondragover="taskDragOver(event,\'section\','+p.id+')" ondragleave="taskDragLeave(event)" ondrop="taskDrop(event,'+sec.id+',\'section\','+p.id+')" style="background:'+(sec.color||'#000080')+';">'
-              + '<button class="icon-btn" onclick="toggleSectionCollapse('+sec.id+')" title="'+(secCollapsed?'展开':'折叠')+'">'+(secCollapsed?'▸':'▾')+'</button>'
-              + '<span class="section-title" id="section-title-'+sec.id+'" ondblclick="startEditTaskTitle('+sec.id+',this)" title="双击编辑标题">'+escHtml(sec.name||'新分栏')+'</span>'
-              + '<button class="icon-btn" onclick="deleteSection('+sec.id+')" title="删除分栏">✕</button>'
-              + '</div>';
-            if(secCollapsed) return;
-          }
-          const pHit = nameHit(p);
-        const visGroupTasks = grp.tasks.filter(t=> passes(t) && (pHit || nameHit(t)));
-          visGroupTasks.forEach(t=>{
-            html += '<div class="task-card" id="task-card-'+t.id+'" draggable="true" ondragstart="taskDragStart(event,'+t.id+',\'child\','+p.id+')" ondragover="taskDragOver(event,\'child\','+p.id+')" ondragleave="taskDragLeave(event)" ondrop="taskDrop(event,'+t.id+',\'child\','+p.id+')" ondragend="taskDragEnd(event)" style="border-left-color:#000080;margin-bottom:6px;">';
-            html += '<div class="task-top">';
-            html += '<div class="task-check '+(t.done?'checked':'')+'" onclick="toggleTask('+t.id+')">'+( t.done?'✓':'')+'</div>';
-            html += '<div class="task-title-wrap">';
-            html += '<div class="task-title '+(t.done?'done-text':'')+'" ondblclick="startEditTaskTitle('+t.id+',this)" title="双击编辑标题">'+escHtml(t.name)+energyTagSelectHtml(t)+'</div>';
-            if(t.doneAt) html += '<div class="task-meta">完成: '+fmtDT(t.doneAt)+'</div>';
-            html += '</div>';
-            html += '<div class="task-actions">';
-            html += '<button class="icon-btn" onclick="bindPomo('+t.id+')" title="绑定番茄钟">🍅</button>';
-            html += '<button class="icon-btn" onclick="deleteTask('+t.id+')" style="color:#cc0000;">✕</button>';
-            html += '</div></div>';
-            html += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+t.id+',this)">'+escHtml(t.note||'')+'</div>';
-            if((t.pomoRecords||[]).length) html += '<div class="pomo-record">🍅 '+t.pomoRecords.join(' · ')+'</div>';
-            html += '</div>';
-          });
-          html += '<input class="form-input" id="quickAddChild-'+groupKey+'" placeholder="+ 添加子任务，回车确认" style="width:100%;font-size:12px;padding:4px 8px;margin:2px 0 8px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();quickAddChildTask('+p.id+','+(sec?sec.id:'null')+');}"/>';
+    // 进度条：已完成任务 + 番茄钟投入，两段合并
+    html += projectProgressHtml(p, st);
+
+    if(!collapsed){
+      html += '<div style="margin-top:8px;padding-left:12px;border-left:2px solid rgba(255,255,255,0.07);">';
+      const groups = getProjectGroups(p.id);
+      const pHit = nameHit(p);
+      groups.forEach(function(grp){
+        const sec = grp.section;
+        const groupKey = sec ? sec.id : ('none-'+p.id);
+        if(sec){
+          const secCollapsed = !!sec.collapsed;
+          html += '<div class="task-section-hdr" id="task-card-'+sec.id+'" ondragover="taskDragOver(event,\'section\','+p.id+')" ondragleave="taskDragLeave(event)" ondrop="taskDrop(event,'+sec.id+',\'section\','+p.id+')" style="background:'+(sec.color||'#000080')+';">'
+            + '<button class="icon-btn" onclick="toggleSectionCollapse('+sec.id+')" title="'+(secCollapsed?'展开':'折叠')+'">'+(secCollapsed?'▸':'▾')+'</button>'
+            + '<span class="section-title" id="section-title-'+sec.id+'" ondblclick="startEditTaskTitle('+sec.id+',this)" title="双击编辑标题">'+escHtml(sec.name||'新分栏')+'</span>'
+            + '<button class="icon-btn" onclick="deleteSection('+sec.id+')" title="删除分栏">✕</button>'
+            + '</div>';
+          if(secCollapsed) return;
+        }
+        const visGroupTasks = grp.tasks.filter(t=> visible(t) && (pHit || nameHit(t)));
+        visGroupTasks.forEach(t=>{
+          html += taskCardHtml(t, p.id, st.goal);
         });
-        html += '</div>';
-      }
-
-      html += '</div>'; // close .task-project-block
-    });
-  } else {
-    // standalone tasks — independent from projects entirely
-    const standalone = S.tasks.filter(t=>t.type!=='project' && t.type!=='section' && !t.projectId
-      && (!search || (t.name||'').toLowerCase().includes(search))
-      && matchesStatus(t) && matchesMonth(t));
-
-    if(!standalone.length){
-      list.innerHTML='<div class="empty-state"><div class="empty-icon">📜</div>没有任务</div>';
-      renderTasksToc();
-      return;
+        html += '<input class="form-input" id="quickAddChild-'+groupKey+'" placeholder="+ 添加子任务，回车确认" style="width:100%;font-size:12px;padding:4px 8px;margin:2px 0 8px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();quickAddChildTask('+p.id+','+(sec?sec.id:'null')+');}"/>';
+      });
+      html += '</div>';
     }
 
-    standalone.forEach(t=>{
-      html += '<div class="task-card '+(t.done?'done':'')+'" id="task-card-'+t.id+'" style="border-left-color:#000080;">';
-      html += '<div class="task-top">';
-      html += '<div class="task-check '+(t.done?'checked':'')+'" onclick="toggleTask('+t.id+')">'+( t.done?'✓':'')+'</div>';
-      html += '<div class="task-title-wrap">';
-      html += '<div class="task-title '+(t.done?'done-text':'')+'" ondblclick="startEditTaskTitle('+t.id+',this)" title="双击编辑标题">'+escHtml(t.name)+energyTagSelectHtml(t)+'</div>';
-      if(t.doneAt) html += '<div class="task-meta">完成: '+fmtDT(t.doneAt)+'</div>';
-      else html += '<div class="task-meta">'+fmtDT(t.createdAt)+'</div>';
-      html += '</div>';
-      html += '<div class="task-actions">';
-      html += '<button class="icon-btn" onclick="bindPomo('+t.id+')" title="绑定番茄钟">🍅</button>';
-      html += '<button class="icon-btn" onclick="deleteTask('+t.id+')" style="color:#cc0000;">✕</button>';
-      html += '</div></div>';
-      html += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+t.id+',this)">'+escHtml(t.note||'')+'</div>';
-      if((t.pomoRecords||[]).length) html += '<div class="pomo-record">🍅 '+t.pomoRecords.join(' · ')+'</div>';
-      html += '</div>';
-    });
+    html += '</div>'; // .task-project-block
+  });
+
+  // 不属于任何项目的旧任务：单独归到一个只读分组，免得看不到
+  if(visOrphans.length){
+    const goalFallback = DEFAULT_POMO_GOAL;
+    html += '<div class="task-project-block">';
+    html += '<div class="task-section-hdr" style="background:#808080;">'
+      + '<span class="section-title">📥 未归类任务（'+visOrphans.length+'）</span></div>';
+    html += '<div style="padding-left:12px;">';
+    visOrphans.forEach(t=>{ html += taskCardHtml(t, null, goalFallback); });
+    html += '</div></div>';
   }
 
   list.innerHTML = html;
   renderTasksToc();
+}
+
+function taskCardHtml(t, projectId, goalFallback){
+  const drag = projectId!=null
+    ? ' draggable="true" ondragstart="taskDragStart(event,'+t.id+',\'child\','+projectId+')" ondragover="taskDragOver(event,\'child\','+projectId+')" ondragleave="taskDragLeave(event)" ondrop="taskDrop(event,'+t.id+',\'child\','+projectId+')" ondragend="taskDragEnd(event)"'
+    : '';
+  let h = '<div class="task-card'+(t.done?' done-task':'')+'" id="task-card-'+t.id+'"'+drag+' style="border-left-color:'+(t.done?'#a0a0a0':'#000080')+';margin-bottom:6px;">';
+  h += '<div class="task-top">';
+  h += '<div class="task-check '+(t.done?'checked':'')+'" onclick="toggleTask('+t.id+')">'+(t.done?'✓':'')+'</div>';
+  h += '<div class="task-title-wrap">';
+  h += '<div class="task-title '+(t.done?'done-text':'')+'" ondblclick="startEditTaskTitle('+t.id+',this)" title="双击编辑标题">'+escHtml(t.name)+energyTagHtml(t)+'</div>';
+  if(t.doneAt && t.done) h += '<div class="task-meta">完成: '+fmtDT(t.doneAt)+'</div>';
+  h += '</div>';
+  h += '<div class="task-actions">';
+  const tw = taskWeight(t);
+  h += '<button class="task-weight'+(tw!==1?' set':'')+'" onclick="openWeightMenu(event,'+t.id+')" title="任务权重（1-10）">×'+tw+'</button>';
+  h += '<button class="icon-btn" onclick="bindPomo('+t.id+')" title="绑定番茄钟"'+(pomoTaskId==t.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
+  h += '<button class="icon-btn" onclick="deleteTask('+t.id+')" style="color:#cc0000;">✕</button>';
+  h += '</div></div>';
+  h += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+t.id+',this)">'+escHtml(t.note||'')+'</div>';
+  h += pomoStripHtml(t, goalFallback);
+  h += '</div>';
+  return h;
 }
 
 function toggleProjCollapse(id){
@@ -2078,18 +2388,45 @@ function syncTaskNoteFromDOM(id, el){
   saveStateSoon();
 }
 
-// fluorescent palette for energy tags (bright backgrounds, black bold text)
+// 新建标签时的起始色（之后可以自由改成任意颜色）
 const ETAG_PALETTE = ['#ffff00','#aaff00','#00ffcc','#ff99ff','#ffb84d','#66ccff'];
 
-function energyTagSelectHtml(t){
+// 标签可以自由选色，所以文字颜色要跟着底色自动切换黑/白
+function tagTextColor(hex){
+  const c = String(hex||'').replace('#','');
+  if(c.length!==6) return '#000';
+  const luma = 0.299*parseInt(c.slice(0,2),16) + 0.587*parseInt(c.slice(2,4),16) + 0.114*parseInt(c.slice(4,6),16);
+  return luma < 140 ? '#fff' : '#000';
+}
+
+function energyTagHtml(t){
   const tags = S.energyTags||[];
+  const idx = tags.findIndex(tg=>tg.name===t.energyTag);
+  const tag = idx>=0 ? tags[idx] : null;
+  let h = '';
+  if(tag){
+    const col = tag.color||'#ffff00';
+    h += '<span class="etag-mini" style="background:'+col+';color:'+tagTextColor(col)+';font-size:'+tagSize(tag)+'px;" oncontextmenu="openTagCtxMenu(event,'+idx+')" title="右键设置颜色和字号">'+escHtml(tag.name)+'</span>';
+  }
+  h += '<button class="etag-pick" id="etagPick-'+t.id+'" onclick="event.stopPropagation();openTagPicker('+t.id+')" title="更改能量标签">'+(tag?'▾':'＋标签')+'</button>';
+  return h;
+}
+
+// 点 ▾ 才临时变成下拉框，平时保持成一个干净的色块
+function openTagPicker(id){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  const btn = document.getElementById('etagPick-'+id); if(!btn) return;
+  const sel = document.createElement('select');
+  sel.className = 'energy-select';
   let opts = '<option value=""'+(!t.energyTag?' selected':'')+'>无标签</option>';
-  tags.forEach(tag=>{
+  (S.energyTags||[]).forEach(tag=>{
     opts += '<option value="'+escAttr(tag.name)+'"'+(t.energyTag===tag.name?' selected':'')+'>'+escHtml(tag.name)+'</option>';
   });
-  const activeTag = tags.find(tg=>tg.name===t.energyTag);
-  const style = activeTag ? ' style="background:'+(activeTag.color||'#ffff00')+';"' : '';
-  return '<select class="energy-select'+(t.energyTag?'':' none')+'"'+style+' onclick="event.stopPropagation()" onchange="setTaskEnergyTag('+t.id+',this.value)" title="能量标签（在工具栏 🏷️ 中管理）">'+opts+'</select>';
+  sel.innerHTML = opts;
+  btn.replaceWith(sel);
+  sel.focus();
+  sel.addEventListener('change', ()=>setTaskEnergyTag(id, sel.value));
+  sel.addEventListener('blur', ()=>renderTasks());
 }
 
 function setTaskEnergyTag(id, val){
@@ -2112,14 +2449,112 @@ function renderEnergyTagBar(){
   if(!bar) return;
   let html = '<span style="font-size:11px;color:#000080;font-weight:bold;">🏷️ 标签管理：</span>';
   (S.energyTags||[]).forEach((tg,i)=>{
-    html += '<span class="etag-chip" style="background:'+(tg.color||'#ffff00')+';" onclick="cycleEnergyTagColor('+i+')" title="点击切换颜色">'
+    const col = tg.color||'#ffff00';
+    html += '<span class="etag-chip" style="background:'+col+';color:'+tagTextColor(col)+';font-size:'+tagSize(tg)+'px;"'
+      + ' oncontextmenu="openTagCtxMenu(event,'+i+')" title="右键设置颜色和字号">'
       + escHtml(tg.name)
       + '<span class="etag-del" onclick="deleteEnergyTag(event,'+i+')" title="删除标签">✕</span>'
       + '</span>';
   });
   html += '<input class="form-input" id="newEnergyTagName" placeholder="+ 新标签，回车添加" style="width:140px;font-size:12px;padding:2px 6px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addEnergyTagFromBar();}"/>';
+  html += '<span style="font-size:11px;color:#707070;">右键标签 → 改颜色 / 改字号</span>';
   bar.innerHTML = html;
 }
+
+// ══════ 每个标签单独的颜色与字号，统一放进右键菜单 ══════
+function tagSize(tg){
+  const v = Number(tg && tg.size);
+  return (isFinite(v) && v>=9 && v<=24) ? v : 11;
+}
+
+let _ctxTagIdx = null;
+
+function openTagCtxMenu(e, i){
+  e.preventDefault();
+  e.stopPropagation();
+  if(!(S.energyTags||[])[i]) return;
+  _ctxTagIdx = i;
+  renderTagCtxMenu();
+  placeCtxMenu(document.getElementById('etagCtxMenu'), e);
+}
+
+function closeTagCtxMenu(){
+  const m = document.getElementById('etagCtxMenu');
+  if(m) m.classList.remove('open');
+  _ctxTagIdx = null;
+}
+
+function renderTagCtxMenu(){
+  const m = document.getElementById('etagCtxMenu');
+  if(!m) return;
+  const tg = (S.energyTags||[])[_ctxTagIdx];
+  if(!tg){ closeTagCtxMenu(); return; }
+  const col = tg.color||'#ffff00';
+  const size = tagSize(tg);
+
+  let h = '<div class="ctx-title">'+escHtml(tg.name)+'</div>';
+
+  h += '<div class="ctx-row"><span class="ctx-label">颜色</span>';
+  ETAG_PALETTE.forEach(c=>{
+    h += '<span class="ctx-sw'+(c.toLowerCase()===col.toLowerCase()?' sel':'')+'" style="background:'+c+';" onclick="setEnergyTagColor('+_ctxTagIdx+',\''+c+'\')" title="'+c+'"></span>';
+  });
+  h += '<span class="ctx-custom" title="自定义颜色">'
+    +   '<input type="color" value="'+col+'" oninput="setEnergyTagColor('+_ctxTagIdx+',this.value)" onchange="setEnergyTagColor('+_ctxTagIdx+',this.value)"/>'
+    + '</span></div>';
+
+  h += '<div class="ctx-row"><span class="ctx-label">字号</span>'
+    + '<button class="pxl-btn etag-size-btn" onclick="stepTagSize('+_ctxTagIdx+',-1)" title="缩小">A-</button>'
+    + '<span class="ctx-size-lbl">'+size+'px</span>'
+    + '<button class="pxl-btn etag-size-btn" onclick="stepTagSize('+_ctxTagIdx+',1)" title="放大">A+</button>'
+    + '<span class="ctx-preview" style="background:'+col+';color:'+tagTextColor(col)+';font-size:'+size+'px;">'+escHtml(tg.name)+'</span>'
+    + '</div>';
+
+  h += '<div class="ctx-sep"></div>'
+    + '<div class="ctx-item" onclick="renameEnergyTag('+_ctxTagIdx+')">✎ 重命名</div>'
+    + '<div class="ctx-item danger" onclick="deleteEnergyTagFromMenu('+_ctxTagIdx+')">✕ 删除标签</div>';
+
+  m.innerHTML = h;
+}
+
+function stepTagSize(i, step){
+  const tg = (S.energyTags||[])[i]; if(!tg) return;
+  tg.size = Math.min(24, Math.max(9, tagSize(tg) + step));
+  saveStateSoon();
+  renderTagCtxMenu();
+  renderEnergyTagBar();
+  renderTasks();
+}
+
+function renameEnergyTag(i){
+  const tg = (S.energyTags||[])[i]; if(!tg) return;
+  const old = tg.name;
+  closeTagCtxMenu();
+  const val = prompt('标签名称', old);
+  if(val === null) return;
+  const name = val.trim();
+  if(!name) return;
+  if(name !== old && (S.energyTags||[]).some(x=>x.name===name)){ showToast('标签已存在'); return; }
+  (S.tasks||[]).forEach(t=>{ if(t.energyTag===old) t.energyTag = name; });
+  tg.name = name;
+  saveState();
+  renderEnergyTagBar();
+  renderTasks();
+}
+
+function deleteEnergyTagFromMenu(i){
+  const tg = (S.energyTags||[])[i]; if(!tg) return;
+  closeTagCtxMenu();
+  if(!confirm('删除标签"'+tg.name+'"？使用此标签的任务将失去标签。')) return;
+  (S.tasks||[]).forEach(t=>{ if(t.energyTag===tg.name) t.energyTag=null; });
+  S.energyTags.splice(i,1);
+  saveState();
+  renderEnergyTagBar();
+  renderTasks();
+}
+
+document.addEventListener('click', ()=>{ closeTagCtxMenu(); closeWeightMenu(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeTagCtxMenu(); closeWeightMenu(); } });
+window.addEventListener('resize', ()=>{ closeTagCtxMenu(); closeWeightMenu(); });
 
 function addEnergyTagFromBar(){
   const inp = document.getElementById('newEnergyTagName');
@@ -2137,13 +2572,34 @@ function addEnergyTagFromBar(){
   setTimeout(()=>{ const el=document.getElementById('newEnergyTagName'); if(el) el.focus(); }, 30);
 }
 
-function cycleEnergyTagColor(i){
+function setEnergyTagColor(i, color){
   const tg = (S.energyTags||[])[i]; if(!tg) return;
-  const cur = ETAG_PALETTE.indexOf(tg.color);
-  tg.color = ETAG_PALETTE[(cur+1) % ETAG_PALETTE.length];
-  saveState();
-  renderEnergyTagBar();
+  if(!/^#[0-9a-fA-F]{6}$/.test(color)) return;
+  tg.color = color;
+  saveStateSoon();
+  // 就地改样式，避免重绘时把正在拖动的取色器关掉
+  const bar = document.getElementById('energyTagBar');
+  if(bar){
+    const chip = bar.querySelectorAll('.etag-chip')[i];
+    if(chip){ chip.style.background = color; chip.style.color = tagTextColor(color); }
+  }
+  const menu = document.getElementById('etagCtxMenu');
+  if(menu && menu.classList.contains('open') && _ctxTagIdx===i){
+    const pv = menu.querySelector('.ctx-preview');
+    if(pv){ pv.style.background = color; pv.style.color = tagTextColor(color); }
+    menu.querySelectorAll('.ctx-sw').forEach(sw=>{
+      const bg = (sw.style.background||'').trim();
+      sw.classList.toggle('sel', hexOf(bg)===color.toLowerCase());
+    });
+  }
   renderTasks();
+}
+
+// 浏览器会把内联的 #rrggbb 读回成 rgb(...)，比色前先统一格式
+function hexOf(v){
+  const m = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(v);
+  if(m) return '#'+[1,2,3].map(k=>Number(m[k]).toString(16).padStart(2,'0')).join('');
+  return String(v||'').trim().toLowerCase();
 }
 
 function deleteEnergyTag(e, i){
@@ -2301,18 +2757,19 @@ function gotoTaskItem(id){
     _projCollapsed[t.projectId]=false;
     needRender=true;
   }
-  // switch view/status so the target is actually visible —
-  // a child task (has projectId) always lives in the "projects" view, nested
-  // under its parent, regardless of its own type
-  const viewModeEl = document.getElementById('taskViewMode');
-  const statusEl = document.getElementById('taskStatusFilter');
-  if(viewModeEl){
-    const neededView = (t.type==='project' || t.projectId) ? 'projects' : 'tasks';
-    if(viewModeEl.value!==neededView){ viewModeEl.value=neededView; needRender=true; }
+  // 清掉会把目标挡住的筛选条件：隐藏已完成 / 归档月份 / 搜索词
+  if(t.done && _hideDoneTasks){
+    _hideDoneTasks=false; S.hideDoneTasks=false; saveStateSoon(); needRender=true;
   }
-  if(statusEl){
-    const neededStatus = t.done ? 'done' : 'todo';
-    if(statusEl.value!==neededStatus){ statusEl.value=neededStatus; needRender=true; }
+  if(_taskMonthFilter && (!t.done || (t.doneAt||'').slice(0,7)!==_taskMonthFilter)){
+    _taskMonthFilter=null; needRender=true;
+  }
+  const sEl = document.getElementById('taskSearch');
+  if(sEl && sEl.value.trim()){
+    const q = sEl.value.toLowerCase().trim();
+    const proj = t.projectId ? (S.tasks||[]).find(x=>x.id==t.projectId) : null;
+    const hit = (t.name||'').toLowerCase().includes(q) || (proj && (proj.name||'').toLowerCase().includes(q));
+    if(!hit){ sEl.value=''; needRender=true; }
   }
   if(needRender) renderTasks();
   setTimeout(()=>{
@@ -3989,8 +4446,21 @@ function startPomo(min){
   updatePomoDisplay();
 }
 
-function stopPomo(){
-  if(pomoTimer){clearInterval(pomoTimer);pomoTimer=null;}
+function stopPomo(silent){
+  if(pomoTimer){
+    clearInterval(pomoTimer); pomoTimer=null;
+    // 中途停止（或换时长）：把已经跑掉的整分钟补记到绑定任务，不足 1 分钟不记
+    if(!silent && pomoTaskId){
+      const m = Math.floor((pomoMin*60 - Math.max(0, Math.round((pomoEndWall-Date.now())/1000)))/60);
+      const t = S.tasks.find(x=>x.id==pomoTaskId);
+      if(t && m>0){
+        t.pomoMin = (t.pomoMin||0) + m;
+        addXP(m, '番茄钟');
+        saveState(); renderTasks();
+        showToast('🍅 已记录 '+m+' 分钟');
+      }
+    }
+  }
   document.getElementById('pomoDisplay').textContent='--:--';
   document.getElementById('pomoDisplay').classList.remove('running');
   document.querySelectorAll('.pomo-btn[data-min]').forEach(b=>b.classList.remove('active'));
@@ -3999,11 +4469,13 @@ function stopPomo(){
 function tickPomo(){
   const remaining=Math.max(0,Math.round((pomoEndWall-Date.now())/1000));
   if(remaining<=0){
-    stopPomo();
-    const now=fmtDT(new Date().toISOString());
+    stopPomo(true);   // 整轮跑完，下面单独结算，别走中断补记
     if(pomoTaskId){
       const t=S.tasks.find(t=>t.id==pomoTaskId);
-      if(t){if(!t.pomoRecords)t.pomoRecords=[];t.pomoRecords.push(pomoMin+'min @ '+now);saveState();renderTasks();}
+      if(t){
+        t.pomoMin = (t.pomoMin||0) + pomoMin;
+        saveState(); renderTasks();
+      }
     }
     addXP(pomoMin,'番茄钟');
     showToast('🍅 '+pomoMin+'分钟完成！');
