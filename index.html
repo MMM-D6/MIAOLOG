@@ -572,6 +572,12 @@ body{
   border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
   padding:2px 6px;outline:none;
 }
+.tasks-sidebar-filter{padding:3px 6px;border-bottom:1px solid var(--win-dark);flex-shrink:0;background:var(--win-light);}
+.tasks-sidebar-filter label{
+  display:flex;align-items:center;gap:5px;cursor:pointer;
+  font-family:var(--font-ui);font-size:11px;color:#000;user-select:none;
+}
+.tasks-sidebar-filter input{margin:0;cursor:pointer;flex-shrink:0;}
 .tasks-sidebar-tree{flex:1;overflow-y:auto;padding:4px 2px 8px;}
 
 .tasks-sidebar-rail{
@@ -608,6 +614,13 @@ body{
 .ttoc-item-text{flex:1;overflow:hidden;text-overflow:ellipsis;}
 .ttoc-empty{padding:10px 8px;color:var(--win-dark);font-size:11px;line-height:1.5;}
 .ttoc-project-item{padding-left:8px;font-weight:bold;cursor:grab;}
+.ttoc-item.sel{background:#000080;color:#fff;}
+.ttoc-item.sel .ttoc-dot,.ttoc-item.sel .ttoc-count{color:#fff;}
+.ttoc-item.sel.done .ttoc-item-text{color:#fff;}
+.ttoc-sub{margin:2px 0 6px 10px;border-left:2px solid var(--win-dark);padding-left:2px;}
+.ttoc-sub .ttoc-item{padding-left:10px;}
+.ttoc-sub-sec{padding:2px 0 2px 6px;margin:4px 0 2px;}
+.ttoc-sub-sec span{font-size:10px;font-weight:bold;}
 .ttoc-project-item.task-dragging{opacity:.35;}
 .ttoc-project-item.task-drag-over{outline:2px dashed #000080;outline-offset:-2px;}
 
@@ -1097,12 +1110,18 @@ body{
           <div class="tasks-sidebar-head">
             <span class="tasks-sidebar-title" id="tasksSidebarTitle">项目目录</span>
             <div style="display:flex;gap:4px;flex-shrink:0;">
-              <button class="tasks-sidebar-toggle" id="tasksSidebarBackBtn" onclick="closeProjectDirectory()" title="返回项目列表" style="display:none;">← 返回</button>
+              <button class="tasks-sidebar-toggle" id="tasksSidebarBackBtn" onclick="closeProjectDirectory()" title="取消选中，右侧显示全部项目" style="display:none;">全部</button>
               <button class="tasks-sidebar-toggle" onclick="toggleTasksSidebar()" title="收起目录">◀ 收起</button>
             </div>
           </div>
           <div class="tasks-sidebar-search">
             <input type="text" id="tasksTocSearch" placeholder="筛选目录..." oninput="renderTasksToc()"/>
+          </div>
+          <div class="tasks-sidebar-filter">
+            <label title="勾选后只列出未完成的项目（已勾完成、或子任务全部完成的项目会被隐藏）">
+              <input type="checkbox" id="tocOnlyOpenChk" onchange="toggleTocOnlyOpen()"/>
+              <span>只看未完成项目</span>
+            </label>
           </div>
           <div class="tasks-sidebar-tree" id="tasksTocTree"></div>
         </aside>
@@ -1115,7 +1134,9 @@ body{
             <input class="search-bar" id="taskSearch" placeholder="搜索..." style="width:200px;" oninput="renderTasks()"/>
             <button class="pxl-btn" id="hideDoneBtn" onclick="toggleHideDone()" title="隐藏已完成任务">☑</button>
             <button class="pxl-btn" onclick="toggleEnergyTagBar()" title="管理能量标签">🏷️</button>
-            <button class="pxl-btn" onclick="exportTasks()">📄 导出</button>
+            <button class="pxl-btn" onclick="exportSelectedProject()" title="导出左侧目录中选中的那个项目（JSON，可以再导入回来）">📤 导出项目</button>
+            <button class="pxl-btn" onclick="document.getElementById('projImportInput').click()" title="导入项目 JSON 文件">📥 导入项目</button>
+            <input type="file" id="projImportInput" accept=".json,application/json" style="display:none;" onchange="onProjectImportSelected(event)"/>
           </div>
           <div id="energyTagBar"></div>
           <div id="archiveT" class="archive-row"></div>
@@ -1419,6 +1440,7 @@ function pushUndo(){
 let _taskMonthFilter = null;
 let _projCollapsed = {};
 let _hideDoneTasks = false;   // 检索框旁的小按钮控制：是否隐藏已完成任务
+let _tocOnlyOpen = false;     // 项目目录的勾选框：只列出未完成的项目
 let _projCfgOpen = {};        // 哪些项目展开了 ⚙ 设置行
 let jMonthFilter=null;
 
@@ -1661,6 +1683,7 @@ function migrateState(loaded) {
     }
   });
   if(typeof S.hideDoneTasks==='boolean') _hideDoneTasks = S.hideDoneTasks;
+  if(typeof S.tocOnlyOpen==='boolean') _tocOnlyOpen = S.tocOnlyOpen;
   if(!Array.isArray(S.habits)) S.habits=[];
   if(!S.checkins || typeof S.checkins!=='object') S.checkins={};
   if(!Array.isArray(S.energyTags)) S.energyTags=[];
@@ -2167,8 +2190,12 @@ function renderTasks(){
     return true;
   };
 
-  const projects = S.tasks.filter(p=>p.type==='project');
-  const orphans  = S.tasks.filter(t=>t.type!=='project' && t.type!=='section' && !t.projectId);
+  const allProjects = S.tasks.filter(p=>p.type==='project');
+  // 目录里选中了某个项目，右侧就只留它一个；没选中才铺开全部
+  if(_tasksOpenProjectId!=null && !allProjects.some(p=>p.id==_tasksOpenProjectId)) _tasksOpenProjectId = null;
+  const selProject = _tasksOpenProjectId!=null ? allProjects.find(p=>p.id==_tasksOpenProjectId) : null;
+  const projects = selProject ? [selProject] : allProjects;
+  const orphans  = selProject ? [] : S.tasks.filter(t=>t.type!=='project' && t.type!=='section' && !t.projectId);
 
   const visProjects = projects.filter(p=>{
     const kids = S.tasks.filter(t=>t.projectId==p.id && t.type!=='section');
@@ -2181,9 +2208,11 @@ function renderTasks(){
   const visOrphans = orphans.filter(t=>nameHit(t) && visible(t));
 
   if(!visProjects.length && !visOrphans.length){
-    const hint = _taskMonthFilter ? '这个月没有完成的任务'
+    const hint = selProject ? ('「'+escHtml(selProject.name||'（未命名项目）')+'」在当前筛选下没有可显示的内容'
+        + '<br/><button class="pxl-btn" style="margin-top:8px;" onclick="closeProjectDirectory()">显示全部项目</button>')
+      : (_taskMonthFilter ? '这个月没有完成的任务'
       : (search ? '没有匹配的结果'
-      : (_hideDoneTasks ? '没有进行中的任务' : '还没有项目，在上方输入框直接创建'));
+      : (_hideDoneTasks ? '没有进行中的任务' : '还没有项目，在上方输入框直接创建')));
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div>'+hint+'</div>';
     renderTasksToc();
     return;
@@ -2191,8 +2220,9 @@ function renderTasks(){
 
   visProjects.forEach(p=>{
     const st = projectStats(p);
+    const dirOpen = _tasksOpenProjectId==p.id;
+    // 选中的那一刻由 openProjectDirectory 展开；之后 ▾ 按钮仍然可以自己折叠
     const collapsed = _projCollapsed[p.id];
-    const dirOpen = _tasksOpenProjectId===p.id;
     const accent = p.done ? '#a0a0a0' : (dirOpen ? '#800080' : '#000080');
 
     html += '<div class="task-project-block">';
@@ -2202,12 +2232,12 @@ function renderTasks(){
     html += '<div class="task-top">';
     html += '<div class="task-check '+(p.done?'checked':'')+'" onclick="toggleTask('+p.id+')">'+(p.done?'✓':'')+'</div>';
     html += '<div class="task-title-wrap">';
-    html += '<div style="font-size:10px;font-weight:bold;color:'+accent+';margin-bottom:2px;letter-spacing:1px;">PROJECT'+(dirOpen?' · 目录已打开':'')+'</div>';
+    html += '<div style="font-size:10px;font-weight:bold;color:'+accent+';margin-bottom:2px;letter-spacing:1px;">PROJECT'+(dirOpen?' · 单独查看中':'')+'</div>';
     html += '<div class="task-title '+(p.done?'done-text':'')+'" ondblclick="startEditTaskTitle('+p.id+',this)" title="双击编辑标题">'+escHtml(p.name)+energyTagHtml(p)+'</div>';
     html += '<div class="task-meta">'+fmtDT(p.createdAt)+'</div>';
     html += '</div>';
     html += '<div class="task-actions">';
-    html += '<button class="icon-btn" onclick="toggleProjectDirectory('+p.id+')" style="'+(dirOpen?'background:#800080;color:#fff;':'color:#800080;')+'" title="'+(dirOpen?'关闭目录':'打开项目目录')+'">📂</button>';
+    html += '<button class="icon-btn" onclick="toggleProjectDirectory('+p.id+')" style="'+(dirOpen?'background:#800080;color:#fff;':'color:#800080;')+'" title="'+(dirOpen?'回到全部项目':'只看这个项目')+'">📂</button>';
     html += '<button class="icon-btn" onclick="toggleProjCollapse('+p.id+')" style="font-size:11px;color:#808080;">'+(collapsed?'▸':'▾')+'</button>';
     html += '<button class="icon-btn" onclick="addSectionToProject('+p.id+')" style="color:#000080;" title="添加分栏">+</button>';
     html += '<button class="icon-btn" onclick="bindPomo('+p.id+')" title="'+(pomoTaskId==p.id?'点击解绑番茄钟':'绑定番茄钟')+'"'+(pomoTaskId==p.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
@@ -2625,22 +2655,38 @@ let _tasksSidebarCollapsed = false;
 function openProjectDirectory(id){
   const p = (S.tasks||[]).find(x=>x.id==id && x.type==='project');
   if(!p) return;
-  _tasksOpenProjectId = id;
+  _tasksOpenProjectId = p.id;
+  _projCollapsed[p.id] = false;   // 选中就展开，右侧只留这一个项目
   _tasksSidebarCollapsed = false;
-  renderTasksToc();
   applyTasksSidebarState();
+  renderTasks();                  // renderTasks 结尾会刷新目录
 }
 
 function closeProjectDirectory(){
   _tasksOpenProjectId = null;
-  renderTasksToc();
   applyTasksSidebarState();
+  renderTasks();
 }
 
 function toggleProjectDirectory(id){
-  if(_tasksOpenProjectId===id) closeProjectDirectory();
+  if(_tasksOpenProjectId==id) closeProjectDirectory();
   else openProjectDirectory(id);
-  renderTasks();
+}
+
+// 目录里的勾选框：全部项目 / 只看未完成
+function toggleTocOnlyOpen(){
+  const chk = document.getElementById('tocOnlyOpenChk');
+  _tocOnlyOpen = chk ? !!chk.checked : !_tocOnlyOpen;
+  S.tocOnlyOpen = _tocOnlyOpen;
+  saveStateSoon();
+  renderTasksToc();
+}
+
+// 项目是否算「已完成」：自己勾了完成，或者子任务全部完成
+function projectIsFinished(p){
+  if(p.done) return true;
+  const kids = (S.tasks||[]).filter(t=>t.projectId==p.id && t.type!=='section');
+  return kids.length>0 && kids.every(t=>t.done);
 }
 
 function toggleTasksSidebar(){
@@ -2662,90 +2708,75 @@ function renderTasksToc(){
   const tree=document.getElementById('tasksTocTree');
   const titleEl=document.getElementById('tasksSidebarTitle');
   const backBtn=document.getElementById('tasksSidebarBackBtn');
+  const chk=document.getElementById('tocOnlyOpenChk');
   if(!tree) return;
+  if(chk) chk.checked = !!_tocOnlyOpen;
 
-  if(_tasksOpenProjectId==null){
-    if(backBtn) backBtn.style.display='none';
-    renderProjectsToc(tree, titleEl);
-    return;
-  }
-
-  const p = (S.tasks||[]).find(x=>x.id==_tasksOpenProjectId && x.type==='project');
-  if(!p){
-    // the opened project no longer exists — fall back to the project list
-    _tasksOpenProjectId=null;
-    if(backBtn) backBtn.style.display='none';
-    renderProjectsToc(tree, titleEl);
-    return;
-  }
-  if(backBtn) backBtn.style.display='';
-  if(titleEl) titleEl.textContent=p.name||'（未命名项目）';
-
-  const q=((document.getElementById('tasksTocSearch')||{}).value||'').trim().toLowerCase();
-  const groups = getProjectGroups(p.id);
-  const allRealChildren = groups.reduce((acc,g)=>acc.concat(g.tasks),[]);
-  const matchItem = t => !q || (t.name||'').toLowerCase().includes(q);
-  const doneCount = allRealChildren.filter(t=>t.done).length;
-
-  let html = '<div class="ttoc-group">'
-    + '<span class="ttoc-group-name muted">'+escHtml(p.name||'（未命名项目）')+'</span>'
-    + '<span class="ttoc-count">'+doneCount+'/'+allRealChildren.length+'</span>'
-    + '</div>';
-
-  if(!allRealChildren.length){
-    html += '<div class="ttoc-empty">这个项目还没有子任务</div>';
-  } else {
-    let bodyHtml = '';
-    let anyRendered = false;
-    groups.forEach(function(grp){
-      const visTasks = q ? grp.tasks.filter(matchItem) : grp.tasks;
-      if(q && grp.section && !visTasks.length) return; // hide empty sections only while searching
-      if(grp.section){
-        bodyHtml += '<div style="border-left:3px solid '+(grp.section.color||'#000080')+';padding:2px 0 2px 6px;margin:4px 0 2px;">'
-          + '<span style="font-size:10px;font-weight:bold;color:'+(grp.section.color||'#000080')+';">'+escHtml(grp.section.name||'分栏')+'</span>'
-          + '</div>';
-      }
-      visTasks.forEach(t=>{
-        anyRendered = true;
-        bodyHtml += '<div class="ttoc-item'+(t.done?' done':'')+'" onclick="gotoTaskItem('+t.id+')" title="'+escAttr(t.name)+'">'
-          + '<span class="ttoc-dot">'+(t.done?'✓':'•')+'</span>'
-          + '<span class="ttoc-item-text">'+escHtml(t.name||'（未命名）')+'</span>'
-          + '</div>';
-      });
-    });
-    html += (q && !anyRendered) ? '<div class="ttoc-empty">没有匹配的结果</div>' : bodyHtml;
-  }
-
-  tree.innerHTML = html;
-}
-
-function renderProjectsToc(tree, titleEl){
-  if(titleEl) titleEl.textContent='项目目录';
-  const q=((document.getElementById('tasksTocSearch')||{}).value||'').trim().toLowerCase();
   const projects = (S.tasks||[]).filter(t=>t.type==='project');
-  const matchItem = p => !q || (p.name||'').toLowerCase().includes(q);
-  const vis = q ? projects.filter(matchItem) : projects;
+  // 选中的项目被删掉了就退回全部
+  if(_tasksOpenProjectId!=null && !projects.some(p=>p.id==_tasksOpenProjectId)) _tasksOpenProjectId=null;
+  if(backBtn) backBtn.style.display = _tasksOpenProjectId==null ? 'none' : '';
+  if(titleEl) titleEl.textContent = '项目目录';
+
+  const q=((document.getElementById('tasksTocSearch')||{}).value||'').trim().toLowerCase();
+  const hit = t => !q || (t.name||'').toLowerCase().includes(q);
+  const childrenOf = id => (S.tasks||[]).filter(t=>t.projectId==id && t.type!=='section');
 
   if(!projects.length){
-    tree.innerHTML = '<div class="ttoc-empty">还没有项目 — 可以在下方直接输入创建</div>';
+    tree.innerHTML = '<div class="ttoc-empty">还没有项目，可以在右上的输入框直接创建</div>';
     return;
   }
-  if(q && !vis.length){
-    tree.innerHTML = '<div class="ttoc-empty">没有匹配的结果</div>';
+
+  const vis = projects.filter(p=>{
+    // 选中的项目一直留在列表里，否则点完筛选就找不到它了
+    if(p.id==_tasksOpenProjectId) return true;
+    if(_tocOnlyOpen && projectIsFinished(p)) return false;
+    return hit(p) || childrenOf(p.id).some(hit);
+  });
+
+  if(!vis.length){
+    tree.innerHTML = '<div class="ttoc-empty">'
+      + (q ? '没有匹配的结果' : '没有未完成的项目<br/><span style="color:#808080;">取消上方勾选可以看全部</span>')
+      + '</div>';
     return;
   }
 
   let html='';
   vis.forEach(p=>{
-    const children = S.tasks.filter(t=>t.projectId==p.id && t.type!=='section');
+    const sel = p.id==_tasksOpenProjectId;
+    const children = childrenOf(p.id);
     const doneCount = children.filter(t=>t.done).length;
-    html += '<div class="ttoc-item ttoc-project-item'+(p.done?' done':'')+'" draggable="true" '
+    html += '<div class="ttoc-item ttoc-project-item'+(p.done?' done':'')+(sel?' sel':'')+'" draggable="true" '
       + 'ondragstart="taskDragStart(event,'+p.id+',\'project\')" ondragover="taskDragOver(event,\'project\')" ondragleave="taskDragLeave(event)" ondrop="taskDrop(event,'+p.id+',\'project\')" ondragend="taskDragEnd(event)" '
-      + 'onclick="openProjectDirectory('+p.id+')" title="'+escAttr(p.name)+'（点击查看内部结构，可拖动调整项目顺序）">'
-      + '<span class="ttoc-dot">'+(p.done?'✓':'📁')+'</span>'
+      + 'onclick="toggleProjectDirectory('+p.id+')" title="'+escAttr(p.name)+'（点击只看这个项目，再点一次回到全部；可拖动调整顺序）">'
+      + '<span class="ttoc-dot">'+(sel?'📂':(p.done?'✓':'📁'))+'</span>'
       + '<span class="ttoc-item-text">'+escHtml(p.name||'（未命名项目）')+'</span>'
       + '<span class="ttoc-count">'+doneCount+'/'+children.length+'</span>'
       + '</div>';
+
+    if(!sel) return;
+    // 选中的项目在目录里就地展开自己的分栏和子任务
+    if(!children.length){
+      html += '<div class="ttoc-sub"><div class="ttoc-empty">这个项目还没有子任务</div></div>';
+      return;
+    }
+    let body='', any=false;
+    getProjectGroups(p.id).forEach(function(grp){
+      const visTasks = q ? grp.tasks.filter(hit) : grp.tasks;
+      if(q && grp.section && !visTasks.length) return;
+      if(grp.section){
+        body += '<div class="ttoc-sub-sec" style="border-left:3px solid '+(grp.section.color||'#000080')+';">'
+          + '<span style="color:'+(grp.section.color||'#000080')+';">'+escHtml(grp.section.name||'分栏')+'</span></div>';
+      }
+      visTasks.forEach(t=>{
+        any=true;
+        body += '<div class="ttoc-item'+(t.done?' done':'')+'" onclick="gotoTaskItem('+t.id+')" title="'+escAttr(t.name)+'">'
+          + '<span class="ttoc-dot">'+(t.done?'✓':'•')+'</span>'
+          + '<span class="ttoc-item-text">'+escHtml(t.name||'（未命名）')+'</span>'
+          + '</div>';
+      });
+    });
+    html += '<div class="ttoc-sub">'+((q && !any) ? '<div class="ttoc-empty">没有匹配的子任务</div>' : body)+'</div>';
   });
   tree.innerHTML = html;
 }
@@ -4089,30 +4120,119 @@ function boxExportAll(){
   showToast('已导出 '+arr.filter(x=>x.type==='file').length+' 个文件');
 }
 
-function exportTasks(){
-  let txt = '=== 任务导出 ===\n\n';
-  const projects = S.tasks.filter(t=>t.type==='project');
-  const standalone = S.tasks.filter(t=>t.type!=='project' && !t.projectId);
-  projects.forEach(p=>{
-    txt += '[' + (p.done?'✓':'○') + '] [PROJECT] ' + p.name + '\n';
-    if(p.desc) txt += '  ' + p.desc + '\n';
-    txt += '  创建: ' + fmtDT(p.createdAt) + '\n';
-    getProjectGroups(p.id).forEach(function(grp){
-      if(grp.section) txt += '  -- ' + (grp.section.name||'分栏') + ' --\n';
-      grp.tasks.forEach(t=>{
-        txt += '  [' + (t.done?'✓':'○') + '] ' + t.name + (t.note?' — '+t.note:'') + '\n';
-      });
-    });
-    txt += '\n';
+// ═══════════════════════════════════════
+// 项目导出 / 导入：JSON 原样往返，导出的文件可以直接再导入回来
+// ═══════════════════════════════════════
+const PROJ_FILE_FORMAT = 'mmm-project';
+const PROJ_FILE_VERSION = 1;
+
+// 去掉本机专用的 id，其余字段全部保留，这样导入回来还是同一个项目
+function projStripIds(o){
+  const c = JSON.parse(JSON.stringify(o));
+  delete c.id; delete c.projectId;
+  return c;
+}
+
+function projectExportPayload(p){
+  // 子条目按 S.tasks 里的原始顺序，分栏和任务的归属靠顺序决定，不能打乱
+  const items = (S.tasks||[]).filter(t=>t.projectId==p.id).map(projStripIds);
+  // 顺带存一份用到的能量标签定义，换台设备导入后颜色和字号还是原来的
+  const used = new Set([p.energyTag].concat(items.map(i=>i.energyTag)).filter(Boolean));
+  const tags = (S.energyTags||[]).filter(tg=>tg && used.has(tg.name));
+  return {
+    format: PROJ_FILE_FORMAT,
+    version: PROJ_FILE_VERSION,
+    exportedAt: new Date().toISOString(),
+    project: projStripIds(p),
+    items: items,
+    energyTags: tags
+  };
+}
+
+function exportSelectedProject(){
+  const p = _tasksOpenProjectId!=null
+    ? (S.tasks||[]).find(x=>x.id==_tasksOpenProjectId && x.type==='project')
+    : null;
+  if(!p){ showToast('先在左侧目录点一个项目，再导出'); return; }
+  const safe = (p.name||'project').replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,40) || 'project';
+  const blob = new Blob([JSON.stringify(projectExportPayload(p), null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.download = 'project-'+safe+'.json'; a.href = url; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
+  showToast('已导出项目: '+(p.name||''));
+}
+
+function onProjectImportSelected(e){
+  const file = e.target.files[0];
+  e.target.value='';
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = ev=>{
+    try{
+      const id = importProjectPayload(JSON.parse(ev.target.result));
+      openProjectDirectory(id);
+      const p = (S.tasks||[]).find(x=>x.id==id);
+      showToast('已导入项目: '+((p&&p.name)||''));
+    }catch(err){ alert('导入失败: '+err.message); }
+  };
+  r.readAsText(file);
+}
+
+function importProjectPayload(data){
+  if(!data || typeof data!=='object' || !data.project || !Array.isArray(data.items)){
+    throw new Error('不是项目格式的 JSON');
+  }
+  pushUndo();
+  const now = new Date().toISOString();
+
+  const p = projStripIds(data.project);
+  p.id = S.nextId++;
+  p.type = 'project';
+  p.projectId = null;
+  if(!p.name) p.name = '（未命名项目）';
+  if(!p.createdAt) p.createdAt = now;
+  if(!Array.isArray(p.tags)) p.tags = [];
+
+  // 重名就加个后缀，免得导入后分不清哪个是哪个
+  const used = new Set((S.tasks||[]).filter(t=>t.type==='project').map(t=>t.name));
+  if(used.has(p.name)){
+    let n = 2, base = p.name;
+    while(used.has(base+'（导入 '+n+'）')) n++;
+    p.name = base+'（导入 '+n+'）';
+  }
+
+  const kids = data.items.map(it=>{
+    const c = projStripIds(it);
+    c.id = S.nextId++;
+    c.projectId = p.id;
+    if(c.type!=='section') c.type = c.type || 'todo';
+    if(!c.createdAt) c.createdAt = now;
+    if(c.type!=='section'){
+      c.done = !!c.done;
+      if(!c.done) delete c.doneAt;
+      if(!Array.isArray(c.tags)) c.tags = [];
+      if(typeof c.pomoMin!=='number') c.pomoMin = 0;
+    }
+    return c;
   });
-  if(standalone.length){
-    txt += '--- 独立任务 ---\n';
-    standalone.forEach(t=>{
-      txt += '[' + (t.done?'✓':'○') + '] ' + t.name + '\n';
-      txt += '  创建: ' + fmtDT(t.createdAt) + '\n';
+
+  // 补上本机还没有的能量标签，已有的同名标签不动
+  if(Array.isArray(data.energyTags)){
+    if(!Array.isArray(S.energyTags)) S.energyTags = [];
+    const have = new Set(S.energyTags.map(tg=>tg && tg.name));
+    data.energyTags.forEach(tg=>{
+      if(tg && tg.name && !have.has(tg.name)){
+        S.energyTags.push({name:tg.name, color:tg.color||'#ffff00', size:tg.size});
+        have.add(tg.name);
+      }
     });
   }
-  dl('tasks.txt', txt);
+
+  S.tasks.unshift(p);
+  S.tasks.splice(1, 0, ...kids);   // 子条目紧跟在项目后面，保持原来的先后顺序
+  saveState();
+  return p.id;
 }
 
 // ═══════════════════════════════════════
@@ -5141,8 +5261,13 @@ function exportJournal(){
   dl('journal.txt',txt);
 }
 function exportAll(){
-  const txt=JSON.stringify({exportedAt:new Date().toISOString()},null,2);
-  dl('mmm-backup.json',txt);
+  const txt=JSON.stringify({exportedAt:new Date().toISOString(), data:S},null,2);
+  const blob=new Blob([txt],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.download='mmm-backup.json'; a.href=url; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+  showToast('已导出全量备份');
 }
 function dl(name,cnt){
   const a=document.createElement('a');
