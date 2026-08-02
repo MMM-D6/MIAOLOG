@@ -221,11 +221,13 @@ body{background:var(--gray);color:var(--black);font-family:var(--font);font-size
 .trans-box.listening{border-color:var(--red);}
 
 /* capture result */
-.cap-panel{display:flex;flex-direction:column;gap:5px;background:#f4f4f4;padding:7px 9px;
-  border:2px solid;border-color:var(--darker) var(--white) var(--white) var(--darker);}
+.cap-panel{display:flex;flex-direction:column;gap:5px;}
 .cap-hdr{font-family:monospace;font-size:10px;color:var(--blue);letter-spacing:1px;}
-.cap-anno{font-size:14px;font-family:Arial,sans-serif;line-height:1.9;background:#fff;border:1px solid #ccc;
-  padding:6px 9px;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;}
+.cap-anno{
+  min-height:52px;max-height:190px;overflow-y:auto;padding:6px 9px;
+  font-size:14px;font-family:Arial,sans-serif;line-height:1.9;
+  background:#fff;border:2px solid;border-color:var(--darker) var(--white) var(--white) var(--darker);
+  white-space:pre-wrap;word-break:break-word;}
 .cap-warn{font-size:10px;color:var(--dark);line-height:1.5;}
 .cap-acts{display:flex;gap:4px;flex-wrap:wrap;}
 
@@ -536,7 +538,7 @@ let capSession=null;              // the single active recording, or null
 const PS=new Map();               // itemId -> {open,mode,refAnsId,masks,result}
 let PRAC_LANG='en-GB';
 function ps(id){
-  if(!PS.has(id)) PS.set(id,{open:false,mode:'free',refAnsId:null,masks:[],revealed:false,result:null});
+  if(!PS.has(id)) PS.set(id,{open:false,mode:'recite',refAnsId:null,masks:[],revealed:false,result:null});
   return PS.get(id);
 }
 function uid(){return Date.now()+'-'+(idSeq++);}
@@ -1500,7 +1502,9 @@ function renderPractice(item){
   h+='<span class="rec-sub">转录会边说边出现在下面的白框里</span>';
   h+='</div></div>';
 
-  h+='<div class="trans-box'+(live?' listening':'')+'" id="rtb-'+item.id+'"></div>';
+  if(live||!st.result){
+    h+='<div class="trans-box'+(live?' listening':'')+'" id="rtb-'+item.id+'"></div>';
+  }
 
   if(st.result){
     const r=st.result;
