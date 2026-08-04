@@ -980,6 +980,134 @@ body{
 #sec-checkin{overflow-y:auto;background:var(--win-gray);}
 #ci-calendar{padding-bottom:16px;}
 
+/* ── 面板栏（统计 / 事件 / 清单，默认全收起） ── */
+#ci-panel-bar{
+  display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+  padding:7px 10px;background:var(--surface);border-bottom:1px solid var(--border);
+}
+#ci-panel{background:var(--win-gray);}
+#ci-panel:not(:empty){padding:8px 10px;border-bottom:1px solid var(--win-dark);}
+.ci-panel-head{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;
+  font-family:var(--font-ui);font-size:12px;color:#404040;
+}
+
+/* ── 统计条 ── */
+.ci-stat-card{
+  background:#fff;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  padding:6px 8px;margin-bottom:6px;font-family:var(--font-ui);font-size:12px;
+}
+.ci-stat-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
+.ci-stat-name{font-weight:bold;font-size:13px;}
+.ci-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:1px 6px;font-size:11px;background:var(--win-gray);
+  border:1px solid var(--win-dark);
+}
+.ci-badge.fire{background:#ffe8c0;border-color:#c07000;color:#803000;}
+.ci-badge.ok{background:#d8f0d8;border-color:#008000;color:#005000;}
+.ci-bar{height:10px;background:var(--win-gray);border:1px solid var(--win-dark);position:relative;overflow:hidden;}
+.ci-bar > i{display:block;height:100%;background:#000080;}
+.ci-bar > i.full{background:#008000;}
+.ci-makeup{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;align-items:center;}
+.ci-makeup-chip{
+  font-family:var(--font-ui);font-size:11px;padding:1px 6px;cursor:pointer;
+  background:var(--win-gray);color:#000;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.ci-makeup-chip:hover{background:var(--win-light);}
+.ci-makeup-chip:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
+
+/* ── 事件与清单 ── */
+.ci-card{
+  background:#fff;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  padding:6px 8px;margin-bottom:6px;font-family:var(--font-ui);font-size:13px;
+}
+.ci-card-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
+.ci-card-name{font-weight:bold;font-size:13px;flex:1;min-width:90px;}
+.ci-date-hdr{
+  font-family:var(--font-ui);font-size:12px;font-weight:bold;color:#000080;
+  margin:8px 0 3px;padding-bottom:2px;border-bottom:1px solid var(--win-dark);
+}
+.ci-date-hdr.today{color:var(--win-red);}
+.ci-line{
+  display:flex;align-items:flex-start;gap:6px;padding:3px 0;
+  border-bottom:1px dotted #d0d0d0;
+}
+.ci-line:last-child{border-bottom:none;}
+.ci-line.done .ci-line-text{text-decoration:line-through;color:#909090;}
+.ci-line-text{flex:1;min-width:60px;font-size:13px;line-height:1.4;word-break:break-word;cursor:text;}
+.ci-line-time{font-size:11px;color:#000080;flex-shrink:0;padding-top:2px;}
+.ci-check{
+  width:16px;height:16px;flex-shrink:0;cursor:pointer;margin-top:1px;
+  background:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:11px;line-height:1;color:#008000;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
+.ci-mini-btn{
+  font-family:var(--font-ui);font-size:11px;padding:1px 5px;cursor:pointer;flex-shrink:0;
+  background:var(--win-gray);color:#000;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.ci-mini-btn:hover{background:var(--win-light);}
+.ci-mini-btn:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
+.ci-add-inp{
+  width:100%;background:#fff;color:#000;margin-top:5px;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  padding:3px 6px;font-family:var(--font-ui);font-size:12px;outline:none;
+}
+.ci-empty{font-family:var(--font-ui);font-size:12px;color:#606060;padding:6px 2px;}
+
+/* ── 日历格子 ── */
+.ci-cell-line{font-size:13px;line-height:1.25;display:flex;align-items:center;gap:2px;white-space:nowrap;overflow:hidden;}
+.ci-cell-val{font-family:var(--font-ui);font-size:10px;color:#000080;}
+.ci-cell-ev{
+  font-family:var(--font-ui);font-size:10px;line-height:1.35;color:#000080;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.ci-cell-ev.done{color:#a0a0a0;text-decoration:line-through;}
+.ci-cell-ev.list{color:#800080;}
+.ci-cell-note{
+  position:absolute;right:2px;bottom:1px;font-size:10px;line-height:1;opacity:.85;
+}
+.ci-cell-mood{position:absolute;right:2px;top:1px;font-size:12px;line-height:1;}
+
+/* ── 当日编辑弹窗 ── */
+.ci-day-row{
+  margin:8px auto 0;width:460px;max-width:100%;
+  background:#fff;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  padding:7px 8px;font-family:var(--font-ui);
+}
+.ci-day-row-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.ci-day-row-name{flex:1;font-size:13px;min-width:80px;}
+.ci-num{
+  width:70px;text-align:center;font-family:var(--font-ui);font-size:14px;
+  background:#fff;color:#000;padding:3px 4px;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  outline:none;
+}
+.ci-step-btn{
+  font-family:var(--font-ui);font-size:12px;min-width:34px;padding:2px 6px;cursor:pointer;
+  background:var(--win-gray);color:#000;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.ci-step-btn:hover{background:var(--win-light);}
+.ci-step-btn:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
+.ci-day-hint{font-size:11px;color:#606060;margin-top:4px;}
+.ci-mood-chip{
+  font-size:18px;padding:2px 5px;cursor:pointer;background:var(--win-gray);
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.ci-mood-chip.on{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);background:#000080;}
+.ci-tip{
+  margin:8px auto 0;width:460px;max-width:100%;
+  font-family:var(--font-ui);font-size:11px;color:#404040;
+  background:var(--win-light);border:1px solid var(--win-dark);padding:5px 7px;
+}
+
 /* ══════════════════════════════════════
    SCROLLBARS — Win95 style
    ══════════════════════════════════════ */
@@ -1110,7 +1238,6 @@ body{
           <div class="tasks-sidebar-head">
             <span class="tasks-sidebar-title" id="tasksSidebarTitle">项目目录</span>
             <div style="display:flex;gap:4px;flex-shrink:0;">
-              <button class="tasks-sidebar-toggle" id="tasksSidebarBackBtn" onclick="closeProjectDirectory()" title="取消选中，右侧显示全部项目" style="display:none;">全部</button>
               <button class="tasks-sidebar-toggle" onclick="toggleTasksSidebar()" title="收起目录">◀ 收起</button>
             </div>
           </div>
@@ -1131,7 +1258,7 @@ body{
         <div class="tasks-main">
           <div class="toolbar">
             <input class="search-bar" id="quickAddProjectInput" placeholder="+ 新项目，回车创建..." style="width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddProject();}"/>
-            <input class="search-bar" id="taskSearch" placeholder="搜索..." style="width:200px;" oninput="renderTasks()"/>
+            <input class="search-bar" id="taskSearch" placeholder="搜索全部项目..." style="width:200px;" title="有关键词时跨所有项目查找，清空后回到当前选中的项目" oninput="renderTasks()"/>
             <button class="pxl-btn" id="hideDoneBtn" onclick="toggleHideDone()" title="隐藏已完成任务">☑</button>
             <button class="pxl-btn" onclick="toggleEnergyTagBar()" title="管理能量标签">🏷️</button>
             <button class="pxl-btn" onclick="exportSelectedProject()" title="导出左侧目录中选中的那个项目（JSON，可以再导入回来）">📤 导出项目</button>
@@ -1154,9 +1281,19 @@ body{
           <button class="pxl-btn" onclick="ciNavMonth(1)">▶</button>
           <button class="pxl-btn" onclick="ciGoToday()">TODAY</button>
         </div>
-        <button class="pxl-btn primary" onclick="openHabitModal()">🌱 + 新建习惯</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="pxl-btn primary" onclick="ciOpenDay(ciToday())">📝 今日记录</button>
+          <button class="pxl-btn" onclick="openHabitModal()">🌱 + 新建习惯</button>
+        </div>
       </div>
       <div id="ci-habits-strip"></div>
+      <div id="ci-panel-bar">
+        <button class="pxl-btn" id="ciTabEvents" onclick="ciTogglePanel('events')">📅 事件与计划</button>
+        <button class="pxl-btn" id="ciTabLists" onclick="ciTogglePanel('lists')">📋 清单</button>
+        <button class="pxl-btn" id="ciTabStats" onclick="ciTogglePanel('stats')">📊 统计</button>
+        <span style="font-size:11px;color:#606060;">统计默认收起，想看的时候再点开就好</span>
+      </div>
+      <div id="ci-panel"></div>
       <div id="ci-calendar"></div>
     </div>
 
@@ -1288,9 +1425,109 @@ body{
       <input class="form-input" id="habitEmoji" placeholder="📖" style="font-size:24px;text-align:center;width:80px;"/>
       <div style="font-size:12px;color:#808080;margin-top:4px;">直接输入一个 emoji</div>
     </div>
+    <div class="form-row">
+      <label class="form-label">类型</label>
+      <select class="form-select" id="habitKind" onchange="ciHabitKindChange()">
+        <option value="simple">打卡型（做了就打勾）</option>
+        <option value="goal">目标型（记录投入量，比如时长）</option>
+      </select>
+    </div>
+    <div class="form-row" id="habitGoalRow" style="display:none;">
+      <label class="form-label">每日目标</label>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <input class="form-input" id="habitGoal" type="number" min="0" step="0.5" placeholder="9" style="width:90px;"/>
+        <input class="form-input" id="habitUnit" placeholder="小时" style="width:90px;"/>
+        <span style="font-size:12px;color:#606060;">步长</span>
+        <input class="form-input" id="habitStep" type="number" min="0.1" step="0.1" placeholder="0.5" style="width:80px;"/>
+      </div>
+      <div style="font-size:12px;color:#606060;margin-top:5px;line-height:1.5;">
+        目标只是参照，不是考核线。只要当天有为它做点什么，哪怕只有 0.5，打卡就算数、连续也不会断。
+      </div>
+    </div>
     <div class="modal-btns">
       <button class="pxl-btn" onclick="closeModal('habitModal')">取消</button>
       <button class="pxl-btn primary" onclick="saveHabit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHECKIN DAY MODAL -->
+<div class="overlay" id="ciDayModal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal('ciDayModal')">✕</button>
+    <div class="modal-title" id="ciDayTitle">当日记录</div>
+    <input type="hidden" id="ciDayDate"/>
+    <div id="ciDayHabits"></div>
+    <div id="ciDayPlans"></div>
+    <div class="form-row">
+      <label class="form-label">今天的心情</label>
+      <div id="ciMoodPicker" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">文字记录 · 心情与总结</label>
+      <textarea class="form-textarea" id="ciDayText" rows="5" placeholder="今天做了什么？状态怎么样？想对自己说点什么？"></textarea>
+    </div>
+    <div class="ci-tip" id="ciDayTip"></div>
+    <div class="modal-btns">
+      <button class="pxl-btn danger" onclick="ciClearDay()">清空当天</button>
+      <button class="pxl-btn" onclick="closeModal('ciDayModal')">取消</button>
+      <button class="pxl-btn primary" onclick="ciSaveDay()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHECKIN EVENT MODAL -->
+<div class="overlay" id="ciEventModal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal('ciEventModal')">✕</button>
+    <div class="modal-title" id="ciEventTitle">新建事件</div>
+    <input type="hidden" id="ciEventId"/>
+    <div class="form-row">
+      <label class="form-label">日期</label>
+      <input class="form-input" id="ciEventDs" type="date" style="width:180px;"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">时间（可留空）</label>
+      <input class="form-input" id="ciEventTime" type="time" style="width:140px;"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">事件 / 计划</label>
+      <input class="form-input" id="ciEventName" placeholder="例如：牙医预约、交房租、朋友生日"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">备注（可留空）</label>
+      <textarea class="form-textarea" id="ciEventNote" rows="3" placeholder="地点、要带的东西、注意事项..."></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="closeModal('ciEventModal')">取消</button>
+      <button class="pxl-btn primary" onclick="ciSaveEvent()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHECKIN LIST MODAL -->
+<div class="overlay" id="ciListModal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal('ciListModal')">✕</button>
+    <div class="modal-title" id="ciListTitle">新建清单</div>
+    <input type="hidden" id="ciListId"/>
+    <div class="form-row">
+      <label class="form-label">清单名称</label>
+      <input class="form-input" id="ciListName" placeholder="例如：这周要买的东西、出门前检查"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">关联到日期（可留空）</label>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <input class="form-input" id="ciListDs" type="date" style="width:180px;"/>
+        <button class="pxl-btn" onclick="document.getElementById('ciListDs').value='';">清除日期</button>
+      </div>
+      <div style="font-size:12px;color:#606060;margin-top:5px;">
+        关联后，这份清单会出现在日历对应的格子里，点开那天就能直接勾。
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="closeModal('ciListModal')">取消</button>
+      <button class="pxl-btn primary" onclick="ciSaveList()">保存</button>
     </div>
   </div>
 </div>
@@ -1426,7 +1663,7 @@ var S = {
   charName:'MMM', level:1, xp:0,
   avatar:null,
   tasks:[], journal:[], cards:[],
-  habits:[], checkins:{}, energyTags:[],
+  habits:[], checkins:{}, dayNotes:{}, ciEvents:[], ciLists:[], energyTags:[],
   nextId:1,
   finance:{rate:9.2, accounts:[], cart:[], records:[], recordsCollapsed:true}
 };
@@ -1438,7 +1675,6 @@ function pushUndo(){
   if(undoStack.length>UNDO_LIMIT) undoStack.shift();
 }
 let _taskMonthFilter = null;
-let _projCollapsed = {};
 let _hideDoneTasks = false;   // 检索框旁的小按钮控制：是否隐藏已完成任务
 let _tocOnlyOpen = false;     // 项目目录的勾选框：只列出未完成的项目
 let _projCfgOpen = {};        // 哪些项目展开了 ⚙ 设置行
@@ -1542,7 +1778,7 @@ function mergeCloudIntoLocal(cloud){
     cloudArr.forEach(x => { if(x && !ids.has(String(x.id))) localArr.push(x); });
     return localArr;
   };
-  ['tasks','journal','cards','habits','boxFiles',
+  ['tasks','journal','cards','habits','ciEvents','ciLists','boxFiles',
    'fleeting','permanent','lit','ideas','drafts'].forEach(k=>{
     S[k] = unionById(S[k], cloud[k]);
   });
@@ -1686,6 +1922,21 @@ function migrateState(loaded) {
   if(typeof S.tocOnlyOpen==='boolean') _tocOnlyOpen = S.tocOnlyOpen;
   if(!Array.isArray(S.habits)) S.habits=[];
   if(!S.checkins || typeof S.checkins!=='object') S.checkins={};
+  // 习惯字段补全：goal>0 表示「目标型」（每天记录投入量），否则是简单打卡型
+  S.habits.forEach(h=>{
+    if(!h) return;
+    const g = Number(h.goal);
+    h.goal = (isFinite(g) && g>0) ? g : 0;
+    if(h.goal>0){
+      if(typeof h.unit!=='string' || !h.unit) h.unit='小时';
+      const st = Number(h.step);
+      h.step = (isFinite(st) && st>0) ? st : 0.5;
+    } else {
+      if(typeof h.unit!=='string') h.unit='';
+      if(!(Number(h.step)>0)) h.step=0.5;
+    }
+    if(!h.emoji) h.emoji='✅';
+  });
   if(!Array.isArray(S.energyTags)) S.energyTags=[];
   // migrate legacy plain-string energy tags to {name,color} objects
   S.energyTags = S.energyTags.map(tg => typeof tg==='string' ? {name:tg, color:'#ffff00'} : tg);
@@ -1694,6 +1945,36 @@ function migrateState(loaded) {
     if(!tg.color || !/^#[0-9a-fA-F]{6}$/.test(tg.color)) tg.color = '#ffff00';
   });
   if(!S.dayNotes || typeof S.dayNotes!=='object') S.dayNotes={};
+  // 事件/计划 与 清单：补全结构，坏数据直接丢掉，避免渲染时炸掉
+  if(!Array.isArray(S.ciEvents)) S.ciEvents=[];
+  S.ciEvents = S.ciEvents.filter(e=>e && e.ds).map(e=>({
+    id: e.id!=null ? e.id : S.nextId++,
+    ds: String(e.ds),
+    title: String(e.title||'未命名事件'),
+    time: String(e.time||''),
+    note: String(e.note||''),
+    done: !!e.done,
+    createdAt: e.createdAt || new Date().toISOString()
+  }));
+  if(!Array.isArray(S.ciLists)) S.ciLists=[];
+  S.ciLists = S.ciLists.filter(l=>l && typeof l==='object').map(l=>({
+    id: l.id!=null ? l.id : S.nextId++,
+    name: String(l.name||'未命名清单'),
+    ds: l.ds ? String(l.ds) : null,
+    items: (Array.isArray(l.items)?l.items:[]).filter(it=>it && typeof it==='object').map(it=>({
+      id: it.id!=null ? it.id : S.nextId++,
+      text: String(it.text||''),
+      done: !!it.done
+    })).filter(it=>it.text),
+    createdAt: l.createdAt || new Date().toISOString()
+  }));
+  // 当日文字记录统一成 {mood,text} 结构，旧的纯字符串自动迁移
+  Object.keys(S.dayNotes).forEach(k=>{
+    const n=S.dayNotes[k];
+    if(typeof n==='string'){ S.dayNotes[k] = n ? {mood:'', text:n} : undefined; }
+    else if(n && typeof n==='object'){ n.mood = n.mood||''; n.text = n.text||''; }
+    if(!S.dayNotes[k] || (!S.dayNotes[k].mood && !S.dayNotes[k].text)) delete S.dayNotes[k];
+  });
   if(!Array.isArray(S.boxFiles)) S.boxFiles=[];
   // BOX 目录：由“位置分组”迁移到显式 parentId 树（支持任意层级 + 任意层放文件）
   // 幂等：已经有 parentId 字段的条目不再处理
@@ -1855,11 +2136,13 @@ function quickAddProject(){
   const inp = document.getElementById('quickAddProjectInput');
   const name = (inp.value||'').trim();
   if(!name) return;
+  const id = S.nextId++;
   S.tasks.unshift({
-    id: S.nextId++, name, type:'project', desc:'', tags:[], projectId:null, note:'', energyTag:null,
+    id: id, name, type:'project', desc:'', tags:[], projectId:null, note:'', energyTag:null,
     done:false, createdAt:new Date().toISOString(), pomoMin:0
   });
   inp.value='';
+  _tasksOpenProjectId = id;   // 新建的项目直接在右侧打开
   saveState();
   renderTasks();
 }
@@ -1907,7 +2190,6 @@ function quickAddChildTask(projectId, sectionId){
 }
 
 function addSectionToProject(projectId){
-  if(_projCollapsed[projectId]){ _projCollapsed[projectId]=false; }
   const sec = {
     id: S.nextId++, type:'section', projectId, name:'新分栏', color:'#000080',
     collapsed:false, createdAt:new Date().toISOString()
@@ -2190,12 +2472,17 @@ function renderTasks(){
     return true;
   };
 
+  // 主列表永远只显示左侧目录里选中的那一项（某个项目，或未归类）
+  // 唯一的例外是搜索：有关键词时跨所有项目找
   const allProjects = S.tasks.filter(p=>p.type==='project');
-  // 目录里选中了某个项目，右侧就只留它一个；没选中才铺开全部
-  if(_tasksOpenProjectId!=null && !allProjects.some(p=>p.id==_tasksOpenProjectId)) _tasksOpenProjectId = null;
-  const selProject = _tasksOpenProjectId!=null ? allProjects.find(p=>p.id==_tasksOpenProjectId) : null;
-  const projects = selProject ? [selProject] : allProjects;
-  const orphans  = selProject ? [] : S.tasks.filter(t=>t.type!=='project' && t.type!=='section' && !t.projectId);
+  const allOrphans  = S.tasks.filter(t=>t.type!=='project' && t.type!=='section' && !t.projectId);
+  _tasksOpenProjectId = resolveTaskSelection(allProjects, allOrphans);
+
+  const searching = !!search;
+  const selProject = (_tasksOpenProjectId!=null && _tasksOpenProjectId!=='orphans')
+    ? allProjects.find(p=>p.id==_tasksOpenProjectId) : null;
+  const projects = searching ? allProjects : (selProject ? [selProject] : []);
+  const orphans  = searching ? allOrphans  : (_tasksOpenProjectId==='orphans' ? allOrphans : []);
 
   const visProjects = projects.filter(p=>{
     const kids = S.tasks.filter(t=>t.projectId==p.id && t.type!=='section');
@@ -2208,11 +2495,12 @@ function renderTasks(){
   const visOrphans = orphans.filter(t=>nameHit(t) && visible(t));
 
   if(!visProjects.length && !visOrphans.length){
-    const hint = selProject ? ('「'+escHtml(selProject.name||'（未命名项目）')+'」在当前筛选下没有可显示的内容'
-        + '<br/><button class="pxl-btn" style="margin-top:8px;" onclick="closeProjectDirectory()">显示全部项目</button>')
+    const hint = search ? '没有匹配的结果'
       : (_taskMonthFilter ? '这个月没有完成的任务'
-      : (search ? '没有匹配的结果'
-      : (_hideDoneTasks ? '没有进行中的任务' : '还没有项目，在上方输入框直接创建')));
+      : (selProject ? ('「'+escHtml(selProject.name||'（未命名项目）')+'」在当前筛选下没有可显示的内容')
+      : (_tasksOpenProjectId==='orphans' ? '没有未归类的任务'
+      : (_hideDoneTasks ? '没有进行中的任务'
+      : '还没有项目，在上方输入框直接创建'))));
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div>'+hint+'</div>';
     renderTasksToc();
     return;
@@ -2220,10 +2508,7 @@ function renderTasks(){
 
   visProjects.forEach(p=>{
     const st = projectStats(p);
-    const dirOpen = _tasksOpenProjectId==p.id;
-    // 选中的那一刻由 openProjectDirectory 展开；之后 ▾ 按钮仍然可以自己折叠
-    const collapsed = _projCollapsed[p.id];
-    const accent = p.done ? '#a0a0a0' : (dirOpen ? '#800080' : '#000080');
+    const accent = p.done ? '#a0a0a0' : '#000080';
 
     html += '<div class="task-project-block">';
 
@@ -2232,13 +2517,11 @@ function renderTasks(){
     html += '<div class="task-top">';
     html += '<div class="task-check '+(p.done?'checked':'')+'" onclick="toggleTask('+p.id+')">'+(p.done?'✓':'')+'</div>';
     html += '<div class="task-title-wrap">';
-    html += '<div style="font-size:10px;font-weight:bold;color:'+accent+';margin-bottom:2px;letter-spacing:1px;">PROJECT'+(dirOpen?' · 单独查看中':'')+'</div>';
+    html += '<div style="font-size:10px;font-weight:bold;color:'+accent+';margin-bottom:2px;letter-spacing:1px;">PROJECT</div>';
     html += '<div class="task-title '+(p.done?'done-text':'')+'" ondblclick="startEditTaskTitle('+p.id+',this)" title="双击编辑标题">'+escHtml(p.name)+energyTagHtml(p)+'</div>';
     html += '<div class="task-meta">'+fmtDT(p.createdAt)+'</div>';
     html += '</div>';
     html += '<div class="task-actions">';
-    html += '<button class="icon-btn" onclick="toggleProjectDirectory('+p.id+')" style="'+(dirOpen?'background:#800080;color:#fff;':'color:#800080;')+'" title="'+(dirOpen?'回到全部项目':'只看这个项目')+'">📂</button>';
-    html += '<button class="icon-btn" onclick="toggleProjCollapse('+p.id+')" style="font-size:11px;color:#808080;">'+(collapsed?'▸':'▾')+'</button>';
     html += '<button class="icon-btn" onclick="addSectionToProject('+p.id+')" style="color:#000080;" title="添加分栏">+</button>';
     html += '<button class="icon-btn" onclick="bindPomo('+p.id+')" title="'+(pomoTaskId==p.id?'点击解绑番茄钟':'绑定番茄钟')+'"'+(pomoTaskId==p.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
     html += '<button class="icon-btn" onclick="deleteTask('+p.id+')" style="color:#cc0000;">✕</button>';
@@ -2249,8 +2532,8 @@ function renderTasks(){
     // 进度条：已完成任务 + 番茄钟投入，两段合并
     html += projectProgressHtml(p, st);
 
-    if(!collapsed){
-      html += '<div style="margin-top:8px;padding-left:12px;border-left:2px solid rgba(255,255,255,0.07);">';
+    html += '<div style="margin-top:8px;padding-left:12px;border-left:2px solid rgba(255,255,255,0.07);">';
+    {
       const groups = getProjectGroups(p.id);
       const pHit = nameHit(p);
       groups.forEach(function(grp){
@@ -2271,8 +2554,8 @@ function renderTasks(){
         });
         html += '<input class="form-input" id="quickAddChild-'+groupKey+'" placeholder="+ 添加子任务，回车确认" style="width:100%;font-size:12px;padding:4px 8px;margin:2px 0 8px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();quickAddChildTask('+p.id+','+(sec?sec.id:'null')+');}"/>';
       });
-      html += '</div>';
     }
+    html += '</div>';
 
     html += '</div>'; // .task-project-block
   });
@@ -2315,10 +2598,6 @@ function taskCardHtml(t, projectId, goalFallback){
   return h;
 }
 
-function toggleProjCollapse(id){
-  _projCollapsed[id] = !_projCollapsed[id];
-  renderTasks();
-}
 
 // ═══════════════════════════════════════
 // DRAG-TO-REORDER (projects among themselves, tasks within a project)
@@ -2649,28 +2928,29 @@ function deleteEnergyTag(e, i){
 // TASKS DIRECTORY SIDEBAR (box-style project TOC)
 // Shows only when a project's directory has been opened.
 // ═══════════════════════════════════════
+// 当前选中项：项目 id / 'orphans' / null。主列表只显示这一项
 let _tasksOpenProjectId = null;
 let _tasksSidebarCollapsed = false;
 
+// 选中项永远保证有效：没选过、或选中的项目被删了，就落到第一个项目
+function resolveTaskSelection(projects, orphans){
+  let sel = _tasksOpenProjectId;
+  if(sel==='orphans' && !orphans.length) sel = null;
+  if(sel!=null && sel!=='orphans' && !projects.some(p=>p.id==sel)) sel = null;
+  if(sel==null) sel = projects.length ? projects[0].id : (orphans.length ? 'orphans' : null);
+  return sel;
+}
+
 function openProjectDirectory(id){
-  const p = (S.tasks||[]).find(x=>x.id==id && x.type==='project');
-  if(!p) return;
-  _tasksOpenProjectId = p.id;
-  _projCollapsed[p.id] = false;   // 选中就展开，右侧只留这一个项目
+  if(id!=='orphans'){
+    const p = (S.tasks||[]).find(x=>x.id==id && x.type==='project');
+    if(!p) return;
+    id = p.id;
+  }
+  _tasksOpenProjectId = id;
   _tasksSidebarCollapsed = false;
   applyTasksSidebarState();
   renderTasks();                  // renderTasks 结尾会刷新目录
-}
-
-function closeProjectDirectory(){
-  _tasksOpenProjectId = null;
-  applyTasksSidebarState();
-  renderTasks();
-}
-
-function toggleProjectDirectory(id){
-  if(_tasksOpenProjectId==id) closeProjectDirectory();
-  else openProjectDirectory(id);
 }
 
 // 目录里的勾选框：全部项目 / 只看未完成
@@ -2707,22 +2987,20 @@ function escAttr(s){ return escHtml(String(s||'')).replace(/"/g,'&quot;'); }
 function renderTasksToc(){
   const tree=document.getElementById('tasksTocTree');
   const titleEl=document.getElementById('tasksSidebarTitle');
-  const backBtn=document.getElementById('tasksSidebarBackBtn');
   const chk=document.getElementById('tocOnlyOpenChk');
   if(!tree) return;
   if(chk) chk.checked = !!_tocOnlyOpen;
 
   const projects = (S.tasks||[]).filter(t=>t.type==='project');
-  // 选中的项目被删掉了就退回全部
-  if(_tasksOpenProjectId!=null && !projects.some(p=>p.id==_tasksOpenProjectId)) _tasksOpenProjectId=null;
-  if(backBtn) backBtn.style.display = _tasksOpenProjectId==null ? 'none' : '';
+  const orphans  = (S.tasks||[]).filter(t=>t.type!=='project' && t.type!=='section' && !t.projectId);
+  _tasksOpenProjectId = resolveTaskSelection(projects, orphans);
   if(titleEl) titleEl.textContent = '项目目录';
 
   const q=((document.getElementById('tasksTocSearch')||{}).value||'').trim().toLowerCase();
   const hit = t => !q || (t.name||'').toLowerCase().includes(q);
   const childrenOf = id => (S.tasks||[]).filter(t=>t.projectId==id && t.type!=='section');
 
-  if(!projects.length){
+  if(!projects.length && !orphans.length){
     tree.innerHTML = '<div class="ttoc-empty">还没有项目，可以在右上的输入框直接创建</div>';
     return;
   }
@@ -2734,21 +3012,19 @@ function renderTasksToc(){
     return hit(p) || childrenOf(p.id).some(hit);
   });
 
+  let html='';
   if(!vis.length){
-    tree.innerHTML = '<div class="ttoc-empty">'
+    html += '<div class="ttoc-empty">'
       + (q ? '没有匹配的结果' : '没有未完成的项目<br/><span style="color:#808080;">取消上方勾选可以看全部</span>')
       + '</div>';
-    return;
   }
-
-  let html='';
   vis.forEach(p=>{
     const sel = p.id==_tasksOpenProjectId;
     const children = childrenOf(p.id);
     const doneCount = children.filter(t=>t.done).length;
     html += '<div class="ttoc-item ttoc-project-item'+(p.done?' done':'')+(sel?' sel':'')+'" draggable="true" '
       + 'ondragstart="taskDragStart(event,'+p.id+',\'project\')" ondragover="taskDragOver(event,\'project\')" ondragleave="taskDragLeave(event)" ondrop="taskDrop(event,'+p.id+',\'project\')" ondragend="taskDragEnd(event)" '
-      + 'onclick="toggleProjectDirectory('+p.id+')" title="'+escAttr(p.name)+'（点击只看这个项目，再点一次回到全部；可拖动调整顺序）">'
+      + 'onclick="openProjectDirectory('+p.id+')" title="'+escAttr(p.name)+'（点击在右侧打开；可拖动调整顺序）">'
       + '<span class="ttoc-dot">'+(sel?'📂':(p.done?'✓':'📁'))+'</span>'
       + '<span class="ttoc-item-text">'+escHtml(p.name||'（未命名项目）')+'</span>'
       + '<span class="ttoc-count">'+doneCount+'/'+children.length+'</span>'
@@ -2778,6 +3054,18 @@ function renderTasksToc(){
     });
     html += '<div class="ttoc-sub">'+((q && !any) ? '<div class="ttoc-empty">没有匹配的子任务</div>' : body)+'</div>';
   });
+
+  // 不属于任何项目的旧任务：目录里也给它一个入口，否则选中制下就看不到了
+  if(orphans.length && (!q || orphans.some(hit))){
+    const sel = _tasksOpenProjectId==='orphans';
+    const doneCount = orphans.filter(t=>t.done).length;
+    html += '<div class="ttoc-item ttoc-project-item'+(sel?' sel':'')+'" '
+      + 'onclick="openProjectDirectory(\'orphans\')" title="不属于任何项目的任务">'
+      + '<span class="ttoc-dot">📥</span>'
+      + '<span class="ttoc-item-text">未归类任务</span>'
+      + '<span class="ttoc-count">'+doneCount+'/'+orphans.length+'</span>'
+      + '</div>';
+  }
   tree.innerHTML = html;
 }
 
@@ -2785,11 +3073,9 @@ function gotoTaskItem(id){
   const t = (S.tasks||[]).find(x=>x.id==id);
   if(!t) return;
   let needRender=false;
-  // expand the parent project in the main list if it's collapsed
-  if(t.projectId && _projCollapsed[t.projectId]){
-    _projCollapsed[t.projectId]=false;
-    needRender=true;
-  }
+  // 主列表只显示选中的那个项目，先把选中切到它所属的项目
+  const wantSel = t.projectId!=null ? t.projectId : 'orphans';
+  if(String(_tasksOpenProjectId)!==String(wantSel)){ _tasksOpenProjectId = wantSel; needRender=true; }
   // 清掉会把目标挡住的筛选条件：隐藏已完成 / 归档月份 / 搜索词
   if(t.done && _hideDoneTasks){
     _hideDoneTasks=false; S.hideDoneTasks=false; saveStateSoon(); needRender=true;
@@ -5283,11 +5569,43 @@ let ciMonthOff = 0; // months offset from current month
 function ciNavMonth(d){ ciMonthOff+=d; renderCheckin(); }
 function ciGoToday(){ ciMonthOff=0; renderCheckin(); }
 
+// ── 日期工具 ──
+const CI_WD = ['周日','周一','周二','周三','周四','周五','周六'];
+function ciDs(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function ciToday(){ return ciDs(new Date()); }
+function ciParseDs(ds){ const p=String(ds).split('-'); return new Date(+p[0], (+p[1])-1, +p[2], 12, 0, 0); }
+function ciTargetYM(){
+  const now=new Date(), y=now.getFullYear(), m=now.getMonth();
+  return { y: y + Math.floor((m + ciMonthOff)/12), m: ((m + ciMonthOff)%12 + 12)%12 };
+}
+
+// ── 习惯模型 ──
+// habit: {id, name, emoji, goal, unit, step, createdAt}
+// goal > 0 ⇒ 目标型（记录每天实际投入量）；否则是简单打卡型（做了就打勾）
+function ciIsGoal(h){ return !!(h && Number(h.goal) > 0); }
+function ciUnit(h){ return (h && h.unit) ? h.unit : ''; }
+function ciStep(h){ const s=Number(h && h.step); return (isFinite(s) && s>0) ? s : 0.5; }
+function ciFmtNum(n){ n=Number(n)||0; return String(Math.round(n*100)/100); }
+function ciHabitStartDs(h){
+  if(h && h.createdAt){ const d=new Date(h.createdAt); if(!isNaN(d.getTime())) return ciDs(d); }
+  return '0000-01-01';
+}
+
+function ciHabitKindChange(){
+  const kind = document.getElementById('habitKind').value;
+  document.getElementById('habitGoalRow').style.display = (kind==='goal') ? '' : 'none';
+}
+
 function openHabitModal(editId){
   document.getElementById('editHabitId').value = editId||'';
   const h = editId ? (S.habits||[]).find(x=>x.id==editId) : null;
   document.getElementById('habitName').value = h?h.name:'';
   document.getElementById('habitEmoji').value = h?h.emoji:'';
+  document.getElementById('habitKind').value = ciIsGoal(h) ? 'goal' : 'simple';
+  document.getElementById('habitGoal').value = ciIsGoal(h) ? ciFmtNum(h.goal) : '';
+  document.getElementById('habitUnit').value = h ? (h.unit||'') : '';
+  document.getElementById('habitStep').value = (h && h.step) ? ciFmtNum(h.step) : '';
+  ciHabitKindChange();
   document.getElementById('habitModalTitle').textContent = h ? '编辑习惯' : '新建习惯';
   openModal('habitModal');
   setTimeout(()=>document.getElementById('habitName').focus(),100);
@@ -5297,12 +5615,21 @@ function saveHabit(){
   const name = document.getElementById('habitName').value.trim(); if(!name) return;
   const emoji = document.getElementById('habitEmoji').value.trim()||'✅';
   const editId = document.getElementById('editHabitId').value;
+  const kind = document.getElementById('habitKind').value;
+  let goal = 0, unit = '', step = 0.5;
+  if(kind==='goal'){
+    goal = Number(document.getElementById('habitGoal').value)||0;
+    if(goal<=0) goal = 1;
+    unit = document.getElementById('habitUnit').value.trim() || '小时';
+    step = Number(document.getElementById('habitStep').value)||0;
+    if(!(step>0)) step = 0.5;
+  }
   if(!S.habits) S.habits=[];
   if(editId){
     const h=S.habits.find(x=>x.id==editId);
-    if(h){ h.name=name; h.emoji=emoji; }
+    if(h){ h.name=name; h.emoji=emoji; h.goal=goal; h.unit=unit; h.step=step; }
   } else {
-    S.habits.push({id:S.nextId++, name, emoji, createdAt:new Date().toISOString()});
+    S.habits.push({id:S.nextId++, name, emoji, goal, unit, step, createdAt:new Date().toISOString()});
   }
   saveState(); closeModal('habitModal'); renderCheckin();
 }
@@ -5313,20 +5640,121 @@ function deleteHabit(id){
   saveState(); renderCheckin();
 }
 
-// checkin key: "YYYY-MM-DD_habitId"
+// ── 打卡数据 ──
+// S.checkins[key] 可以是 true（简单打卡）或 {v:数值}（目标型的当日投入量）
 function ciKey(dateStr, habitId){ return dateStr+'_'+habitId; }
-function ciIsChecked(dateStr, habitId){ return !!(S.checkins||{})[ciKey(dateStr,habitId)]; }
-function ciToggle(dateStr, habitId){
+function ciRaw(dateStr, habitId){ return (S.checkins||{})[ciKey(dateStr,habitId)]; }
+function ciVal(dateStr, habitId){
+  const r = ciRaw(dateStr, habitId);
+  if(r===undefined || r===null || r===false) return 0;
+  if(r===true) return 1;
+  if(typeof r==='number') return Number(r)||0;
+  if(typeof r==='object') return Number(r.v)||0;
+  return 0;
+}
+function ciIsChecked(dateStr, habitId){ return ciVal(dateStr, habitId) > 0; }
+function ciSetVal(dateStr, habitId, v, isGoal){
   if(!S.checkins) S.checkins={};
-  const k=ciKey(dateStr,habitId);
-  if(S.checkins[k]) delete S.checkins[k];
-  else S.checkins[k]=true;
-  saveState(); renderCheckin();
+  const k = ciKey(dateStr, habitId);
+  v = Number(v)||0;
+  if(v<=0) delete S.checkins[k];
+  else if(isGoal) S.checkins[k] = {v:v};
+  else S.checkins[k] = true;
+}
+function ciToggle(dateStr, habitId){
+  const h=(S.habits||[]).find(x=>x.id==habitId);
+  const goal=ciIsGoal(h);
+  if(ciIsChecked(dateStr,habitId)) ciSetVal(dateStr,habitId,0,goal);
+  else ciSetVal(dateStr,habitId, goal ? ciStep(h) : 1, goal);
+  saveState();
 }
 
+// ── 当日文字记录 ──
+function ciNote(ds){
+  const n=(S.dayNotes||{})[ds];
+  if(!n) return {mood:'', text:''};
+  if(typeof n==='string') return {mood:'', text:n};
+  return {mood:n.mood||'', text:n.text||''};
+}
+
+// ── 连续天数 / 补卡 ──
+function ciStreak(habitId){
+  const d=new Date(); d.setHours(12,0,0,0);
+  // 今天还没过完，今天没打也不算断
+  if(!ciIsChecked(ciDs(d), habitId)) d.setDate(d.getDate()-1);
+  let n=0, guard=0;
+  while(guard++ < 3650 && ciIsChecked(ciDs(d), habitId)){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+function ciBestStreak(habitId){
+  const days=Object.keys(S.checkins||{})
+    .filter(k=>k.endsWith('_'+habitId))
+    .map(k=>k.slice(0, k.lastIndexOf('_')))
+    .filter(ds=>ciIsChecked(ds,habitId))
+    .sort();
+  let best=0, cur=0, prev=null;
+  days.forEach(ds=>{
+    if(prev){
+      const diff=Math.round((ciParseDs(ds)-ciParseDs(prev))/86400000);
+      cur = (diff===1) ? cur+1 : 1;
+    } else cur=1;
+    if(cur>best) best=cur;
+    prev=ds;
+  });
+  return best;
+}
+function ciMissedDays(habitId, back){
+  const h=(S.habits||[]).find(x=>x.id==habitId);
+  const start=ciHabitStartDs(h);
+  const out=[], d=new Date(); d.setHours(12,0,0,0);
+  d.setDate(d.getDate()-1); // 从昨天往回找
+  for(let i=0;i<(back||14);i++){
+    const ds=ciDs(d);
+    if(ds>=start && !ciIsChecked(ds,habitId)) out.push(ds);
+    d.setDate(d.getDate()-1);
+  }
+  return out;
+}
+function ciMonthStats(habitId, y, m){
+  const last=new Date(y,m+1,0).getDate();
+  let days=0, sum=0, hit=0;
+  const h=(S.habits||[]).find(x=>x.id==habitId);
+  const goal=Number(h&&h.goal)||0;
+  for(let i=1;i<=last;i++){
+    const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');
+    const v=ciVal(ds,habitId);
+    if(v>0){ days++; sum+=v; if(goal>0 && v>=goal) hit++; }
+  }
+  return {days:days, sum:sum, hit:hit, last:last};
+}
+
+// ── 渲染 ──
 function renderCheckin(){
   renderHabitsStrip();
+  renderCiPanels();
   renderCiCalendar();
+}
+
+// ── 面板栏：统计 / 事件 / 清单，默认全部收起 ──
+// 只在本次会话里记住展开状态，重新进来永远是干净的日历
+let _ciPanel = null;
+
+function ciTogglePanel(name){
+  _ciPanel = (_ciPanel===name) ? null : name;
+  renderCiPanels();
+  renderCiCalendar();
+}
+
+function renderCiPanels(){
+  const box=document.getElementById('ci-panel'); if(!box) return;
+  [['stats','ciTabStats'],['events','ciTabEvents'],['lists','ciTabLists']].forEach(pair=>{
+    const b=document.getElementById(pair[1]);
+    if(b) b.classList.toggle('primary', _ciPanel===pair[0]);
+  });
+  box.innerHTML='';
+  if(_ciPanel==='stats') renderCiStats(box);
+  else if(_ciPanel==='events') renderCiEvents(box);
+  else if(_ciPanel==='lists') renderCiLists(box);
 }
 
 function renderHabitsStrip(){
@@ -5334,14 +5762,16 @@ function renderHabitsStrip(){
   strip.innerHTML='';
   strip.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);';
   if(!(S.habits||[]).length){
-    strip.innerHTML='<div style="font-size:13px;color:#808080;">还没有习惯计划，点右上角「+ 新建习惯」添加</div>';
+    strip.innerHTML='<div style="font-size:13px;color:#606060;">还没有习惯计划，点右上角「+ 新建习惯」添加。可以选「目标型」，比如每天工作学习 9 小时。</div>';
     return;
   }
   (S.habits||[]).forEach(h=>{
     const chip=document.createElement('div');
     chip.style.cssText='display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);';
+    let meta='';
+    if(ciIsGoal(h)) meta='<span style="font-size:11px;color:#000080;">目标 '+ciFmtNum(h.goal)+ciUnit(h)+'/天</span>';
     chip.innerHTML='<span style="font-size:18px;">'+h.emoji+'</span>'
-      +'<span style="font-family:var(--font-vt);font-size:15px;color:#000;">'+h.name+'</span>';
+      +'<span style="font-family:var(--font-vt);font-size:15px;color:#000;">'+escHtml(String(h.name))+'</span>'+meta;
     const editBtn=document.createElement('button'); editBtn.className='icon-btn'; editBtn.textContent='[EDIT]'; editBtn.style.fontSize='12px';
     editBtn.onclick=()=>openHabitModal(h.id);
     const delBtn=document.createElement('button'); delBtn.className='icon-btn'; delBtn.textContent='✕'; delBtn.style.cssText='color:var(--accent);font-size:12px;';
@@ -5351,12 +5781,490 @@ function renderHabitsStrip(){
   });
 }
 
+function renderCiStats(box){
+  const habits=S.habits||[];
+  if(!habits.length){
+    box.innerHTML='<div class="ci-empty">还没有习惯计划，先添加一个再来看数据。</div>';
+    return;
+  }
+  const intro=document.createElement('div');
+  intro.className='ci-panel-head';
+  intro.textContent='下面只是记录，不是成绩单。数字难看的时候，关掉它继续过日子就行。';
+  box.appendChild(intro);
+  const ym=ciTargetYM();
+  const monthLabel=(ym.m+1)+'月';
+
+  habits.forEach(h=>{
+    const st=ciMonthStats(h.id, ym.y, ym.m);
+    const streak=ciStreak(h.id);
+    const best=ciBestStreak(h.id);
+    const goal=Number(h.goal)||0;
+    const unit=ciUnit(h);
+
+    const card=document.createElement('div'); card.className='ci-stat-card';
+
+    let head='<div class="ci-stat-head">'
+      +'<span style="font-size:17px;">'+h.emoji+'</span>'
+      +'<span class="ci-stat-name">'+escHtml(String(h.name))+'</span>'
+      +'<span class="ci-badge fire">🔥 连续 '+streak+' 天</span>'
+      +'<span class="ci-badge">最长 '+best+' 天</span>'
+      +'<span class="ci-badge">'+monthLabel+'打卡 '+st.days+'/'+st.last+' 天</span>';
+    if(goal>0){
+      const avg = st.days ? st.sum/st.days : 0;
+      head+='<span class="ci-badge">累计 '+ciFmtNum(st.sum)+unit+'</span>'
+        +'<span class="ci-badge">日均 '+ciFmtNum(avg)+unit+'</span>';
+      if(st.hit>0) head+='<span class="ci-badge ok">达标 '+st.hit+' 天</span>';
+    }
+    head+='</div>';
+    card.innerHTML=head;
+
+    if(goal>0){
+      const avg = st.days ? st.sum/st.days : 0;
+      const pct = Math.max(0, Math.min(100, Math.round(avg/goal*100)));
+      const bar=document.createElement('div');
+      bar.innerHTML='<div class="ci-bar"><i class="'+(pct>=100?'full':'')+'" style="width:'+pct+'%;"></i></div>'
+        +'<div style="font-size:11px;color:#606060;margin-top:3px;">日均达成 '+pct+'%。低于 100% 完全没关系，记录本身就是在往前走。</div>';
+      card.appendChild(bar);
+    }
+
+    const missed=ciMissedDays(h.id, 14).slice(0,6);
+    const mk=document.createElement('div'); mk.className='ci-makeup';
+    if(missed.length){
+      const lbl=document.createElement('span');
+      lbl.style.cssText='font-size:11px;color:#606060;';
+      lbl.textContent='近两周还没记的日子（点一下就能补上）：';
+      mk.appendChild(lbl);
+      missed.forEach(ds=>{
+        const b=document.createElement('button'); b.className='ci-makeup-chip';
+        const d=ciParseDs(ds);
+        b.textContent=(d.getMonth()+1)+'/'+d.getDate();
+        b.onclick=()=>ciOpenDay(ds);
+        mk.appendChild(b);
+      });
+    } else {
+      const lbl=document.createElement('span');
+      lbl.style.cssText='font-size:11px;color:var(--win-green);';
+      lbl.textContent='近两周每天都有记录，很稳。';
+      mk.appendChild(lbl);
+    }
+    card.appendChild(mk);
+    box.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════
+// 事件与计划：提前录进来，到那天日历格子里就能看见
+// ═══════════════════════════════════════
+let _ciEvShowDone = false;
+let _ciEvShowPast = false;
+
+function ciEventsOn(ds){
+  return (S.ciEvents||[]).filter(e=>e.ds===ds)
+    .sort((a,b)=>{
+      if(!!a.done !== !!b.done) return a.done ? 1 : -1;
+      return (a.time||'99:99').localeCompare(b.time||'99:99');
+    });
+}
+
+function ciOpenEventModal(id, ds){
+  const e = (id!=null && id!=='') ? (S.ciEvents||[]).find(x=>x.id==id) : null;
+  document.getElementById('ciEventId').value   = e ? e.id : '';
+  document.getElementById('ciEventDs').value   = e ? e.ds : (ds || ciToday());
+  document.getElementById('ciEventTime').value = e ? (e.time||'') : '';
+  document.getElementById('ciEventName').value = e ? e.title : '';
+  document.getElementById('ciEventNote').value = e ? (e.note||'') : '';
+  document.getElementById('ciEventTitle').textContent = e ? '编辑事件' : '新建事件';
+  openModal('ciEventModal');
+  setTimeout(()=>document.getElementById('ciEventName').focus(),100);
+}
+
+function ciSaveEvent(){
+  const id    = document.getElementById('ciEventId').value;
+  const ds    = document.getElementById('ciEventDs').value;
+  const title = document.getElementById('ciEventName').value.trim();
+  if(!ds){ showToast('先选一个日期'); return; }
+  if(!title){ showToast('给这件事写个名字'); return; }
+  const time = document.getElementById('ciEventTime').value || '';
+  const note = document.getElementById('ciEventNote').value.trim();
+  if(!Array.isArray(S.ciEvents)) S.ciEvents=[];
+  if(id){
+    const e=S.ciEvents.find(x=>x.id==id);
+    if(e){ e.ds=ds; e.title=title; e.time=time; e.note=note; }
+  } else {
+    S.ciEvents.push({id:S.nextId++, ds:ds, title:title, time:time, note:note, done:false, createdAt:new Date().toISOString()});
+  }
+  saveState(); closeModal('ciEventModal'); renderCheckin(); ciRefreshDayPlans();
+}
+
+function ciDelEvent(id){
+  if(!confirm('删除这个事件？')) return;
+  S.ciEvents=(S.ciEvents||[]).filter(e=>e.id!=id);
+  saveState(); renderCheckin(); ciRefreshDayPlans();
+}
+
+function ciToggleEvent(id){
+  const e=(S.ciEvents||[]).find(x=>x.id==id); if(!e) return;
+  e.done=!e.done;
+  saveState(); renderCheckin(); ciRefreshDayPlans();
+}
+
+function ciDateLabel(ds){
+  const d=ciParseDs(ds), today=ciToday();
+  let tag='';
+  if(ds===today) tag=' · 今天';
+  else {
+    const diff=Math.round((ciParseDs(ds)-ciParseDs(today))/86400000);
+    if(diff===1) tag=' · 明天';
+    else if(diff>1) tag=' · '+diff+' 天后';
+    else if(diff===-1) tag=' · 昨天';
+    else tag=' · '+(-diff)+' 天前';
+  }
+  return (d.getMonth()+1)+'月'+d.getDate()+'日 '+CI_WD[d.getDay()]+tag;
+}
+
+function renderCiEvents(box){
+  const today=ciToday();
+  const all=(S.ciEvents||[]).slice();
+  let evs=all.slice();
+  if(!_ciEvShowPast) evs=evs.filter(e=>e.ds>=today);
+  if(!_ciEvShowDone) evs=evs.filter(e=>!e.done);
+  evs.sort((a,b)=> a.ds===b.ds
+    ? (a.time||'99:99').localeCompare(b.time||'99:99')
+    : a.ds.localeCompare(b.ds));
+
+  const head=document.createElement('div'); head.className='ci-panel-head';
+  const add=document.createElement('button'); add.className='pxl-btn primary';
+  add.textContent='+ 新建事件';
+  add.onclick=()=>ciOpenEventModal(null, ciToday());
+  head.appendChild(add);
+
+  const hiddenDone = all.filter(e=>e.done && (_ciEvShowPast || e.ds>=today)).length;
+  const bDone=document.createElement('button');
+  bDone.className='pxl-btn'+(_ciEvShowDone?' primary':'');
+  bDone.textContent=_ciEvShowDone ? '隐藏已完成' : ('显示已完成'+(hiddenDone?'（'+hiddenDone+'）':''));
+  bDone.onclick=()=>{ _ciEvShowDone=!_ciEvShowDone; renderCiPanels(); };
+  head.appendChild(bDone);
+
+  const bPast=document.createElement('button');
+  bPast.className='pxl-btn'+(_ciEvShowPast?' primary':'');
+  bPast.textContent=_ciEvShowPast ? '只看今天以后' : '显示过去的';
+  bPast.onclick=()=>{ _ciEvShowPast=!_ciEvShowPast; renderCiPanels(); };
+  head.appendChild(bPast);
+  box.appendChild(head);
+
+  if(!evs.length){
+    const em=document.createElement('div'); em.className='ci-empty';
+    em.textContent = all.length ? '当前筛选下没有事件。' : '还没有事件。点「+ 新建事件」把要记得的事提前放进日历，到那天格子里就会出现。';
+    box.appendChild(em);
+    return;
+  }
+
+  let curDs=null, card=null;
+  evs.forEach(e=>{
+    if(e.ds!==curDs){
+      curDs=e.ds;
+      const h=document.createElement('div');
+      h.className='ci-date-hdr'+(e.ds===today?' today':'');
+      h.textContent=ciDateLabel(e.ds);
+      box.appendChild(h);
+      card=document.createElement('div'); card.className='ci-card';
+      box.appendChild(card);
+    }
+    card.appendChild(ciEventLine(e));
+  });
+}
+
+function ciEventLine(e){
+  const line=document.createElement('div');
+  line.className='ci-line'+(e.done?' done':'');
+
+  const chk=document.createElement('div'); chk.className='ci-check';
+  chk.textContent=e.done?'✓':'';
+  chk.title=e.done?'点一下取消完成':'点一下标记完成';
+  chk.onclick=()=>ciToggleEvent(e.id);
+  line.appendChild(chk);
+
+  if(e.time){
+    const t=document.createElement('span'); t.className='ci-line-time'; t.textContent=e.time;
+    line.appendChild(t);
+  }
+
+  const txt=document.createElement('div'); txt.className='ci-line-text';
+  txt.textContent=e.title;
+  if(e.note){
+    const n=document.createElement('div');
+    n.style.cssText='font-size:11px;color:#606060;margin-top:2px;white-space:pre-wrap;';
+    n.textContent=e.note;
+    txt.appendChild(n);
+  }
+  line.appendChild(txt);
+
+  const ed=document.createElement('button'); ed.className='ci-mini-btn'; ed.textContent='编辑';
+  ed.onclick=()=>ciOpenEventModal(e.id);
+  line.appendChild(ed);
+
+  const del=document.createElement('button'); del.className='ci-mini-btn';
+  del.textContent='✕'; del.style.color='#cc0000';
+  del.onclick=()=>ciDelEvent(e.id);
+  line.appendChild(del);
+
+  return line;
+}
+
+// ═══════════════════════════════════════
+// 清单：要买什么、要记得做什么，可以起名、可以挂到某一天
+// ═══════════════════════════════════════
+let _ciListShowDone = {};   // listId -> 是否展开已完成项
+
+function ciListsOn(ds){ return (S.ciLists||[]).filter(l=>l.ds===ds); }
+function ciListOpenCount(l){ return (l.items||[]).filter(it=>!it.done).length; }
+
+function ciOpenListModal(id){
+  const l = (id!=null && id!=='') ? (S.ciLists||[]).find(x=>x.id==id) : null;
+  document.getElementById('ciListId').value   = l ? l.id : '';
+  document.getElementById('ciListName').value = l ? l.name : '';
+  document.getElementById('ciListDs').value   = l ? (l.ds||'') : '';
+  document.getElementById('ciListTitle').textContent = l ? '编辑清单' : '新建清单';
+  openModal('ciListModal');
+  setTimeout(()=>document.getElementById('ciListName').focus(),100);
+}
+
+function ciSaveList(){
+  const id   = document.getElementById('ciListId').value;
+  const name = document.getElementById('ciListName').value.trim();
+  if(!name){ showToast('给清单起个名字'); return; }
+  const ds = document.getElementById('ciListDs').value || null;
+  if(!Array.isArray(S.ciLists)) S.ciLists=[];
+  if(id){
+    const l=S.ciLists.find(x=>x.id==id);
+    if(l){ l.name=name; l.ds=ds; }
+  } else {
+    S.ciLists.push({id:S.nextId++, name:name, ds:ds, items:[], createdAt:new Date().toISOString()});
+  }
+  saveState(); closeModal('ciListModal');
+  if(_ciPanel!=='lists') _ciPanel='lists';
+  renderCheckin(); ciRefreshDayPlans();
+}
+
+function ciDelList(id){
+  const l=(S.ciLists||[]).find(x=>x.id==id); if(!l) return;
+  if(!confirm('删除清单「'+l.name+'」？里面的条目会一起删掉。')) return;
+  S.ciLists=(S.ciLists||[]).filter(x=>x.id!=id);
+  saveState(); renderCheckin(); ciRefreshDayPlans();
+}
+
+function ciAddItem(listId, inp){
+  const text=(inp.value||'').trim(); if(!text) return;
+  const l=(S.ciLists||[]).find(x=>x.id==listId); if(!l) return;
+  if(!Array.isArray(l.items)) l.items=[];
+  l.items.push({id:S.nextId++, text:text, done:false});
+  const inpId=inp.id;   // 重渲染会换掉这个输入框，用 id 把光标接回去
+  inp.value='';
+  saveState(); renderCheckin(); ciRefreshDayPlans();
+  const again=document.getElementById(inpId);
+  if(again){ again.value=''; again.focus(); }
+}
+
+function ciToggleItem(listId, itemId){
+  const l=(S.ciLists||[]).find(x=>x.id==listId); if(!l) return;
+  const it=(l.items||[]).find(x=>x.id==itemId); if(!it) return;
+  it.done=!it.done;
+  saveState(); renderCheckin(); ciRefreshDayPlans();
+}
+
+function ciDelItem(listId, itemId){
+  const l=(S.ciLists||[]).find(x=>x.id==listId); if(!l) return;
+  l.items=(l.items||[]).filter(x=>x.id!=itemId);
+  saveState(); renderCheckin(); ciRefreshDayPlans();
+}
+
+function ciEditItem(listId, itemId, el){
+  const l=(S.ciLists||[]).find(x=>x.id==listId); if(!l) return;
+  const it=(l.items||[]).find(x=>x.id==itemId); if(!it) return;
+  const text=(el.textContent||'').trim();
+  if(!text){ el.textContent=it.text; return; }   // 清空就还原，删除请用 ✕
+  if(text===it.text) return;
+  it.text=text;
+  saveState(); renderCheckin(); ciRefreshDayPlans();
+}
+
+function ciToggleListDone(listId){
+  _ciListShowDone[listId]=!_ciListShowDone[listId];
+  renderCiPanels(); ciRefreshDayPlans();
+}
+
+function renderCiLists(box){
+  const lists=S.ciLists||[];
+  const head=document.createElement('div'); head.className='ci-panel-head';
+  const add=document.createElement('button'); add.className='pxl-btn primary';
+  add.textContent='+ 新建清单';
+  add.onclick=()=>ciOpenListModal(null);
+  head.appendChild(add);
+  const tip=document.createElement('span');
+  tip.textContent='勾掉的条目会自动收起，点「已完成」可以翻出来。';
+  head.appendChild(tip);
+  box.appendChild(head);
+
+  if(!lists.length){
+    const em=document.createElement('div'); em.className='ci-empty';
+    em.textContent='还没有清单。比如「这周要买的东西」「出门前检查」，建好以后可以关联到某一天。';
+    box.appendChild(em);
+    return;
+  }
+  lists.forEach(l=>box.appendChild(ciListCard(l, false)));
+}
+
+// compact = true 时用在当日弹窗里，只留勾选和添加，不显示改名/删除清单
+function ciListCard(l, compact){
+  const card=document.createElement('div'); card.className='ci-card';
+
+  const head=document.createElement('div'); head.className='ci-card-head';
+  const nm=document.createElement('span'); nm.className='ci-card-name';
+  nm.textContent='📋 '+l.name;
+  head.appendChild(nm);
+
+  const open=ciListOpenCount(l), total=(l.items||[]).length;
+  const cnt=document.createElement('span'); cnt.className='ci-badge';
+  cnt.textContent=total ? ('剩 '+open+' / '+total) : '空清单';
+  head.appendChild(cnt);
+
+  if(!compact){
+    if(l.ds){
+      const ds=document.createElement('span'); ds.className='ci-badge';
+      const d=ciParseDs(l.ds);
+      ds.textContent='📅 '+(d.getMonth()+1)+'/'+d.getDate();
+      ds.style.cursor='pointer';
+      ds.title='跳到这一天';
+      ds.onclick=()=>ciOpenDay(l.ds);
+      head.appendChild(ds);
+    }
+    const ed=document.createElement('button'); ed.className='ci-mini-btn';
+    ed.textContent='改名/日期';
+    ed.onclick=()=>ciOpenListModal(l.id);
+    head.appendChild(ed);
+    const del=document.createElement('button'); del.className='ci-mini-btn';
+    del.textContent='✕'; del.style.color='#cc0000';
+    del.onclick=()=>ciDelList(l.id);
+    head.appendChild(del);
+  }
+  card.appendChild(head);
+
+  const items=l.items||[];
+  const undone=items.filter(it=>!it.done);
+  const done=items.filter(it=>it.done);
+  const showDone=!!_ciListShowDone[l.id];
+
+  undone.forEach(it=>card.appendChild(ciItemLine(l, it)));
+  if(showDone) done.forEach(it=>card.appendChild(ciItemLine(l, it)));
+
+  if(!undone.length && (!showDone || !done.length)){
+    const em=document.createElement('div'); em.className='ci-empty';
+    em.textContent = done.length ? '这份清单全部完成了 🎉' : '还没有条目，在下面输入框加一条。';
+    card.appendChild(em);
+  }
+
+  if(done.length){
+    const b=document.createElement('button'); b.className='ci-mini-btn';
+    b.style.marginTop='5px';
+    b.textContent=(showDone?'▾ ':'▸ ')+'已完成 '+done.length+' 项';
+    b.onclick=()=>ciToggleListDone(l.id);
+    card.appendChild(b);
+  }
+
+  const inp=document.createElement('input');
+  inp.className='ci-add-inp';
+  inp.id='ciAddItem-'+l.id+(compact?'-d':'');
+  inp.placeholder='+ 添加一条，回车确认';
+  inp.onkeydown=function(ev){
+    if(ev.key==='Enter'){ ev.preventDefault(); ciAddItem(l.id, inp); }
+  };
+  card.appendChild(inp);
+
+  return card;
+}
+
+function ciItemLine(l, it){
+  const line=document.createElement('div');
+  line.className='ci-line'+(it.done?' done':'');
+
+  const chk=document.createElement('div'); chk.className='ci-check';
+  chk.textContent=it.done?'✓':'';
+  chk.onclick=()=>ciToggleItem(l.id, it.id);
+  line.appendChild(chk);
+
+  const txt=document.createElement('div');
+  txt.className='ci-line-text';
+  txt.contentEditable='true';
+  txt.spellcheck=false;
+  txt.title='点一下就能改文字';
+  txt.textContent=it.text;
+  txt.onblur=()=>ciEditItem(l.id, it.id, txt);
+  txt.onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); txt.blur(); } };
+  line.appendChild(txt);
+
+  const del=document.createElement('button'); del.className='ci-mini-btn';
+  del.textContent='✕'; del.style.color='#cc0000';
+  del.onclick=()=>ciDelItem(l.id, it.id);
+  line.appendChild(del);
+
+  return line;
+}
+
+// ── 当日弹窗里的事件与清单 ──
+function ciRefreshDayPlans(){
+  const m=document.getElementById('ciDayModal');
+  if(m && m.classList.contains('open')) ciRenderDayPlans();
+}
+
+function ciRenderDayPlans(){
+  const box=document.getElementById('ciDayPlans'); if(!box) return;
+  const ds=(document.getElementById('ciDayDate')||{}).value;
+  box.innerHTML='';
+  if(!ds) return;
+
+  const head=document.createElement('div');
+  head.style.cssText='margin:12px auto 0;width:460px;max-width:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+  const lbl=document.createElement('span');
+  lbl.style.cssText='font-family:var(--font-ui);font-size:12px;color:#000;font-weight:bold;';
+  lbl.textContent='当天的事件与清单';
+  head.appendChild(lbl);
+  const bE=document.createElement('button'); bE.className='ci-mini-btn'; bE.textContent='+ 事件';
+  bE.onclick=()=>ciOpenEventModal(null, ds);
+  head.appendChild(bE);
+  const bL=document.createElement('button'); bL.className='ci-mini-btn'; bL.textContent='+ 清单';
+  bL.onclick=()=>{ ciOpenListModal(null); setTimeout(()=>{ const i=document.getElementById('ciListDs'); if(i) i.value=ds; },0); };
+  head.appendChild(bL);
+  const hint=document.createElement('span');
+  hint.style.cssText='font-size:11px;color:#606060;';
+  hint.textContent='这里的勾选是即时生效的，不用等保存';
+  head.appendChild(hint);
+  box.appendChild(head);
+
+  const wrap=document.createElement('div');
+  wrap.style.cssText='margin:6px auto 0;width:460px;max-width:100%;';
+
+  const evs=ciEventsOn(ds);
+  if(evs.length){
+    const card=document.createElement('div'); card.className='ci-card';
+    evs.forEach(e=>card.appendChild(ciEventLine(e)));
+    wrap.appendChild(card);
+  }
+
+  const lists=ciListsOn(ds);
+  lists.forEach(l=>wrap.appendChild(ciListCard(l, true)));
+
+  if(!evs.length && !lists.length){
+    const em=document.createElement('div'); em.className='ci-empty';
+    em.textContent='这天还没有事件或清单。';
+    wrap.appendChild(em);
+  }
+  box.appendChild(wrap);
+}
+
 function renderCiCalendar(){
   const cal = document.getElementById('ci-calendar'); if(!cal) return;
-  const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
-  const targetYear = y + Math.floor((m + ciMonthOff) / 12);
-  const targetMonth = ((m + ciMonthOff) % 12 + 12) % 12;
+  const ym = ciTargetYM();
+  const targetYear=ym.y, targetMonth=ym.m;
   const firstDay = new Date(targetYear, targetMonth, 1);
   const lastDay  = new Date(targetYear, targetMonth+1, 0);
   const daysInMonth = lastDay.getDate();
@@ -5367,83 +6275,222 @@ function renderCiCalendar(){
 
   const DAY_HDRS=['日','一','二','三','四','五','六'];
   const habits = S.habits||[];
-  // cell height depends on habit count
-  const cellH = Math.max(60, 30 + habits.length*22);
+  // 预留高度：这个月里事件/清单最多占几行
+  let maxExtra=0;
+  for(let i=1;i<=daysInMonth;i++){
+    const ds=targetYear+'-'+String(targetMonth+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');
+    const n=Math.min(2, ciEventsOn(ds).length) + Math.min(1, ciListsOn(ds).length);
+    if(n>maxExtra) maxExtra=n;
+  }
+  const cellH = Math.max(64, 32 + habits.length*19 + maxExtra*13);
 
   let html='<div style="padding:10px 8px;overflow-x:auto;">';
   html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;min-width:280px;">';
-  // headers
   DAY_HDRS.forEach(d=>{ html+='<div style="text-align:center;font-family:var(--font-pixel);font-size:7px;color:#808080;padding:4px 0;">'+d+'</div>'; });
-  // empty cells before first day
   for(let i=0;i<startWd;i++) html+='<div></div>';
-  // day cells
-  const todayStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+
+  const todayStr = ciToday();
   for(let d=1;d<=daysInMonth;d++){
     const ds=targetYear+'-'+String(targetMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const isToday=ds===todayStr;
     const wd=new Date(targetYear,targetMonth,d).getDay();
     const isWE=wd===0||wd===6;
-    const checkedHabits=habits.filter(h=>ciIsChecked(ds,h.id));
-    html+='<div data-ds="'+ds+'" onclick="ciDayClickDs(this)" style="min-height:'+cellH+'px;border:1px solid '+(isToday?'var(--accent)':'var(--border)')+';border-radius:4px;padding:4px 3px;cursor:pointer;background:'+(isToday?'rgba(233,69,96,.08)':isWE?'rgba(255,255,255,.03)':'transparent')+';position:relative;">';
+    const note=ciNote(ds);
+    html+='<div data-ds="'+ds+'" onclick="ciDayClickDs(this)" style="min-height:'+cellH+'px;border:1px solid '+(isToday?'var(--accent)':'var(--border)')+';border-radius:4px;padding:4px 3px;cursor:pointer;background:'+(isToday?'rgba(233,69,96,.08)':isWE?'rgba(255,255,255,.03)':'transparent')+';position:relative;overflow:hidden;">';
     html+='<div style="font-family:var(--font-pixel);font-size:7px;color:'+(isToday?'var(--accent)':isWE?'var(--gray)':'var(--light)')+';">'+d+'</div>';
-    checkedHabits.forEach(h=>{ html+='<div style="font-size:16px;line-height:1.3;" title="'+h.name+'">'+h.emoji+'</div>'; });
+    if(note.mood) html+='<div class="ci-cell-mood">'+note.mood+'</div>';
+    habits.forEach(h=>{
+      const v=ciVal(ds,h.id);
+      if(v<=0) return;
+      let valTxt='';
+      if(ciIsGoal(h)){
+        const done = v >= (Number(h.goal)||0);
+        valTxt='<span class="ci-cell-val" style="color:'+(done?'var(--win-green)':'#000080')+';">'+ciFmtNum(v)+ciUnit(h)+'</span>';
+      }
+      html+='<div class="ci-cell-line" title="'+escAttr(h.name)+'"><span>'+h.emoji+'</span>'+valTxt+'</div>';
+    });
+    // 事件：最多两行，多的折成 +N
+    const evs=ciEventsOn(ds);
+    evs.slice(0,2).forEach(e=>{
+      html+='<div class="ci-cell-ev'+(e.done?' done':'')+'" title="'+escAttr((e.time?e.time+' ':'')+e.title)+'">'
+        +(e.done?'✓':'•')+' '+escHtml(e.title)+'</div>';
+    });
+    if(evs.length>2) html+='<div class="ci-cell-ev">+'+(evs.length-2)+' 个事件</div>';
+    // 清单：只显示一行汇总
+    const lists=ciListsOn(ds);
+    if(lists.length){
+      const openN=lists.reduce((n,l)=>n+ciListOpenCount(l),0);
+      const label=lists.length===1 ? lists[0].name : (lists.length+' 份清单');
+      html+='<div class="ci-cell-ev list" title="'+escAttr(lists.map(l=>l.name).join('、'))+'">📋 '
+        +escHtml(label)+(openN?(' 剩'+openN):' ✓')+'</div>';
+    }
+    if(note.text) html+='<div class="ci-cell-note" title="'+escAttr(note.text.slice(0,60))+'">📝</div>';
     html+='</div>';
   }
   html+='</div></div>';
   cal.innerHTML=html;
 }
 
-let _ciDayPanel=null;
-let _ciOpening=false;
-function ciDayClickDs(el){
-  const dateStr=el.dataset.ds; if(!dateStr) return;
-  const habits=S.habits||[];
-  if(!habits.length){ showToast('先在上方添加习惯'); return; }
-  if(_ciDayPanel){ _ciDayPanel.remove(); _ciDayPanel=null; }
-  _ciOpening=true;
-  const panel=document.createElement('div');
-  panel.className='ci-panel';
-  panel.style.cssText='position:fixed;z-index:600;background:var(--surface);border:2px solid var(--border);border-radius:6px;padding:10px 14px;min-width:200px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
-  const parts=dateStr.split('-');
-  const ttl=document.createElement('div');
-  ttl.style.cssText='font-family:var(--font-pixel);font-size:7px;color:var(--gold);margin-bottom:8px;';
-  ttl.textContent=parts[1]+'/'+parts[2]+' 打卡';
-  panel.appendChild(ttl);
-  habits.forEach(h=>{
-    const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;';
-    const upd=()=>{
-      const chk=ciIsChecked(dateStr,h.id);
-      chkEl.textContent=chk?'✓':'○';
-      chkEl.style.color=chk?'var(--green)':'var(--gray)';
-      renderCiCalendar();
-    };
-    const emEl=document.createElement('span'); emEl.style.fontSize='20px'; emEl.textContent=h.emoji;
-    const nmEl=document.createElement('span'); nmEl.style.cssText='flex:1;font-family:var(--font-vt);font-size:15px;color:var(--light);'; nmEl.textContent=h.name;
-    const chk=ciIsChecked(dateStr,h.id);
-    const chkEl=document.createElement('span'); chkEl.style.cssText='font-size:16px;color:'+(chk?'var(--green)':'var(--gray)')+';'; chkEl.textContent=chk?'✓':'○';
-    row.appendChild(emEl); row.appendChild(nmEl); row.appendChild(chkEl);
-    row.addEventListener('mousedown',e=>{ e.stopPropagation(); ciToggle(dateStr,h.id); upd(); });
-    panel.appendChild(row);
-  });
-  const closeBtn=document.createElement('button');
-  closeBtn.className='pxl-btn'; closeBtn.style.cssText='width:100%;margin-top:8px;font-size:10px;';
-  closeBtn.textContent='关闭';
-  closeBtn.addEventListener('mousedown',e=>{ e.stopPropagation(); panel.remove(); _ciDayPanel=null; });
-  panel.appendChild(closeBtn);
-  // position near the clicked cell
-  const rect=el.getBoundingClientRect();
-  const px=Math.min(rect.left, window.innerWidth-220);
-  const py=Math.min(rect.bottom+4, window.innerHeight-320);
-  panel.style.left=px+'px'; panel.style.top=py+'px';
-  document.body.appendChild(panel);
-  _ciDayPanel=panel;
-  setTimeout(()=>{ _ciOpening=false; }, 50);
+// ── 当日记录弹窗 ──
+const CI_MOODS=['😄','🙂','😐','😔','😤','😴','🤯','💪','🌱','🔥'];
+let _ciMood='';
+let _ciDayDraft={};
+
+function ciDayClickDs(el){ if(el && el.dataset.ds) ciOpenDay(el.dataset.ds); }
+
+function ciOpenDay(ds){
+  if(!ds) return;
+  document.getElementById('ciDayDate').value=ds;
+  const d=ciParseDs(ds), today=ciToday();
+  const isToday = ds===today, isPast = ds<today;
+  document.getElementById('ciDayTitle').textContent =
+    (d.getMonth()+1)+'月'+d.getDate()+'日 '+CI_WD[d.getDay()]
+    + (isToday ? ' · 今天' : (isPast ? ' · 补卡' : ' · 提前安排'));
+
+  _ciDayDraft={};
+  (S.habits||[]).forEach(h=>{ _ciDayDraft[h.id]=ciVal(ds,h.id); });
+  ciRenderDayHabits();
+  ciRenderDayPlans();
+
+  const note=ciNote(ds);
+  document.getElementById('ciDayText').value=note.text||'';
+  _ciMood=note.mood||'';
+  ciRenderMoodPicker();
+
+  document.getElementById('ciDayTip').textContent = isPast
+    ? '这天可以随时补上。补卡和当天打卡完全等价，连续天数会自动接回去，断了不算数。'
+    : '只要今天想起过它、为它做了点什么，就算打卡成功。数字只是记录投入，不是及格线。';
+
+  openModal('ciDayModal');
+  setTimeout(()=>{ const t=document.getElementById('ciDayText'); if(t && !t.value) t.focus(); }, 120);
 }
-document.addEventListener('mousedown',e=>{
-  if(_ciOpening) return;
-  if(_ciDayPanel && !_ciDayPanel.contains(e.target)){ _ciDayPanel.remove(); _ciDayPanel=null; }
-});
+
+function ciRenderDayHabits(){
+  const box=document.getElementById('ciDayHabits'); if(!box) return;
+  box.innerHTML='';
+  const habits=S.habits||[];
+  if(!habits.length){
+    const tip=document.createElement('div'); tip.className='ci-tip';
+    tip.textContent='还没有习惯计划。可以先关掉这里，点右上角「+ 新建习惯」加一个。';
+    box.appendChild(tip);
+    return;
+  }
+  habits.forEach(h=>{
+    const goal=ciIsGoal(h), unit=ciUnit(h), step=ciStep(h);
+    const row=document.createElement('div'); row.className='ci-day-row';
+    const top=document.createElement('div'); top.className='ci-day-row-top';
+
+    const em=document.createElement('span'); em.style.fontSize='20px'; em.textContent=h.emoji||'✅';
+    const nm=document.createElement('span'); nm.className='ci-day-row-name'; nm.textContent=h.name;
+    top.appendChild(em); top.appendChild(nm);
+
+    if(goal){
+      const minus=document.createElement('button'); minus.className='ci-step-btn'; minus.textContent='−'+ciFmtNum(step);
+      const inp=document.createElement('input');
+      inp.className='ci-num'; inp.type='number'; inp.min='0'; inp.step=String(step);
+      inp.placeholder='0';
+      inp.value = _ciDayDraft[h.id] ? ciFmtNum(_ciDayDraft[h.id]) : '';
+      const plus=document.createElement('button'); plus.className='ci-step-btn'; plus.textContent='+'+ciFmtNum(step);
+      const un=document.createElement('span');
+      un.style.cssText='font-size:12px;color:#404040;';
+      un.textContent=unit+' · 目标 '+ciFmtNum(h.goal)+unit;
+
+      minus.onclick=()=>{
+        const cur=Number(_ciDayDraft[h.id])||0;
+        _ciDayDraft[h.id]=Math.max(0, Math.round((cur-step)*100)/100);
+        ciRenderDayHabits();
+      };
+      plus.onclick=()=>{
+        const cur=Number(_ciDayDraft[h.id])||0;
+        _ciDayDraft[h.id]=Math.round((cur+step)*100)/100;
+        ciRenderDayHabits();
+      };
+      top.appendChild(minus); top.appendChild(inp); top.appendChild(plus); top.appendChild(un);
+      row.appendChild(top);
+
+      const bar=document.createElement('div'); bar.className='ci-bar'; bar.style.marginTop='6px';
+      bar.innerHTML='<i></i>';
+      row.appendChild(bar);
+
+      const hint=document.createElement('div'); hint.className='ci-day-hint';
+      const badge=document.createElement('span');
+      hint.appendChild(badge);
+      row.appendChild(hint);
+
+      inp.oninput=function(){
+        _ciDayDraft[h.id]=Math.max(0, Number(inp.value)||0);
+        ciUpdateRowBar(h, bar, badge, hint);
+      };
+
+      ciUpdateRowBar(h, bar, badge, hint);
+    } else {
+      const btn=document.createElement('button');
+      const on=(Number(_ciDayDraft[h.id])||0)>0;
+      btn.className='ci-step-btn';
+      btn.style.cssText+='min-width:76px;font-size:13px;'+(on?'background:#008000;color:#fff;':'');
+      btn.textContent=on?'✓ 已完成':'○ 未打卡';
+      btn.onclick=()=>{
+        _ciDayDraft[h.id]=(Number(_ciDayDraft[h.id])||0)>0 ? 0 : 1;
+        ciRenderDayHabits();
+      };
+      top.appendChild(btn);
+      row.appendChild(top);
+    }
+    box.appendChild(row);
+  });
+}
+
+function ciUpdateRowBar(h, bar, badge, hint){
+  const goal=Number(h.goal)||0;
+  const v=Number(_ciDayDraft[h.id])||0;
+  const pct=goal>0 ? Math.max(0, Math.min(100, Math.round(v/goal*100))) : 0;
+  const i=bar.querySelector('i');
+  i.style.width=pct+'%';
+  i.className = (pct>=100) ? 'full' : '';
+  if(v<=0){
+    hint.style.color='#808080';
+    badge.textContent='还没记录。哪怕只投入一点，点一下 +'+ciFmtNum(ciStep(h))+' 就算打卡成功。';
+  } else if(v>=goal){
+    hint.style.color='var(--win-green)';
+    badge.textContent='已达成目标 '+pct+'%，今天很扎实。';
+  } else {
+    hint.style.color='#404040';
+    badge.textContent='已记录 '+ciFmtNum(v)+ciUnit(h)+'（目标的 '+pct+'%）。打卡已经成立，连续不会断。';
+  }
+}
+
+function ciRenderMoodPicker(){
+  const box=document.getElementById('ciMoodPicker'); if(!box) return;
+  box.innerHTML='';
+  CI_MOODS.forEach(m=>{
+    const b=document.createElement('button');
+    b.className='ci-mood-chip'+(_ciMood===m?' on':'');
+    b.textContent=m;
+    b.onclick=()=>{ _ciMood = (_ciMood===m) ? '' : m; ciRenderMoodPicker(); };
+    box.appendChild(b);
+  });
+}
+
+function ciSaveDay(){
+  const ds=document.getElementById('ciDayDate').value; if(!ds) return;
+  if(!S.checkins) S.checkins={};
+  if(!S.dayNotes) S.dayNotes={};
+  (S.habits||[]).forEach(h=>{ ciSetVal(ds, h.id, _ciDayDraft[h.id]||0, ciIsGoal(h)); });
+  const text=(document.getElementById('ciDayText').value||'').trim();
+  if(text || _ciMood) S.dayNotes[ds]={mood:_ciMood||'', text:text, ts:new Date().toISOString()};
+  else delete S.dayNotes[ds];
+  saveState(); closeModal('ciDayModal'); renderCheckin();
+  showToast('已保存 '+ds+' 的记录');
+}
+
+function ciClearDay(){
+  const ds=document.getElementById('ciDayDate').value; if(!ds) return;
+  if(!confirm('清空 '+ds+' 的全部打卡和文字记录？')) return;
+  (S.habits||[]).forEach(h=>{ if(S.checkins) delete S.checkins[ciKey(ds,h.id)]; });
+  if(S.dayNotes) delete S.dayNotes[ds];
+  saveState(); closeModal('ciDayModal'); renderCheckin();
+  showToast('已清空 '+ds);
+}
 
 // ═══════════════════════════════════════
 // FINANCE (记账理财)
