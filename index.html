@@ -391,6 +391,38 @@ body{
   border:1px solid #008000;font-family:var(--font-ui);
 }
 
+/* ── 任务卡上的番茄格子表 ── */
+.pomo-grid-wrap{
+  margin-top:6px;padding:6px;background:#f4f4f4;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
+.pomo-grid-hd{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  font-family:var(--font-ui);font-size:11px;color:#404040;margin-bottom:5px;
+}
+.pomo-grid-hd .pg-count{font-family:var(--font-mono);color:#000080;font-weight:bold;}
+.pomo-grid-hd .pg-tip{color:#909090;font-size:10px;}
+.pg-slot-btn{
+  width:18px;height:18px;line-height:1;padding:0;cursor:pointer;
+  background:var(--win-gray);font-family:var(--font-mono);font-size:11px;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.pg-slot-btn:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
+.pomo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px;}
+.pomo-cell{
+  height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1px;cursor:pointer;background:#fff;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.pomo-cell .pg-t{font-size:17px;line-height:1;}
+.pomo-cell .pg-m{font-family:var(--font-mono);font-size:9px;color:#707070;line-height:1;}
+.pomo-cell.empty{background:#e8e8e8;color:#b0b0b0;font-size:13px;}
+.pomo-cell.empty:hover{background:#fff;color:#000080;}
+.pomo-cell.filled{background:#fffaf5;}
+.pomo-cell.filled:hover{border-color:#cc0000;}
+.pomo-cell.part .pg-t{opacity:.5;}
+.pomo-cell.live{background:#e4f0e4;border-color:#008000;color:#008000;}
+
 /* ── 任务卡上的能量标签（字号跟随各自标签的设置） ── */
 .etag-mini{
   display:inline-block;font-size:11px;font-weight:bold;padding:0 6px;
@@ -1072,7 +1104,6 @@ body{
 .ci-cell-note{
   position:absolute;right:2px;bottom:1px;font-size:10px;line-height:1;opacity:.85;
 }
-.ci-cell-mood{position:absolute;right:2px;top:1px;font-size:12px;line-height:1;}
 
 /* ── 当日编辑弹窗 ── */
 .ci-day-row{
@@ -1097,11 +1128,6 @@ body{
 .ci-step-btn:hover{background:var(--win-light);}
 .ci-step-btn:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
 .ci-day-hint{font-size:11px;color:#606060;margin-top:4px;}
-.ci-mood-chip{
-  font-size:18px;padding:2px 5px;cursor:pointer;background:var(--win-gray);
-  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
-}
-.ci-mood-chip.on{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);background:#000080;}
 .ci-tip{
   margin:8px auto 0;width:460px;max-width:100%;
   font-family:var(--font-ui);font-size:11px;color:#404040;
@@ -1454,23 +1480,19 @@ body{
 <!-- CHECKIN DAY MODAL -->
 <div class="overlay" id="ciDayModal">
   <div class="modal">
-    <button class="close-btn" onclick="closeModal('ciDayModal')">✕</button>
+    <button class="close-btn" onclick="ciCloseDay()">✕</button>
     <div class="modal-title" id="ciDayTitle">当日记录</div>
     <input type="hidden" id="ciDayDate"/>
     <div id="ciDayHabits"></div>
     <div id="ciDayPlans"></div>
     <div class="form-row">
-      <label class="form-label">今天的心情</label>
-      <div id="ciMoodPicker" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
-    </div>
-    <div class="form-row">
-      <label class="form-label">文字记录 · 心情与总结</label>
+      <label class="form-label">文字记录 · 今天的总结</label>
       <textarea class="form-textarea" id="ciDayText" rows="5" placeholder="今天做了什么？状态怎么样？想对自己说点什么？"></textarea>
     </div>
     <div class="ci-tip" id="ciDayTip"></div>
     <div class="modal-btns">
       <button class="pxl-btn danger" onclick="ciClearDay()">清空当天</button>
-      <button class="pxl-btn" onclick="closeModal('ciDayModal')">取消</button>
+      <button class="pxl-btn" onclick="ciCloseDay()">取消</button>
       <button class="pxl-btn primary" onclick="ciSaveDay()">保存</button>
     </div>
   </div>
@@ -1731,8 +1753,24 @@ function setSyncStatus(status) {
 }
 
 // Save to localStorage immediately, debounce cloud sync by 1.5s
-function saveState() {
+// 「脏标记」也要落到 localStorage：只存在内存里的话，页面一刷新就忘了
+// 这次改动还没推上云端，下次打开又被云端整份覆盖，那条打卡就凭空消失了
+const DIRTY_KEY = 'adhd-rpg-dirty';
+function markDirty(){
   _dirtySinceSync = true;
+  try { localStorage.setItem(DIRTY_KEY, '1'); } catch(e) {}
+}
+function clearDirty(){
+  _dirtySinceSync = false;
+  try { localStorage.removeItem(DIRTY_KEY); } catch(e) {}
+}
+function hasPendingLocalEdits(){
+  if(_dirtySinceSync) return true;
+  try { return localStorage.getItem(DIRTY_KEY) === '1'; } catch(e) { return false; }
+}
+
+function saveState() {
+  markDirty();
   try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(syncToCloud, 1500);
@@ -1743,7 +1781,7 @@ function saveState() {
 // 数据一多就会卡。这里把落盘推迟到停止输入之后，内存里的数据仍是即时更新的。
 let _persistTimer = null;
 function saveStateSoon(){
-  _dirtySinceSync = true;
+  markDirty();
   if(_persistTimer) clearTimeout(_persistTimer);
   _persistTimer = setTimeout(()=>{ _persistTimer = null; saveState(); }, 500);
 }
@@ -1815,6 +1853,9 @@ function mergeCloudIntoLocal(cloud){
   if(typeof cloud.level==='number')  S.level  = Math.max(S.level||1, cloud.level);
 }
 
+// 同一套并集逻辑，换个名字用：把另一份快照里「当前状态没有」的条目补进来
+function unionIntoState(snapshot){ mergeCloudIntoLocal(snapshot); }
+
 async function syncToCloud() {
   try {
     setSyncStatus('saving');
@@ -1840,7 +1881,7 @@ async function syncToCloud() {
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     _cloudBaseRev = S.rev;
-    _dirtySinceSync = false;
+    clearDirty();
     try { localStorage.setItem('adhd-rpg-v2', payload); } catch(e) {}
     setSyncStatus('saved');
     if (merged) { renderAll(); showToast('已合并其他设备的改动'); }
@@ -1857,7 +1898,7 @@ async function refreshFromCloudIfNewer(){
   try {
     flushPendingSave(); // 先把还没落盘的输入写下来，再判断脏状态
     // 本地有未同步的改动时，交给 syncToCloud 的合并流程处理
-    if(_dirtySinceSync || _saveTimer){ 
+    if(hasPendingLocalEdits() || _saveTimer){
       if(_saveTimer){ clearTimeout(_saveTimer); _saveTimer=null; }
       await syncToCloud();
       return;
@@ -1867,7 +1908,7 @@ async function refreshFromCloudIfNewer(){
     if(cloud && cloudRev > _cloudBaseRev){
       migrateState(cloud);
       _cloudBaseRev = cloudRev;
-      _dirtySinceSync = false;
+      clearDirty();
       try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
       renderAll();
       setSyncStatus('saved');
@@ -1911,6 +1952,24 @@ function migrateState(loaded) {
     }
     delete t.pomoRecords;
     delete t.pomoCount;
+    // 番茄格子表：只留结构正常的记录，格子数限制在 1-60
+    if(t.pomoLog !== undefined){
+      t.pomoLog = (Array.isArray(t.pomoLog) ? t.pomoLog : [])
+        .map(r=>{
+          if(!r || typeof r!=='object') return null;
+          const m = Math.round(Number(r.m));
+          if(!isFinite(m) || m<=0) return null;
+          return {m:m, ts:r.ts||'', p:!!r.p};
+        })
+        .filter(Boolean);
+      if(!t.pomoLog.length) delete t.pomoLog;
+    }
+    if(t.pomoSlots!==undefined){
+      const sl = Math.round(Number(t.pomoSlots));
+      if(!isFinite(sl) || sl<1) delete t.pomoSlots;
+      else t.pomoSlots = Math.min(60, sl);
+    }
+    if(!t.pomoGrid) delete t.pomoGrid;
     // 权重只存 2-10 的整数，1 是默认值不用存
     if(t.weight!==undefined){
       const w = Math.round(Number(t.weight));
@@ -1968,12 +2027,12 @@ function migrateState(loaded) {
     })).filter(it=>it.text),
     createdAt: l.createdAt || new Date().toISOString()
   }));
-  // 当日文字记录统一成 {mood,text} 结构，旧的纯字符串自动迁移
+  // 当日文字记录统一成 {text} 结构：旧的纯字符串自动迁移，心情图标已取消
   Object.keys(S.dayNotes).forEach(k=>{
     const n=S.dayNotes[k];
-    if(typeof n==='string'){ S.dayNotes[k] = n ? {mood:'', text:n} : undefined; }
-    else if(n && typeof n==='object'){ n.mood = n.mood||''; n.text = n.text||''; }
-    if(!S.dayNotes[k] || (!S.dayNotes[k].mood && !S.dayNotes[k].text)) delete S.dayNotes[k];
+    if(typeof n==='string'){ S.dayNotes[k] = n ? {text:n} : undefined; }
+    else if(n && typeof n==='object'){ n.text = n.text||''; delete n.mood; }
+    if(!S.dayNotes[k] || !S.dayNotes[k].text) delete S.dayNotes[k];
   });
   if(!Array.isArray(S.boxFiles)) S.boxFiles=[];
   // BOX 目录：由“位置分组”迁移到显式 parentId 树（支持任意层级 + 任意层放文件）
@@ -2033,22 +2092,42 @@ function migrateState(loaded) {
 // Load: try cloud first, fall back to localStorage
 async function loadState() {
   // Show local data immediately so UI is not blank
+  let localRaw = null;
+  const localDirty = hasPendingLocalEdits();
   try {
     const local = localStorage.getItem('adhd-rpg-v2');
-    if (local) { migrateState(JSON.parse(local)); }
+    if (local) {
+      localRaw = JSON.parse(local);          // 另存一份原始快照，下面合并要用
+      migrateState(JSON.parse(local));
+    }
   } catch(e) {}
 
   // Then try to fetch cloud data (may be newer)
   try {
     const cloud = await fetchCloudState();
     if (cloud) {
+      const cloudRev = typeof cloud.rev==='number' ? cloud.rev : 0;
+      const localRev = (localRaw && typeof localRaw.rev==='number') ? localRaw.rev : 0;
+      // 本地还有没推上去的改动（关得太快、当时离线…）就绝不能被云端整份盖掉。
+      // 先采用云端，再把只存在于本地的条目和打卡并回来，然后立刻推一次。
+      const needMerge = !!localRaw && (localDirty || localRev > cloudRev);
       migrateState(cloud);
-      _cloudBaseRev = typeof cloud.rev==='number' ? cloud.rev : 0;
-      _dirtySinceSync = false;
-      // Update local cache with cloud data
-      try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
-      setSyncStatus('saved');
-      renderAll(); // re-render with cloud data
+      _cloudBaseRev = cloudRev;
+      if (needMerge) {
+        unionIntoState(localRaw);
+        migrateState(S);       // 合并完再规整一遍字段
+        markDirty();
+        try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
+        renderAll();
+        syncToCloud();         // 把合并结果补推回云端
+        showToast('已找回本地未同步的记录');
+      } else {
+        clearDirty();
+        // Update local cache with cloud data
+        try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
+        setSyncStatus('saved');
+        renderAll(); // re-render with cloud data
+      }
     } else {
       // No cloud data yet — push local data up
       setSyncStatus('offline');
@@ -2438,6 +2517,108 @@ function pomoStripHtml(t, goalFallback){
 }
 
 // ═══════════════════════════════════════
+// 番茄格子表：一个方格 = 一个番茄钟，完成后显示 🍅 和具体时长
+// t.pomoLog = [{m:分钟, ts:完成时间, p:是否中途停下的半个番茄}]
+// t.pomoSlots = 想摆几个格子（没设就按目标时长 / 25 分钟推算）
+// ═══════════════════════════════════════
+const POMO_CELL_MIN = 25;   // 推算格子数时用的单个番茄长度
+
+function pomoLogOf(t){
+  if(!Array.isArray(t.pomoLog)) t.pomoLog = [];
+  return t.pomoLog;
+}
+
+function pomoSlotCount(t, goalFallback){
+  const log = pomoLogOf(t);
+  let n = Math.round(Number(t.pomoSlots));
+  if(!isFinite(n) || n < 1){
+    const g = taskGoalMin(t, goalFallback||DEFAULT_POMO_GOAL);
+    n = Math.max(1, Math.ceil(g / POMO_CELL_MIN));
+  }
+  return Math.max(1, Math.min(60, Math.max(n, log.length)));
+}
+
+// 表格是按任务开关的，默认收着，免得卡片太挤
+function togglePomoGrid(id){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  t.pomoGrid = !t.pomoGrid;
+  saveState();
+  renderTasks();
+}
+
+function setPomoSlots(id, delta, goalFallback){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  const cur = pomoSlotCount(t, goalFallback);
+  const log = pomoLogOf(t);
+  const next = Math.max(Math.max(1, log.length), Math.min(60, cur + delta));
+  t.pomoSlots = next;
+  saveState();
+  renderTasks();
+}
+
+// 记一次番茄钟：格子表和累计分钟数从同一个入口写，两边不会对不上
+function logPomoSession(t, mins, partial){
+  if(!t) return;
+  mins = Math.max(0, Math.round(mins||0));
+  if(!mins) return;
+  pomoLogOf(t).push({m:mins, ts:new Date().toISOString(), p:!!partial});
+  t.pomoMin = (t.pomoMin||0) + mins;
+}
+
+function pomoGridHtml(t, goalFallback){
+  if(!t.pomoGrid) return '';
+  const log = pomoLogOf(t);
+  const slots = pomoSlotCount(t, goalFallback);
+  const running = (pomoTaskId==t.id && pomoTimer);
+  let h = '<div class="pomo-grid-wrap">'
+    + '<div class="pomo-grid-hd">'
+    +   '<span>🍅 番茄格</span>'
+    +   '<span class="pg-count">'+log.length+' / '+slots+'</span>'
+    +   '<button class="pg-slot-btn" onclick="setPomoSlots('+t.id+',-1,'+(goalFallback||DEFAULT_POMO_GOAL)+')" title="少一格">−</button>'
+    +   '<button class="pg-slot-btn" onclick="setPomoSlots('+t.id+',1,'+(goalFallback||DEFAULT_POMO_GOAL)+')" title="多一格">+</button>'
+    +   '<span class="pg-tip">点空格补记，点番茄可删掉</span>'
+    + '</div><div class="pomo-grid">';
+  for(let i=0;i<slots;i++){
+    const r = log[i];
+    if(r){
+      const when = r.ts ? fmtDT(r.ts) : '';
+      const title = (r.p ? '半个番茄 ' : '完成 ') + fmtMin(r.m) + (when ? ' · '+when : '') + '（点击删除）';
+      h += '<div class="pomo-cell filled'+(r.p?' part':'')+'" title="'+escAttr(title)+'" onclick="delPomoRecord('+t.id+','+i+')">'
+        + '<span class="pg-t">🍅</span><span class="pg-m">'+fmtMin(r.m)+'</span></div>';
+    } else if(i===log.length && running){
+      h += '<div class="pomo-cell live" title="正在跑这一格"><span class="pg-t">⏳</span><span class="pg-m">进行中</span></div>';
+    } else {
+      h += '<div class="pomo-cell empty" title="点击手动补记一个番茄钟" onclick="addPomoManual('+t.id+')">+</div>';
+    }
+  }
+  h += '</div></div>';
+  return h;
+}
+
+function addPomoManual(id){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  const val = prompt('补记一个番茄钟，投入了多少分钟？', String(POMO_CELL_MIN));
+  if(val === null) return;
+  const n = parseInt(val, 10);
+  if(!isFinite(n) || n <= 0){ showToast('请输入大于 0 的分钟数'); return; }
+  logPomoSession(t, n, false);
+  saveState();
+  renderTasks();
+  showToast('🍅 已补记 '+n+' 分钟');
+}
+
+function delPomoRecord(id, idx){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  const log = pomoLogOf(t);
+  const r = log[idx]; if(!r) return;
+  if(!confirm('删掉这个番茄（'+fmtMin(r.m)+'）？累计时长也会一起减掉。')) return;
+  log.splice(idx, 1);
+  t.pomoMin = Math.max(0, (t.pomoMin||0) - (r.m||0));
+  saveState();
+  renderTasks();
+}
+
+// ═══════════════════════════════════════
 // 任务栏渲染 — 只有「项目」一种结构，已完成任务显示为灰色勾选
 // ═══════════════════════════════════════
 function toggleHideDone(){
@@ -2524,9 +2705,11 @@ function renderTasks(){
     html += '<div class="task-actions">';
     html += '<button class="icon-btn" onclick="addSectionToProject('+p.id+')" style="color:#000080;" title="添加分栏">+</button>';
     html += '<button class="icon-btn" onclick="bindPomo('+p.id+')" title="'+(pomoTaskId==p.id?'点击解绑番茄钟':'绑定番茄钟')+'"'+(pomoTaskId==p.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
+    html += '<button class="icon-btn" onclick="togglePomoGrid('+p.id+')" title="番茄格子表"'+(p.pomoGrid?' style="background:#000080;color:#fff;"':'')+'>▦</button>';
     html += '<button class="icon-btn" onclick="deleteTask('+p.id+')" style="color:#cc0000;">✕</button>';
     html += '</div></div>';
     html += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+p.id+',this)">'+escHtml(p.note||'')+'</div>';
+    html += pomoGridHtml(p, st.goal);
     html += '</div>';
 
     // 进度条：已完成任务 + 番茄钟投入，两段合并
@@ -2590,10 +2773,12 @@ function taskCardHtml(t, projectId, goalFallback){
   const tw = taskWeight(t);
   h += '<button class="task-weight'+(tw!==1?' set':'')+'" onclick="openWeightMenu(event,'+t.id+')" title="任务权重（1-10）">×'+tw+'</button>';
   h += '<button class="icon-btn" onclick="bindPomo('+t.id+')" title="'+(pomoTaskId==t.id?'点击解绑番茄钟':'绑定番茄钟')+'"'+(pomoTaskId==t.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
+  h += '<button class="icon-btn" onclick="togglePomoGrid('+t.id+')" title="番茄格子表"'+(t.pomoGrid?' style="background:#000080;color:#fff;"':'')+'>▦</button>';
   h += '<button class="icon-btn" onclick="deleteTask('+t.id+')" style="color:#cc0000;">✕</button>';
   h += '</div></div>';
   h += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+t.id+',this)">'+escHtml(t.note||'')+'</div>';
   h += pomoStripHtml(t, goalFallback);
+  h += pomoGridHtml(t, goalFallback);
   h += '</div>';
   return h;
 }
@@ -4852,6 +5037,7 @@ function startPomo(min){
   document.getElementById('pomoDisplay').classList.add('running');
   pomoTimer=setInterval(tickPomo,500);
   updatePomoDisplay();
+  renderTasks();   // 让格子表里那一格立刻变成「进行中」
 }
 
 function stopPomo(silent){
@@ -4862,7 +5048,7 @@ function stopPomo(silent){
       const m = Math.floor((pomoMin*60 - Math.max(0, Math.round((pomoEndWall-Date.now())/1000)))/60);
       const t = S.tasks.find(x=>x.id==pomoTaskId);
       if(t && m>0){
-        t.pomoMin = (t.pomoMin||0) + m;
+        logPomoSession(t, m, true);   // 半个番茄，格子表里画成半透明的 🍅
         addXP(m, '番茄钟');
         saveState(); renderTasks();
         showToast('🍅 已记录 '+m+' 分钟');
@@ -4872,6 +5058,7 @@ function stopPomo(silent){
   document.getElementById('pomoDisplay').textContent='--:--';
   document.getElementById('pomoDisplay').classList.remove('running');
   document.querySelectorAll('.pomo-btn[data-min]').forEach(b=>b.classList.remove('active'));
+  if(document.getElementById('taskList')) renderTasks();   // 刷新格子表
 }
 
 function tickPomo(){
@@ -4881,7 +5068,7 @@ function tickPomo(){
     if(pomoTaskId){
       const t=S.tasks.find(t=>t.id==pomoTaskId);
       if(t){
-        t.pomoMin = (t.pomoMin||0) + pomoMin;
+        logPomoSession(t, pomoMin, false);
         saveState(); renderTasks();
       }
     }
@@ -5672,9 +5859,9 @@ function ciToggle(dateStr, habitId){
 // ── 当日文字记录 ──
 function ciNote(ds){
   const n=(S.dayNotes||{})[ds];
-  if(!n) return {mood:'', text:''};
-  if(typeof n==='string') return {mood:'', text:n};
-  return {mood:n.mood||'', text:n.text||''};
+  if(!n) return {text:''};
+  if(typeof n==='string') return {text:n};
+  return {text:n.text||''};
 }
 
 // ── 连续天数 / 补卡 ──
@@ -6298,7 +6485,6 @@ function renderCiCalendar(){
     const note=ciNote(ds);
     html+='<div data-ds="'+ds+'" onclick="ciDayClickDs(this)" style="min-height:'+cellH+'px;border:1px solid '+(isToday?'var(--accent)':'var(--border)')+';border-radius:4px;padding:4px 3px;cursor:pointer;background:'+(isToday?'rgba(233,69,96,.08)':isWE?'rgba(255,255,255,.03)':'transparent')+';position:relative;overflow:hidden;">';
     html+='<div style="font-family:var(--font-pixel);font-size:7px;color:'+(isToday?'var(--accent)':isWE?'var(--gray)':'var(--light)')+';">'+d+'</div>';
-    if(note.mood) html+='<div class="ci-cell-mood">'+note.mood+'</div>';
     habits.forEach(h=>{
       const v=ciVal(ds,h.id);
       if(v<=0) return;
@@ -6332,8 +6518,6 @@ function renderCiCalendar(){
 }
 
 // ── 当日记录弹窗 ──
-const CI_MOODS=['😄','🙂','😐','😔','😤','😴','🤯','💪','🌱','🔥'];
-let _ciMood='';
 let _ciDayDraft={};
 
 function ciDayClickDs(el){ if(el && el.dataset.ds) ciOpenDay(el.dataset.ds); }
@@ -6354,8 +6538,6 @@ function ciOpenDay(ds){
 
   const note=ciNote(ds);
   document.getElementById('ciDayText').value=note.text||'';
-  _ciMood=note.mood||'';
-  ciRenderMoodPicker();
 
   document.getElementById('ciDayTip').textContent = isPast
     ? '这天可以随时补上。补卡和当天打卡完全等价，连续天数会自动接回去，断了不算数。'
@@ -6388,7 +6570,7 @@ function ciRenderDayHabits(){
       const minus=document.createElement('button'); minus.className='ci-step-btn'; minus.textContent='−'+ciFmtNum(step);
       const inp=document.createElement('input');
       inp.className='ci-num'; inp.type='number'; inp.min='0'; inp.step=String(step);
-      inp.placeholder='0';
+      inp.placeholder='0'; inp.id='ciNum-'+h.id;
       inp.value = _ciDayDraft[h.id] ? ciFmtNum(_ciDayDraft[h.id]) : '';
       const plus=document.createElement('button'); plus.className='ci-step-btn'; plus.textContent='+'+ciFmtNum(step);
       const un=document.createElement('span');
@@ -6417,7 +6599,7 @@ function ciRenderDayHabits(){
       hint.appendChild(badge);
       row.appendChild(hint);
 
-      inp.oninput=function(){
+      inp.oninput=inp.onchange=function(){
         _ciDayDraft[h.id]=Math.max(0, Number(inp.value)||0);
         ciUpdateRowBar(h, bar, badge, hint);
       };
@@ -6459,25 +6641,38 @@ function ciUpdateRowBar(h, bar, badge, hint){
   }
 }
 
-function ciRenderMoodPicker(){
-  const box=document.getElementById('ciMoodPicker'); if(!box) return;
-  box.innerHTML='';
-  CI_MOODS.forEach(m=>{
-    const b=document.createElement('button');
-    b.className='ci-mood-chip'+(_ciMood===m?' on':'');
-    b.textContent=m;
-    b.onclick=()=>{ _ciMood = (_ciMood===m) ? '' : m; ciRenderMoodPicker(); };
-    box.appendChild(b);
-  });
+// 保存时以输入框里的实时值为准，避免手机上数字键盘没触发 oninput 就点了保存
+function ciDraftValue(h){
+  const el=document.getElementById('ciNum-'+h.id);
+  if(ciIsGoal(h) && el && el.value!==''){
+    const n=Number(el.value);
+    if(isFinite(n)) return Math.max(0, n);
+  }
+  return Number(_ciDayDraft[h.id])||0;
+}
+
+// 改了却没点保存就关掉，是最容易「以为打过卡了」的地方，这里拦一下
+function ciDayDirty(){
+  const ds=document.getElementById('ciDayDate').value; if(!ds) return false;
+  let dirty=false;
+  (S.habits||[]).forEach(h=>{ if(ciDraftValue(h) !== (Number(ciVal(ds,h.id))||0)) dirty=true; });
+  const text=(document.getElementById('ciDayText').value||'').trim();
+  if(text !== (ciNote(ds).text||'')) dirty=true;
+  return dirty;
+}
+
+function ciCloseDay(){
+  if(ciDayDirty() && !confirm('这天的打卡还没保存，直接关掉就不会记上。确定放弃吗？')) return;
+  closeModal('ciDayModal');
 }
 
 function ciSaveDay(){
   const ds=document.getElementById('ciDayDate').value; if(!ds) return;
   if(!S.checkins) S.checkins={};
   if(!S.dayNotes) S.dayNotes={};
-  (S.habits||[]).forEach(h=>{ ciSetVal(ds, h.id, _ciDayDraft[h.id]||0, ciIsGoal(h)); });
+  (S.habits||[]).forEach(h=>{ ciSetVal(ds, h.id, ciDraftValue(h), ciIsGoal(h)); });
   const text=(document.getElementById('ciDayText').value||'').trim();
-  if(text || _ciMood) S.dayNotes[ds]={mood:_ciMood||'', text:text, ts:new Date().toISOString()};
+  if(text) S.dayNotes[ds]={text:text, ts:new Date().toISOString()};
   else delete S.dayNotes[ds];
   saveState(); closeModal('ciDayModal'); renderCheckin();
   showToast('已保存 '+ds+' 的记录');
