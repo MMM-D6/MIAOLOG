@@ -392,6 +392,7 @@ body{
 }
 
 /* ── 任务卡上的番茄格子表 ── */
+.pg-icon{display:inline-block;vertical-align:-1px;}
 .pomo-grid-wrap{
   margin-top:6px;padding:6px;background:#f4f4f4;
   border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
@@ -2522,6 +2523,12 @@ function pomoStripHtml(t, goalFallback){
 // t.pomoSlots = 想摆几个格子（没设就按目标时长 / 25 分钟推算）
 // ═══════════════════════════════════════
 const POMO_CELL_MIN = 25;   // 推算格子数时用的单个番茄长度
+// 按钮上的小格子图标：用 SVG 画四个方块，比字体里的 ▦ 干净得多
+const PG_ICON = '<svg class="pg-icon" viewBox="0 0 12 12" width="11" height="11">'
+  + '<rect x="0" y="0" width="5" height="5" fill="currentColor"/>'
+  + '<rect x="7" y="0" width="5" height="5" fill="currentColor"/>'
+  + '<rect x="0" y="7" width="5" height="5" fill="currentColor"/>'
+  + '<rect x="7" y="7" width="5" height="5" fill="currentColor"/></svg>';
 
 function pomoLogOf(t){
   if(!Array.isArray(t.pomoLog)) t.pomoLog = [];
@@ -2572,7 +2579,7 @@ function pomoGridHtml(t, goalFallback){
   const running = (pomoTaskId==t.id && pomoTimer);
   let h = '<div class="pomo-grid-wrap">'
     + '<div class="pomo-grid-hd">'
-    +   '<span>🍅 番茄格</span>'
+    +   '<span>'+PG_ICON+' 番茄格</span>'
     +   '<span class="pg-count">'+log.length+' / '+slots+'</span>'
     +   '<button class="pg-slot-btn" onclick="setPomoSlots('+t.id+',-1,'+(goalFallback||DEFAULT_POMO_GOAL)+')" title="少一格">−</button>'
     +   '<button class="pg-slot-btn" onclick="setPomoSlots('+t.id+',1,'+(goalFallback||DEFAULT_POMO_GOAL)+')" title="多一格">+</button>'
@@ -2705,7 +2712,7 @@ function renderTasks(){
     html += '<div class="task-actions">';
     html += '<button class="icon-btn" onclick="addSectionToProject('+p.id+')" style="color:#000080;" title="添加分栏">+</button>';
     html += '<button class="icon-btn" onclick="bindPomo('+p.id+')" title="'+(pomoTaskId==p.id?'点击解绑番茄钟':'绑定番茄钟')+'"'+(pomoTaskId==p.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
-    html += '<button class="icon-btn" onclick="togglePomoGrid('+p.id+')" title="番茄格子表"'+(p.pomoGrid?' style="background:#000080;color:#fff;"':'')+'>▦</button>';
+    html += '<button class="icon-btn" onclick="togglePomoGrid('+p.id+')" title="番茄格子表"'+(p.pomoGrid?' style="background:#000080;color:#fff;"':'')+'>'+PG_ICON+'</button>';
     html += '<button class="icon-btn" onclick="deleteTask('+p.id+')" style="color:#cc0000;">✕</button>';
     html += '</div></div>';
     html += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+p.id+',this)">'+escHtml(p.note||'')+'</div>';
@@ -2773,7 +2780,7 @@ function taskCardHtml(t, projectId, goalFallback){
   const tw = taskWeight(t);
   h += '<button class="task-weight'+(tw!==1?' set':'')+'" onclick="openWeightMenu(event,'+t.id+')" title="任务权重（1-10）">×'+tw+'</button>';
   h += '<button class="icon-btn" onclick="bindPomo('+t.id+')" title="'+(pomoTaskId==t.id?'点击解绑番茄钟':'绑定番茄钟')+'"'+(pomoTaskId==t.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
-  h += '<button class="icon-btn" onclick="togglePomoGrid('+t.id+')" title="番茄格子表"'+(t.pomoGrid?' style="background:#000080;color:#fff;"':'')+'>▦</button>';
+  h += '<button class="icon-btn" onclick="togglePomoGrid('+t.id+')" title="番茄格子表"'+(t.pomoGrid?' style="background:#000080;color:#fff;"':'')+'>'+PG_ICON+'</button>';
   h += '<button class="icon-btn" onclick="deleteTask('+t.id+')" style="color:#cc0000;">✕</button>';
   h += '</div></div>';
   h += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+t.id+',this)">'+escHtml(t.note||'')+'</div>';
