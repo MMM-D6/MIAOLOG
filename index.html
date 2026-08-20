@@ -157,27 +157,85 @@ body{
   width:160px;cursor:pointer;text-shadow:1px 1px 0 #000040;
 }
 .char-name:focus{background:rgba(255,255,255,.15);outline:1px dotted #fff;}
-.level-row{display:flex;align-items:center;gap:5px;margin-top:3px;}
-.lv-badge{
-  font-family:var(--font-ui);font-size:11px;font-weight:bold;
-  background:var(--win-gray);color:#000080;
-  padding:1px 5px;
+/* ── 番茄钱包（原来的等级条位置） ── */
+.wallet-row{display:flex;align-items:center;gap:6px;margin-top:3px;cursor:pointer;}
+.wallet-badge{
+  font-family:var(--font-mono);font-size:12px;font-weight:bold;
+  background:var(--win-gray);color:#a00000;padding:1px 6px;flex-shrink:0;
   border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
-  flex-shrink:0;
 }
-.xp-bar-wrap{
-  flex:1;height:10px;background:#001;
-  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
-  overflow:hidden;min-width:60px;
+.wallet-stack{display:flex;align-items:center;gap:4px;flex:1;min-width:0;overflow:hidden;height:22px;}
+.wallet-note{
+  display:flex;align-items:center;gap:2px;flex-shrink:0;padding:0 3px;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);
 }
-.xp-bar{height:100%;background:#00cc00;transition:width .4s;}
-.xp-text{font-size:10px;color:#fff;white-space:nowrap;flex-shrink:0;font-family:var(--font-ui);}
-.levelup-btn{
-  font-family:var(--font-ui);font-size:10px;font-weight:bold;
-  background:#ffff00;color:#000;border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
-  padding:1px 5px;cursor:pointer;display:none;animation:blink 1s infinite;flex-shrink:0;
-}
+.wallet-note img{width:17px;height:17px;object-fit:contain;display:block;}
+.wallet-note .wn-emo{font-size:13px;line-height:1;}
+.wallet-note .wn-x{font-family:var(--font-mono);font-size:10px;color:#fff;}
+.wallet-total{font-size:10px;color:#c8d2e8;white-space:nowrap;flex-shrink:0;font-family:var(--font-ui);}
+.wallet-row:hover .wallet-badge{background:#fff;}
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── 商店 ── */
+.shop-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.shop-purse{
+  font-family:var(--font-mono);font-size:13px;font-weight:bold;color:#a00000;
+  background:#fff;padding:3px 8px;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
+.shop-hint{font-size:11px;color:#808080;font-family:var(--font-ui);}
+.shop-sec-title{
+  font-family:var(--font-ui);font-size:12px;font-weight:bold;color:#000080;
+  margin:12px 0 6px;padding-bottom:3px;border-bottom:2px solid var(--win-dark);
+}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;}
+.shop-card{
+  background:#fff;padding:6px;text-align:center;position:relative;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.shop-card img{width:100%;height:84px;object-fit:contain;display:block;}
+.shop-card .sc-name{
+  font-family:var(--font-ui);font-size:12px;color:#000;margin-top:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.shop-card .sc-price{font-family:var(--font-mono);font-size:12px;color:#a00000;margin-top:2px;}
+.shop-card .sc-ops{display:flex;gap:3px;margin-top:5px;}
+.shop-card .sc-ops button{
+  flex:1;font-size:11px;padding:2px 0;cursor:pointer;font-family:var(--font-ui);
+  background:var(--win-gray);color:#000;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.shop-card .sc-ops button:hover{background:var(--win-light);}
+.shop-card .sc-ops button.buy{background:#008000;color:#fff;font-weight:bold;}
+.shop-card .sc-ops button.buy:disabled{background:#b0b0b0;color:#606060;cursor:not-allowed;}
+.shop-card .sc-own{
+  position:absolute;top:2px;right:2px;background:#000080;color:#fff;
+  font-size:10px;padding:0 4px;font-family:var(--font-mono);
+}
+.shop-card.just-bought{animation:pop .7s ease-out;border-color:#ffd700 #806000 #806000 #ffd700;}
+@keyframes pop{0%{transform:scale(1);}35%{transform:scale(1.12);}100%{transform:scale(1);}}
+.shelf-empty{font-size:12px;color:#909090;padding:16px 4px;line-height:1.7;font-family:var(--font-ui);}
+.coll-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;}
+.coll-item{
+  background:linear-gradient(#fffdf5,#efe8d8);padding:5px;text-align:center;cursor:pointer;
+  border:2px solid;border-color:#fff #8a7a55 #8a7a55 #fff;
+}
+.coll-item img{width:100%;height:62px;object-fit:contain;display:block;
+  filter:drop-shadow(2px 2px 0 rgba(0,0,0,.18));}
+.coll-item .ci-name{font-size:11px;color:#403020;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-ui);}
+.coll-item .ci-n{font-family:var(--font-mono);font-size:10px;color:#8a6a20;}
+.coll-detail{text-align:center;margin:10px auto;width:460px;max-width:100%;}
+.coll-detail img{max-width:100%;max-height:240px;object-fit:contain;
+  filter:drop-shadow(3px 3px 0 rgba(0,0,0,.2));}
+.coll-detail .cd-name{font-family:var(--font-ui);font-size:14px;font-weight:bold;color:#000;margin-top:8px;}
+.coll-detail .cd-meta{font-size:12px;color:#606060;margin-top:5px;line-height:1.7;font-family:var(--font-ui);}
+
+/* 被贴纸替换掉的 emoji */
+.emo-img{
+  width:1.15em;height:1.15em;object-fit:contain;display:inline-block;
+  vertical-align:-.2em;pointer-events:none;
+}
 
 /* ── POMODORO ── */
 .pomo-panel{
@@ -1303,11 +1361,10 @@ body{
       
       <div class="char-info">
         <input class="char-name" id="charName" value="MMM" spellcheck="false"/>
-        <div class="level-row">
-          <div class="lv-badge">LV <span id="charLevel">1</span></div>
-          <div class="xp-bar-wrap"><div class="xp-bar" id="xpBar" style="width:0%"></div></div>
-          <div class="xp-text" id="xpText">0/100</div>
-          <button class="levelup-btn" id="levelupBtn" onclick="doLevelUp()">LEVEL UP!</button>
+        <div class="wallet-row" onclick="openShopTab()" title="番茄钱包，点击进商店">
+          <div class="wallet-badge" id="walletBadge">🍅 0</div>
+          <div class="wallet-stack" id="walletStack"></div>
+          <div class="wallet-total" id="walletTotal"></div>
         </div>
       </div>
     </div>
@@ -1340,6 +1397,7 @@ body{
     <div class="tab" onclick="showTab('checkin',this)">日历打卡</div>
     <div class="tab" onclick="showTab('notes',this)">卡片笔记</div>
     <div class="tab" onclick="showTab('box',this)">BOX</div>
+    <div class="tab" id="tabShop" onclick="showTab('shop',this)">商店</div>
     <div class="tab" onclick="showTab('settings',this)">设置</div>
     <div class="tab" onclick="openExtModal()">扩展</div>
   </div>
@@ -1510,6 +1568,22 @@ body{
       </div>
     </div>
 
+    <!-- SHOP -->
+    <div class="section" id="sec-shop">
+      <div class="shop-bar">
+        <span class="shop-purse" id="shopPurse">🍅 0</span>
+        <button class="pxl-btn primary" onclick="document.getElementById('shopFile').click()">＋ 上架新东西</button>
+        <input type="file" id="shopFile" accept="image/*" multiple style="display:none;"
+               onchange="shopImportFiles(this.files);this.value='';"/>
+        <button class="pxl-btn" onclick="openStickerLib('pomo')">🍅 面额设置</button>
+        <span class="shop-hint">把抠好的图导进来，起个名字、标个价，用番茄钟赚的番茄买下它。</span>
+      </div>
+      <div class="shop-sec-title">🏪 货架</div>
+      <div class="shop-grid" id="shopShelf"></div>
+      <div class="shop-sec-title">🏆 我的藏品</div>
+      <div class="coll-grid" id="shopColl"></div>
+    </div>
+
     <!-- SETTINGS -->
     <div class="section" id="sec-settings">
       <div class="setting-card" style="max-width:400px;">
@@ -1520,6 +1594,9 @@ body{
         <div class="setting-title" style="margin-top:14px;">🎨 外观</div>
         <button class="pxl-btn" onclick="openStickerLib('pomo')" style="width:100%;margin-bottom:8px;">🍅 贴纸库（导入自己抠的图）</button>
         <button class="pxl-btn" onclick="openCssLab()" style="width:100%;margin-bottom:8px;">✏️ 自定义 CSS（自由改界面）</button>
+        <button class="pxl-btn" onclick="openEmojiLab()" style="width:100%;margin-bottom:8px;">😀 emoji 换成自己的贴图</button>
+        <button class="pxl-btn" onclick="openFontLab()" style="width:100%;margin-bottom:8px;">🔤 字体设置</button>
+        <button class="pxl-btn" onclick="stkExportZip()" style="width:100%;margin-bottom:8px;">📦 导出贴纸包（准备提交到 GitHub）</button>
         <div class="setting-title" style="margin-top:14px;">💾 数据管理</div>
         <button class="pxl-btn" onclick="exportAll()" style="width:100%;margin-bottom:8px;">💾 全量导出备份</button>
         <button class="pxl-btn" onclick="forceReloadFromCloud()" style="width:100%;margin-top:8px;">☁️ 从云端强制恢复数据</button>
@@ -1595,6 +1672,115 @@ body{
     <div class="modal-btns">
       <button class="pxl-btn" onclick="closeModal('stickerModal');openCssLab();">✏️ 自定义 CSS</button>
       <button class="pxl-btn primary" onclick="closeModal('stickerModal')">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHOP ITEM EDIT -->
+<div class="overlay" id="shopItemModal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal('shopItemModal')">✕</button>
+    <div class="modal-title">🏷️ 商品设置</div>
+    <input type="hidden" id="shopEditId"/>
+    <div style="text-align:center;margin:8px 0;">
+      <img id="shopEditImg" alt="" style="max-height:120px;max-width:80%;object-fit:contain;"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">名字</label>
+      <input class="form-input" id="shopEditName" placeholder="例如：星星耳环"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">价格（多少个番茄分钟）</label>
+      <input class="form-input" id="shopEditPrice" type="number" min="1" step="1" style="width:120px;"/>
+      <div style="font-size:11px;color:#808080;margin-top:4px;">
+        按你的番茄钟分钟数计价。比如 100 就是要攒够 4 个 25 分钟的番茄。
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">一句话描述（可留空）</label>
+      <input class="form-input" id="shopEditDesc" placeholder="想对未来的自己说的话"/>
+    </div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="shopDeleteItem()">下架</button>
+      <button class="pxl-btn" onclick="closeModal('shopItemModal')">取消</button>
+      <button class="pxl-btn primary" onclick="shopSaveItem()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- COLLECTION DETAIL -->
+<div class="overlay" id="collModal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal('collModal')">✕</button>
+    <div class="modal-title">🏆 藏品</div>
+    <div class="coll-detail" id="collDetail"></div>
+    <div class="modal-btns">
+      <button class="pxl-btn primary" onclick="closeModal('collModal')">合上柜门</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMOJI SKIN LAB -->
+<div class="overlay" id="emojiLabModal">
+  <div class="modal" style="max-width:560px;">
+    <button class="close-btn" onclick="closeModal('emojiLabModal')">✕</button>
+    <div class="modal-title">😀 emoji 贴图</div>
+    <div class="stk-body">
+      <div class="stk-bar">
+        <span>页面上出现的 emoji</span>
+        <span class="stk-tip">点一个 emoji，再选一张贴纸，它在全站就都换成你的图</span>
+      </div>
+      <div class="stk-grid" id="emojiGrid"></div>
+      <div class="stk-note">
+        换掉的只是显示，原来的 emoji 还在数据里，随时可以点「还原」。
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="emojiClearAll()">全部还原</button>
+      <button class="pxl-btn primary" onclick="closeModal('emojiLabModal')">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- STICKER PICKER -->
+<div class="overlay" id="stkPickModal">
+  <div class="modal" style="max-width:560px;">
+    <button class="close-btn" onclick="closeModal('stkPickModal')">✕</button>
+    <div class="modal-title" id="stkPickTitle">选一张贴纸</div>
+    <div class="stk-body">
+      <div class="stk-grid" id="stkPickGrid"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="stkPickChoose('')">不用贴纸（还原）</button>
+      <button class="pxl-btn" onclick="closeModal('stkPickModal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- FONT LAB -->
+<div class="overlay" id="fontLabModal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal('fontLabModal')">✕</button>
+    <div class="modal-title">🔤 字体设置</div>
+    <div class="form-row">
+      <label class="form-label">界面字体名</label>
+      <input class="form-input" id="fontUiName" placeholder="例如：LXGW WenKai 或 Press Start 2P"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">等宽字体名（数字、时间用）</label>
+      <input class="form-input" id="fontMonoName" placeholder="例如：Courier New"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">自定义字体文件（仓库里的相对路径，可留空）</label>
+      <input class="form-input" id="fontUrl" placeholder="fonts/myfont.woff2"/>
+      <div style="font-size:11px;color:#808080;margin-top:4px;line-height:1.6;">
+        把字体文件提交到仓库，例如 fonts/myfont.woff2，然后这里填路径，
+        上面的字体名就写你给它起的名字（会自动注册成这个名字）。
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="clearFontLab()">还原默认</button>
+      <button class="pxl-btn primary" onclick="saveFontLab()">保存</button>
     </div>
   </div>
 </div>
@@ -1713,7 +1899,7 @@ body{
     <div class="form-row"><label class="form-label">标签（逗号分隔）</label><input class="form-input" id="journalTags" placeholder="情绪, 反思, 想法" oninput="jDraftSave()"/></div>
     <div class="modal-btns">
       <button class="pxl-btn" onclick="closeModal('journalModal')">取消</button>
-      <button class="pxl-btn primary" onclick="saveJournal()">保存 +5XP</button>
+      <button class="pxl-btn primary" onclick="saveJournal()">保存 +5🍅</button>
     </div>
   </div>
 </div>
@@ -1831,7 +2017,8 @@ body{
 // STATE
 // ═══════════════════════════════════════
 var S = {
-  charName:'MMM', level:1, xp:0,
+  charName:'MMM', earned:0, spent:0,
+  stkVal:{}, shopMeta:{}, shopOwned:{}, emojiMap:{},
   avatar:null,
   tasks:[], journal:[], cards:[],
   habits:[], checkins:{}, dayNotes:{}, ciEvents:[], ciLists:[], energyTags:[],
@@ -1998,8 +2185,16 @@ function mergeCloudIntoLocal(cloud){
   });
   // prevent id collisions after merging, keep the higher progress values
   if(typeof cloud.nextId==='number') S.nextId = Math.max(S.nextId||1, cloud.nextId);
-  if(typeof cloud.xp==='number')     S.xp     = Math.max(S.xp||0, cloud.xp);
-  if(typeof cloud.level==='number')  S.level  = Math.max(S.level||1, cloud.level);
+  // 钱包：两边取大，余额由「赚的 - 花的」推出来，不会因为合并凭空多钱
+  if(typeof cloud.earned==='number') S.earned = Math.max(S.earned||0, cloud.earned);
+  if(typeof cloud.spent ==='number') S.spent  = Math.max(S.spent||0,  cloud.spent);
+  if(typeof cloud.xp==='number')     S.earned = Math.max(S.earned||0, cloud.xp);
+  ['stkVal','shopMeta','shopOwned','emojiMap'].forEach(k=>{
+    if(cloud[k] && typeof cloud[k]==='object'){
+      if(!S[k] || typeof S[k]!=='object') S[k] = {};
+      Object.keys(cloud[k]).forEach(id=>{ if(S[k][id] == null) S[k][id] = cloud[k][id]; });
+    }
+  });
 }
 
 // 同一套并集逻辑，换个名字用：把另一份快照里「当前状态没有」的条目补进来
@@ -2226,8 +2421,14 @@ function migrateState(loaded) {
   });
   // Guarantee scalars
   if (!S.charName) S.charName = 'MMM';
-  if (typeof S.level  !== 'number') S.level   = 1;
-  if (typeof S.xp     !== 'number') S.xp      = 0;
+  // 番茄钱包：老档里的 xp 直接当成已经赚到的番茄，不浪费
+  if (typeof S.earned !== 'number') S.earned = Math.max(0, Math.round(Number(S.xp)||0));
+  if (typeof S.spent  !== 'number') S.spent  = 0;
+  if (!S.stkVal    || typeof S.stkVal    !== 'object') S.stkVal    = {};
+  if (!S.shopMeta  || typeof S.shopMeta  !== 'object') S.shopMeta  = {};
+  if (!S.shopOwned || typeof S.shopOwned !== 'object') S.shopOwned = {};
+  if (!S.emojiMap  || typeof S.emojiMap  !== 'object') S.emojiMap  = {};
+  delete S.level; delete S.xp;
   if (typeof S.nextId !== 'number') S.nextId  = 1;
   // Finance (记账理财)
   if (!S.finance || typeof S.finance !== 'object') S.finance = {rate:9.2, accounts:[], cart:[], records:[], recordsCollapsed:true};
@@ -2288,30 +2489,85 @@ async function loadState() {
 }
 
 // ═══════════════════════════════════════
-// XP / LEVEL
+// 番茄货币钱包
+// 余额 = 累计赚到的 - 已经花掉的，两个数都跟着云端同步
+// 单位就是分钟：跑一个 25 分钟的番茄钟，钱包里多 25
 // ═══════════════════════════════════════
-function xpNeeded(lv){ return Math.floor(100*Math.pow(1.45,lv-1)); }
+function walletEarned(){ return Math.max(0, Math.round(S.earned||0)); }
+function walletSpent(){ return Math.max(0, Math.round(S.spent||0)); }
+function walletBalance(){ return Math.max(0, walletEarned() - walletSpent()); }
 
+// 老代码里到处在调 addXP，直接让它变成「赚番茄」，不用改调用点
 function addXP(amt, label){
-  S.xp+=amt; saveState(); updateXPUI();
-  showToast('+'+amt+' XP  ('+label+')');
+  amt = Math.round(amt||0);
+  if(!amt) return;
+  S.earned = walletEarned() + amt;
+  saveState();
+  updateWalletUI();
+  showToast('+'+amt+' 🍅（'+label+'）');
+}
+function walletRefund(amt){
+  amt = Math.round(amt||0);
+  if(amt <= 0) return;
+  S.earned = Math.max(0, walletEarned() - amt);
+  updateWalletUI();
+}
+function walletPay(amt){
+  amt = Math.round(amt||0);
+  if(amt > walletBalance()) return false;
+  S.spent = walletSpent() + amt;
+  saveState();
+  updateWalletUI();
+  return true;
 }
 
-function updateXPUI(){
-  const need=xpNeeded(S.level);
-  const pct=Math.min(100,Math.floor(S.xp/need*100));
-  document.getElementById('xpBar').style.width=pct+'%';
-  document.getElementById('xpText').textContent=S.xp+'/'+need;
-  document.getElementById('charLevel').textContent=S.level;
-  document.getElementById('levelupBtn').style.display=S.xp>=need?'inline-block':'none';
+// 把余额拆成不同面额的「钞票」，大面额优先，最多显示 5 种
+function walletNotes(bal){
+  const arr = stkOf('pomo').slice().sort((a,b)=>stkValOf(b.id)-stkValOf(a.id));
+  const seen = {}, denoms = [];
+  arr.forEach(sk=>{
+    const v = stkValOf(sk.id);
+    if(v > 0 && !seen[v]){ seen[v] = 1; denoms.push({v:v, sk:sk}); }
+  });
+  const out = [];
+  let left = bal;
+  denoms.forEach(d=>{
+    if(left < d.v) return;
+    const n = Math.floor(left / d.v);
+    left -= n * d.v;
+    out.push({n:n, v:d.v, sk:d.sk});
+  });
+  return {notes: out.slice(0,5), left: left};
 }
 
-function doLevelUp(){
-  const need=xpNeeded(S.level);
-  if(S.xp<need) return;
-  S.xp-=need; S.level++;
-  saveState(); updateXPUI();
-  showToast('🎉 升级！现在是 LV'+S.level);
+function updateWalletUI(){
+  const bal = walletBalance();
+  const badge = document.getElementById('walletBadge');
+  if(badge) badge.textContent = '🍅 ' + bal;
+  const tot = document.getElementById('walletTotal');
+  if(tot) tot.textContent = '累计 ' + walletEarned();
+  const stack = document.getElementById('walletStack');
+  if(stack){
+    const {notes, left} = walletNotes(bal);
+    let h = notes.map(x=>
+      '<span class="wallet-note" title="'+x.v+' 分钟面额 × '+x.n+'">'
+      + stkImgHtml(x.sk, 'wn-img') + '<span class="wn-x">×'+x.n+'</span></span>'
+    ).join('');
+    if(left > 0 || !notes.length){
+      h += '<span class="wallet-note" title="零头 '+left+' 分钟">'
+        + '<span class="wn-emo">🍅</span><span class="wn-x">'+(notes.length?left:bal)+'</span></span>';
+    }
+    stack.innerHTML = h;
+  }
+  const purse = document.getElementById('shopPurse');
+  if(purse) purse.textContent = '🍅 ' + bal + '　（累计赚 ' + walletEarned() + ' · 花掉 ' + walletSpent() + '）';
+}
+// 别名：老代码里的 updateXPUI 全部指向钱包
+function updateXPUI(){ updateWalletUI(); }
+
+function openShopTab(){
+  const t = document.getElementById('tabShop');
+  if(t) showTab('shop', t);
 }
 
 // ═══════════════════════════════════════
@@ -2351,6 +2607,7 @@ function showTab(tab, el){
   if(tab==='finance') finRenderAll();
   if(tab==='notes') renderCards();
   if(tab==='box') renderBoxTab();
+  if(tab==='shop') renderShop();
   if(tab==='checkin') renderCheckin();
 }
 
@@ -2684,7 +2941,11 @@ const STK = {
 //   {"pomo":[{"file":"stickers/pomo/a.png","name":"胖番茄"}, "stickers/pomo/b.png"]}
 //   或者直接一个数组，当成 pomo 用
 function stkLoadRepo(){
-  return fetch('stickers.json', {cache:'no-cache'})
+  if(typeof fetch !== 'function') return Promise.resolve([]);
+  let req;
+  try { req = fetch('stickers.json', {cache:'no-cache'}); }
+  catch(e){ return Promise.resolve([]); }
+  return req
     .then(r => r.ok ? r.json() : null)
     .then(js => {
       if(!js) return [];
@@ -2698,7 +2959,15 @@ function stkLoadRepo(){
           const nm = (typeof item === 'object' && item.name)
             ? item.name
             : file.split('/').pop().replace(/\.[a-z0-9]+$/i,'');
-          out.push({id:'repo:'+file, cat:cat, name:nm, src:file, repo:true});
+          const rec = {id:'repo:'+file, cat:cat, name:nm, src:file, repo:true};
+          if(typeof item === 'object'){
+            // 清单里带了原来的 id，就沿用，这样已经贴在格子上的番茄不会换脸
+            if(item.id) rec.id = item.id;
+            if(item.value) rec.value = item.value;
+            if(item.price) rec.price = item.price;
+            if(item.desc)  rec.desc  = item.desc;
+          }
+          out.push(rec);
         });
       });
       return out;
@@ -2786,11 +3055,47 @@ function stkOf(cat){
 // 管理面板用：全部，包括停用的
 function stkAll(cat){
   const c = cat || 'pomo';
-  return STK.repo.filter(s=>s.cat===c).concat(STK.list.filter(s=>s.cat===c));
+  const repo = STK.repo.filter(s=>s.cat===c);
+  const ids = new Set(repo.map(s=>s.id));
+  return repo.concat(STK.list.filter(s=>s.cat===c && !ids.has(s.id)));
 }
 function stkById(id){
   if(!id) return null;
   return STK.repo.find(s=>s.id===id) || STK.list.find(s=>s.id===id) || null;
+}
+
+// ── 面额：一张贴纸值多少分钟 ──
+const STK_DEFAULT_VALUE = 25;
+function stkValOf(id){
+  if(!S.stkVal || typeof S.stkVal !== 'object') S.stkVal = {};
+  const v = Number(S.stkVal[id]);
+  if(isFinite(v) && v > 0) return Math.round(v);
+  const sk = stkById(id);
+  if(sk && isFinite(Number(sk.value)) && Number(sk.value) > 0) return Math.round(Number(sk.value));
+  return STK_DEFAULT_VALUE;
+}
+function stkSetValue(id){
+  const sk = stkById(id); if(!sk) return;
+  const val = prompt('这张贴纸代表多少分钟？（相当于钞票面额）', String(stkValOf(id)));
+  if(val === null) return;
+  const n = Math.round(Number(val));
+  if(!isFinite(n) || n <= 0){ showToast('请输入大于 0 的分钟数'); return; }
+  if(!S.stkVal || typeof S.stkVal !== 'object') S.stkVal = {};
+  S.stkVal[id] = n;
+  saveState();
+  renderStickerLib();
+  updateWalletUI();
+  renderTasks();
+}
+
+// 记一个 m 分钟的番茄时，挑面额最贴近的那张贴纸；同面额的多张里随机
+function stkPickForMinutes(m){
+  const arr = stkOf('pomo');
+  if(!arr.length) return '';
+  let best = Infinity;
+  arr.forEach(sk=>{ best = Math.min(best, Math.abs(stkValOf(sk.id) - m)); });
+  const pool = arr.filter(sk=>Math.abs(stkValOf(sk.id) - m) === best);
+  return pool[Math.floor(Math.random()*pool.length)].id;
 }
 
 // 随机抽一张（记番茄的时候用）
@@ -2905,9 +3210,11 @@ function renderStickerLib(){
       + '<div class="stk-name">'+escHtml(s.name||'未命名')+'</div>'
       + '<div class="stk-ops">'
       +   '<button onclick="stkToggle('+q+')" title="参不参与抽签">'+(off?'启用':'停用')+'</button>'
-      +   (s.repo
-            ? '<button onclick="stkCopyPath('+q+')" title="复制路径，可用在自定义 CSS 里">路径</button>'
-            : '<button onclick="stkRename('+q+')" title="改名字">改名</button>')
+      +   (STK.cat === 'pomo'
+            ? '<button onclick="stkSetValue('+q+')" title="这张值多少分钟">'+stkValOf(s.id)+'m</button>'
+            : (s.repo
+                ? '<button onclick="stkCopyPath('+q+')" title="复制路径">路径</button>'
+                : '<button onclick="stkRename('+q+')" title="改名字">改名</button>'))
       + '</div>'
       + '</div>';
     return h;
@@ -3035,10 +3342,19 @@ document.addEventListener('click', e=>{
   _pgSwallowClick = false;
 }, true);
 
+// 挂到 window 上，方便在控制台里查看和调试
+try { window.STK = STK; } catch(e) {}
+
 // 开机把贴纸读进内存，读完补一次渲染
 document.addEventListener('DOMContentLoaded', ()=>{
-  stkLoadEverything().then(n=>{ if(n && typeof renderTasks==='function') renderTasks(); });
   applyUserCss();
+  applyUserFont();
+  stkLoadEverything().then(n=>{
+    if(typeof renderTasks==='function') renderTasks();
+    if(typeof updateWalletUI==='function') updateWalletUI();
+    applyEmojiSkins();
+  });
+  startEmojiWatcher();
 });
 
 // ═══════════════════════════════════════
@@ -3133,7 +3449,7 @@ function logPomoSession(t, mins, partial){
   if(!t) return;
   mins = Math.max(0, Math.round(mins||0));
   if(!mins) return;
-  pomoLogOf(t).push({m:mins, ts:new Date().toISOString(), p:!!partial, sk:stkPick('pomo')});
+  pomoLogOf(t).push({m:mins, ts:new Date().toISOString(), p:!!partial, sk:stkPickForMinutes(mins)});
   t.pomoMin = (t.pomoMin||0) + mins;
 }
 
@@ -3200,6 +3516,7 @@ function delPomoRecord(id, idx){
   if(!confirm('删掉这个番茄（'+fmtMin(r.m)+'）？累计时长也会一起减掉。')) return;
   log.splice(idx, 1);
   t.pomoMin = Math.max(0, (t.pomoMin||0) - (r.m||0));
+  walletRefund(r.m||0);
   saveState();
   renderTasks();
 }
@@ -7679,12 +7996,505 @@ function renderAll(){
   // 云端合并后如果正停留在 BOX 栏，也要刷新，否则要切一次标签才看到新数据
   const boxSec=document.getElementById('sec-box');
   if(boxSec && boxSec.classList.contains('active')) renderBoxTab();
+  const shopSec=document.getElementById('sec-shop');
+  if(shopSec && shopSec.classList.contains('active')) renderShop();
+  if(typeof scheduleEmojiSkins==='function') scheduleEmojiSkins();
 }
 
 // Char name save
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('charName').addEventListener('change',()=>{S.charName=document.getElementById('charName').value;saveState();});
 });
+
+// ═══════════════════════════════════════
+// 商店：导进来的每张图就是一件商品
+// 元数据存 S.shopMeta[贴纸id] = {name, price, desc}
+// 已拥有存 S.shopOwned[贴纸id] = {n, ts}
+// ═══════════════════════════════════════
+function shopMeta(id){
+  if(!S.shopMeta || typeof S.shopMeta !== 'object') S.shopMeta = {};
+  const sk = stkById(id) || {};
+  const m = S.shopMeta[id] || {};
+  return {
+    name: m.name || sk.name || '未命名',
+    price: Math.max(1, Math.round(Number(m.price != null ? m.price : (sk.price || 100)))),
+    desc: m.desc || sk.desc || ''
+  };
+}
+function shopOwnedOf(id){
+  if(!S.shopOwned || typeof S.shopOwned !== 'object') S.shopOwned = {};
+  return S.shopOwned[id] || null;
+}
+
+function shopImportFiles(files){
+  STK.cat = 'shop';
+  stkImportFiles(files).then(()=>{ STK.cat = 'shop'; renderShop(); });
+}
+
+function renderShop(){
+  updateWalletUI();
+  const shelf = document.getElementById('shopShelf');
+  const coll  = document.getElementById('shopColl');
+  if(!shelf || !coll) return;
+  const goods = stkAll('shop');
+  const bal = walletBalance();
+
+  if(!goods.length){
+    shelf.innerHTML = '<div class="shelf-empty">货架还是空的。<br>'
+      + '点上面的「＋ 上架新东西」，把你抠好的图导进来，<br>'
+      + '给它起个名字、标个价，然后用番茄钟慢慢把它赚回家。</div>';
+  } else {
+    shelf.innerHTML = goods.map(sk=>{
+      const m = shopMeta(sk.id);
+      const own = shopOwnedOf(sk.id);
+      const q = "'" + sk.id.replace(/'/g, "\\'") + "'";
+      const afford = bal >= m.price;
+      return '<div class="shop-card" id="sc-'+cssId(sk.id)+'">'
+        + (own ? '<span class="sc-own">已有 ×'+own.n+'</span>' : '')
+        + '<img src="'+sk.src+'" alt="" draggable="false">'
+        + '<div class="sc-name" title="'+escAttr(m.name)+'">'+escHtml(m.name)+'</div>'
+        + '<div class="sc-price">🍅 '+m.price+'</div>'
+        + '<div class="sc-ops">'
+        +   '<button class="buy" onclick="shopBuy('+q+')"'+(afford?'':' disabled')+'>'
+        +     (afford ? '买下' : '还差'+(m.price-bal))
+        +   '</button>'
+        +   '<button onclick="shopEdit('+q+')">改</button>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  const ownedIds = Object.keys(S.shopOwned || {}).filter(id=>(S.shopOwned[id]||{}).n > 0);
+  if(!ownedIds.length){
+    coll.innerHTML = '<div class="shelf-empty">柜子空空的。买下第一件东西，它就会摆到这里。</div>';
+  } else {
+    ownedIds.sort((a,b)=>(S.shopOwned[b].ts||0)-(S.shopOwned[a].ts||0));
+    coll.innerHTML = ownedIds.map(id=>{
+      const sk = stkById(id);
+      const m = shopMeta(id);
+      const own = S.shopOwned[id];
+      const q = "'" + id.replace(/'/g, "\\'") + "'";
+      return '<div class="coll-item" onclick="shopShowColl('+q+')" title="'+escAttr(m.name)+'">'
+        + (sk ? '<img src="'+sk.src+'" alt="" draggable="false">' : '<div style="height:62px;font-size:30px;">🎁</div>')
+        + '<div class="ci-name">'+escHtml(m.name)+'</div>'
+        + '<div class="ci-n">×'+own.n+'</div>'
+        + '</div>';
+    }).join('');
+  }
+}
+
+function cssId(id){ return String(id).replace(/[^a-zA-Z0-9_-]/g,'_'); }
+
+function shopBuy(id){
+  const sk = stkById(id); if(!sk) return;
+  const m = shopMeta(id);
+  const bal = walletBalance();
+  if(bal < m.price){ showToast('还差 '+(m.price-bal)+' 个番茄'); return; }
+  if(!confirm('用 '+m.price+' 个番茄换下「'+m.name+'」？\n（你现在有 '+bal+'）')) return;
+  if(!walletPay(m.price)) return;
+  if(!S.shopOwned || typeof S.shopOwned !== 'object') S.shopOwned = {};
+  const own = S.shopOwned[id] || {n:0, ts:Date.now(), first:Date.now()};
+  own.n = (own.n||0) + 1;
+  own.ts = Date.now();
+  if(!own.first) own.first = own.ts;
+  S.shopOwned[id] = own;
+  saveState();
+  renderShop();
+  const card = document.getElementById('sc-'+cssId(id));
+  if(card){
+    card.classList.add('just-bought');
+    setTimeout(()=>card.classList.remove('just-bought'), 800);
+  }
+  showToast('🎉 「'+m.name+'」是你的了');
+  setTimeout(()=>shopShowColl(id), 400);
+}
+
+function shopEdit(id){
+  const sk = stkById(id); if(!sk) return;
+  const m = shopMeta(id);
+  document.getElementById('shopEditId').value = id;
+  document.getElementById('shopEditImg').src = sk.src;
+  document.getElementById('shopEditName').value = m.name;
+  document.getElementById('shopEditPrice').value = m.price;
+  document.getElementById('shopEditDesc').value = m.desc;
+  openModal('shopItemModal');
+}
+function shopSaveItem(){
+  const id = document.getElementById('shopEditId').value;
+  if(!id) return;
+  const price = Math.round(Number(document.getElementById('shopEditPrice').value));
+  if(!isFinite(price) || price <= 0){ showToast('价格要是大于 0 的数字'); return; }
+  if(!S.shopMeta || typeof S.shopMeta !== 'object') S.shopMeta = {};
+  S.shopMeta[id] = {
+    name: (document.getElementById('shopEditName').value||'').trim().slice(0,30) || '未命名',
+    price: price,
+    desc: (document.getElementById('shopEditDesc').value||'').trim().slice(0,60)
+  };
+  saveState();
+  closeModal('shopItemModal');
+  renderShop();
+  showToast('已保存');
+}
+function shopDeleteItem(){
+  const id = document.getElementById('shopEditId').value;
+  const sk = stkById(id); if(!sk) return;
+  if(!confirm('把「'+shopMeta(id).name+'」从货架上撤掉？已经买到手的还留在藏品柜里。')) return;
+  if(sk.repo){
+    showToast('仓库里的商品请在仓库里删');
+  } else {
+    stkDel(id).then(()=>{ STK.list = STK.list.filter(x=>x.id!==id); renderShop(); });
+  }
+  if(S.shopMeta) delete S.shopMeta[id];
+  saveState();
+  closeModal('shopItemModal');
+  renderShop();
+}
+
+function shopShowColl(id){
+  const sk = stkById(id);
+  const m = shopMeta(id);
+  const own = shopOwnedOf(id) || {n:1, ts:Date.now(), first:Date.now()};
+  const days = Math.max(0, Math.floor((Date.now() - (own.first||own.ts))/86400000));
+  const el = document.getElementById('collDetail');
+  if(el){
+    el.innerHTML = (sk ? '<img src="'+sk.src+'" alt="">' : '<div style="font-size:64px;">🎁</div>')
+      + '<div class="cd-name">'+escHtml(m.name)+'</div>'
+      + '<div class="cd-meta">'
+      +   '拥有 ×'+own.n+'　·　每个 🍅 '+m.price
+      +   '<br>总共花掉 '+(m.price*own.n)+' 分钟的专注'
+      +   '<br>入手于 '+fmtDT(new Date(own.first||own.ts).toISOString())
+      +   (days ? '，已经陪了你 '+days+' 天' : '')
+      +   (m.desc ? '<br><br>「'+escHtml(m.desc)+'」' : '')
+      + '</div>';
+  }
+  openModal('collModal');
+}
+
+// ═══════════════════════════════════════
+// emoji 贴图：把界面上的 emoji 换成自己的图
+// S.emojiMap = {"🍅":"贴纸id"}
+// ═══════════════════════════════════════
+let _emoBusy = false, _emoTimer = null;
+function emojiMap(){
+  if(!S.emojiMap || typeof S.emojiMap !== 'object') S.emojiMap = {};
+  return S.emojiMap;
+}
+function emojiRegex(){
+  const keys = Object.keys(emojiMap()).filter(k=>k);
+  if(!keys.length) return null;
+  keys.sort((a,b)=>b.length-a.length);
+  const esc = keys.map(k=>k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp('(' + esc.join('|') + ')', 'g');
+}
+function applyEmojiSkins(root){
+  const re = emojiRegex();
+  if(!re) return;
+  const scope = root || document.getElementById('app') || document.body;
+  if(!scope) return;
+  _emoBusy = true;
+  try{
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
+      acceptNode(node){
+        const pa = node.parentElement;
+        if(!pa) return NodeFilter.FILTER_REJECT;
+        const tag = pa.tagName;
+        if(tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA' || tag === 'INPUT') return NodeFilter.FILTER_REJECT;
+        if(pa.closest('.emo-skip')) return NodeFilter.FILTER_REJECT;
+        // 可编辑区域跳过：那里的内容会被存回数据，换成图片会弄坏笔记
+        if(pa.closest('[contenteditable]')) return NodeFilter.FILTER_REJECT;
+        return re.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    const targets = [];
+    let n;
+    while((n = walker.nextNode())) targets.push(n);
+    targets.forEach(node=>{
+      const frag = document.createDocumentFragment();
+      let last = 0, mm;
+      const rx = emojiRegex();
+      while((mm = rx.exec(node.nodeValue))){
+        if(mm.index > last) frag.appendChild(document.createTextNode(node.nodeValue.slice(last, mm.index)));
+        const sk = stkById(emojiMap()[mm[0]]);
+        if(sk){
+          const img = document.createElement('img');
+          img.className = 'emo-img';
+          img.src = sk.src;
+          img.alt = mm[0];
+          frag.appendChild(img);
+        } else {
+          frag.appendChild(document.createTextNode(mm[0]));
+        }
+        last = mm.index + mm[0].length;
+      }
+      if(last < node.nodeValue.length) frag.appendChild(document.createTextNode(node.nodeValue.slice(last)));
+      node.parentNode.replaceChild(frag, node);
+    });
+  }catch(e){ }
+  _emoBusy = false;
+}
+function scheduleEmojiSkins(){
+  clearTimeout(_emoTimer);
+  _emoTimer = setTimeout(()=>applyEmojiSkins(), 150);
+}
+function startEmojiWatcher(){
+  const app = document.getElementById('app');
+  if(!app || !window.MutationObserver) return;
+  new MutationObserver(()=>{ if(!_emoBusy && Object.keys(emojiMap()).length) scheduleEmojiSkins(); })
+    .observe(app, {childList:true, subtree:true});
+}
+
+// 扫一遍页面，把出现过的 emoji 收集起来
+function scanEmojis(){
+  const found = {};
+  let re;
+  try { re = /\p{Extended_Pictographic}/gu; }
+  catch(e){ re = /[\u2190-\u2BFF\u2600-\u27BF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDFFF]/g; }
+  const scope = document.getElementById('app') || document.body;
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
+  let n;
+  while((n = walker.nextNode())){
+    const pa = n.parentElement;
+    if(!pa || pa.tagName === 'SCRIPT' || pa.tagName === 'STYLE') continue;
+    const txt = n.nodeValue || '';
+    let m;
+    re.lastIndex = 0;
+    while((m = re.exec(txt))){ found[m[0]] = (found[m[0]]||0) + 1; }
+  }
+  Object.keys(emojiMap()).forEach(k=>{ if(!found[k]) found[k] = 0; });
+  return found;
+}
+
+function openEmojiLab(){
+  renderEmojiLab();
+  openModal('emojiLabModal');
+}
+function renderEmojiLab(){
+  const grid = document.getElementById('emojiGrid');
+  if(!grid) return;
+  const found = scanEmojis();
+  const keys = Object.keys(found).sort((a,b)=>found[b]-found[a]);
+  if(!keys.length){ grid.innerHTML = '<div class="stk-empty">没扫到 emoji。</div>'; return; }
+  grid.innerHTML = keys.map(k=>{
+    const sk = stkById(emojiMap()[k]);
+    const q = JSON.stringify(k).replace(/"/g,'&quot;');
+    return '<div class="stk-item emo-skip" onclick="emojiAssign('+q+')" title="点击换图">'
+      + (sk ? '<img src="'+sk.src+'" alt="">'
+            : '<div style="height:52px;display:flex;align-items:center;justify-content:center;font-size:30px;">'+k+'</div>')
+      + '<div class="stk-name">'+k+(found[k]?(' ×'+found[k]):'')+'</div>'
+      + '</div>';
+  }).join('');
+}
+function emojiAssign(emo){
+  stkPickOpen('给 '+emo+' 选一张贴图', id=>{
+    if(id) emojiMap()[emo] = id;
+    else delete emojiMap()[emo];
+    saveState();
+    renderEmojiLab();
+    applyEmojiSkins();
+    renderAll();
+  });
+}
+function emojiClearAll(){
+  if(!confirm('把所有 emoji 都换回原来的样子？')) return;
+  S.emojiMap = {};
+  saveState();
+  renderEmojiLab();
+  renderAll();
+  showToast('已还原');
+}
+
+// ── 通用贴纸选择器 ──
+let _stkPickCb = null;
+function stkPickOpen(title, cb){
+  _stkPickCb = cb;
+  const t = document.getElementById('stkPickTitle');
+  if(t) t.textContent = title || '选一张贴纸';
+  const grid = document.getElementById('stkPickGrid');
+  const all = STK.repo.concat(STK.list);
+  if(grid){
+    grid.innerHTML = all.length
+      ? all.map(sk=>{
+          const q = "'" + sk.id.replace(/'/g, "\\'") + "'";
+          return '<div class="stk-item emo-skip" onclick="stkPickChoose('+q+')" title="'+escAttr(sk.name||'')+'">'
+            + '<img src="'+sk.src+'" alt="">'
+            + '<div class="stk-name">'+escHtml(sk.name||'')+'</div></div>';
+        }).join('')
+      : '<div class="stk-empty">还没有贴纸，先去贴纸库导入几张。</div>';
+  }
+  openModal('stkPickModal');
+}
+function stkPickChoose(id){
+  closeModal('stkPickModal');
+  const cb = _stkPickCb; _stkPickCb = null;
+  if(cb) cb(id);
+}
+
+// ═══════════════════════════════════════
+// 字体
+// ═══════════════════════════════════════
+function applyUserFont(){
+  let el = document.getElementById('mmm-user-font');
+  if(!el){ el = document.createElement('style'); el.id = 'mmm-user-font'; document.head.appendChild(el); }
+  const ui = (S.fontUiName||'').trim();
+  const mono = (S.fontMonoName||'').trim();
+  const url = (S.fontUrl||'').trim();
+  let css = '';
+  if(url && ui) css += '@font-face{font-family:"'+ui+'";src:url("'+url+'");font-display:swap;}\n';
+  if(ui || mono){
+    css += ':root{';
+    if(ui)   css += '--font-ui:"'+ui+'",var(--font-ui-fallback,"Courier New",monospace);';
+    if(mono) css += '--font-mono:"'+mono+'","Courier New",monospace;';
+    css += '}';
+  }
+  el.textContent = css;
+}
+function openFontLab(){
+  document.getElementById('fontUiName').value = S.fontUiName || '';
+  document.getElementById('fontMonoName').value = S.fontMonoName || '';
+  document.getElementById('fontUrl').value = S.fontUrl || '';
+  openModal('fontLabModal');
+}
+function saveFontLab(){
+  S.fontUiName = (document.getElementById('fontUiName').value||'').trim();
+  S.fontMonoName = (document.getElementById('fontMonoName').value||'').trim();
+  S.fontUrl = (document.getElementById('fontUrl').value||'').trim();
+  applyUserFont();
+  saveState();
+  closeModal('fontLabModal');
+  showToast('字体已更新');
+}
+function clearFontLab(){
+  S.fontUiName = ''; S.fontMonoName = ''; S.fontUrl = '';
+  applyUserFont(); saveState();
+  document.getElementById('fontUiName').value = '';
+  document.getElementById('fontMonoName').value = '';
+  document.getElementById('fontUrl').value = '';
+  showToast('已还原默认字体');
+}
+
+// ═══════════════════════════════════════
+// 打包导出：本机贴纸 → 一个 zip，里面已经按 stickers/分类/编号 排好
+// 解压后直接提交到仓库，stickers.json 也一并生成好了
+// ═══════════════════════════════════════
+const _CRC_TABLE = (function(){
+  const t = new Uint32Array(256);
+  for(let i=0;i<256;i++){
+    let c = i;
+    for(let k=0;k<8;k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(buf){
+  let c = 0xFFFFFFFF;
+  for(let i=0;i<buf.length;i++) c = _CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function strBytes(str){
+  return new TextEncoder().encode(str);
+}
+function dataUrlBytes(src){
+  const i = src.indexOf(',');
+  const b64 = src.slice(i+1);
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for(let k=0;k<bin.length;k++) out[k] = bin.charCodeAt(k);
+  return out;
+}
+// 只用「存储」方式打包（png 本来就压过了，再压没意义）
+function makeZip(files){
+  const chunks = [], central = [];
+  let offset = 0;
+  files.forEach(f=>{
+    const nameB = strBytes(f.name);
+    const crc = crc32(f.data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true);
+    lh.setUint16(4, 20, true); lh.setUint16(6, 0, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, 0, true); lh.setUint16(12, 0, true);
+    lh.setUint32(14, crc, true);
+    lh.setUint32(18, f.data.length, true);
+    lh.setUint32(22, f.data.length, true);
+    lh.setUint16(26, nameB.length, true); lh.setUint16(28, 0, true);
+    chunks.push(new Uint8Array(lh.buffer), nameB, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true);
+    ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, 0, true); ch.setUint16(14, 0, true);
+    ch.setUint32(16, crc, true);
+    ch.setUint32(20, f.data.length, true);
+    ch.setUint32(24, f.data.length, true);
+    ch.setUint16(28, nameB.length, true);
+    ch.setUint16(30, 0, true); ch.setUint16(32, 0, true);
+    ch.setUint16(34, 0, true); ch.setUint16(36, 0, true);
+    ch.setUint32(38, 0, true);
+    ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), nameB);
+    offset += 30 + nameB.length + f.data.length;
+  });
+  let cdSize = 0;
+  central.forEach(c=>cdSize += c.length);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(4, 0, true); end.setUint16(6, 0, true);
+  end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true);
+  end.setUint32(16, offset, true);
+  end.setUint16(20, 0, true);
+  const all = chunks.concat(central, [new Uint8Array(end.buffer)]);
+  let total = 0; all.forEach(a=>total += a.length);
+  const out = new Uint8Array(total);
+  let pos = 0;
+  all.forEach(a=>{ out.set(a, pos); pos += a.length; });
+  return new Blob([out], {type:'application/zip'});
+}
+
+function stkExportZip(){
+  const go = ()=>{
+    const local = STK.list.slice();
+    if(!local.length){ showToast('本机还没有导入的贴纸'); return; }
+    const files = [];
+    const manifest = {};
+    const counter = {};
+    local.forEach(sk=>{
+      const cat = sk.cat || 'pomo';
+      counter[cat] = (counter[cat]||0) + 1;
+      const num = String(counter[cat]).padStart(3, '0');
+      const ext = /^data:image\/gif/i.test(sk.src) ? 'gif' : 'png';
+      const path = 'stickers/'+cat+'/'+cat+'-'+num+'.'+ext;
+      files.push({name: path, data: dataUrlBytes(sk.src)});
+      const entry = {file: path, name: sk.name || (cat+'-'+num), id: sk.id};
+      if(cat === 'pomo') entry.value = stkValOf(sk.id);
+      if(cat === 'shop'){
+        const m = shopMeta(sk.id);
+        entry.price = m.price;
+        entry.name = m.name;
+        if(m.desc) entry.desc = m.desc;
+      }
+      (manifest[cat] = manifest[cat] || []).push(entry);
+    });
+    // 仓库里已有的也写进清单，免得覆盖后丢条目
+    STK.repo.forEach(sk=>{
+      const cat = sk.cat || 'pomo';
+      const arr = (manifest[cat] = manifest[cat] || []);
+      if(arr.some(e=>e.file === sk.src)) return;
+      const entry = {file: sk.src, name: sk.name, id: sk.id};
+      if(cat === 'pomo') entry.value = stkValOf(sk.id);
+      if(cat === 'shop'){ const m = shopMeta(sk.id); entry.price = m.price; entry.name = m.name; }
+      arr.push(entry);
+    });
+    files.push({name:'stickers.json', data: strBytes(JSON.stringify(manifest, null, 2))});
+    const blob = makeZip(files);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mmm-stickers-' + new Date().toISOString().slice(0,10) + '.zip';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    showToast('已打包 '+local.length+' 张贴纸');
+  };
+  if(STK.ready) go(); else stkLoadEverything().then(go);
+}
 
 // Register Service Worker
 if('serviceWorker' in navigator){
@@ -7784,7 +8594,7 @@ function doChangePassword(){
     </div>
     <div class="modal-btns">
       <button class="pxl-btn" onclick="closeModal('cardModal')">取消</button>
-      <button class="pxl-btn primary" onclick="saveCard()">保存 +5XP</button>
+      <button class="pxl-btn primary" onclick="saveCard()">保存 +5🍅</button>
     </div>
   </div>
 </div>
