@@ -1,0 +1,9 @@
+{
+  "pomo": [
+    { "file": "stickers/pomo/tomato-01.png", "name": "示例番茄一" },
+    { "file": "stickers/pomo/tomato-02.png", "name": "示例番茄二" }
+  ],
+  "ui": [
+    { "file": "stickers/ui/button.png", "name": "按钮底图" }
+  ]
+}

@@ -409,20 +409,110 @@ body{
   border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
 }
 .pg-slot-btn:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
-.pomo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px;}
+/* 格子大小统一由 --pcell 控制，头部的 ⤢ 按钮循环切换 */
+.pomo-grid-wrap{--pcell:68px;}
+.pomo-grid-wrap[data-psz="s"]{--pcell:48px;}
+.pomo-grid-wrap[data-psz="m"]{--pcell:68px;}
+.pomo-grid-wrap[data-psz="l"]{--pcell:88px;}
+.pomo-grid-wrap[data-psz="xl"]{--pcell:112px;}
+.pomo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--pcell),1fr));gap:5px;}
 .pomo-cell{
-  height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:1px;cursor:pointer;background:#fff;
+  position:relative;height:var(--pcell);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;cursor:pointer;background:#fff;overflow:hidden;
   border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
 }
-.pomo-cell .pg-t{font-size:17px;line-height:1;}
-.pomo-cell .pg-m{font-family:var(--font-mono);font-size:9px;color:#707070;line-height:1;}
-.pomo-cell.empty{background:#e8e8e8;color:#b0b0b0;font-size:13px;}
+.pomo-cell .pg-t{font-size:calc(var(--pcell) * .40);line-height:1;}
+.pomo-cell .pg-m{
+  font-family:var(--font-mono);font-size:calc(9px + var(--pcell) * .012);
+  color:#707070;line-height:1;
+}
+/* 自己抠的透明底贴纸 */
+.pg-img{
+  width:calc(var(--pcell) * .70);height:calc(var(--pcell) * .58);
+  object-fit:contain;display:block;pointer-events:none;
+  image-rendering:auto;filter:drop-shadow(1px 1px 0 rgba(0,0,0,.18));
+}
+.pomo-cell.empty{background:#e8e8e8;color:#b0b0b0;font-size:calc(var(--pcell) * .28);}
 .pomo-cell.empty:hover{background:#fff;color:#000080;}
+.pomo-cell.empty .pg-img{opacity:.16;filter:grayscale(1);}
+.pomo-cell.empty:hover .pg-img{opacity:.34;filter:grayscale(.4);}
+.pomo-cell.empty .pg-plus{
+  position:absolute;right:3px;bottom:2px;font-family:var(--font-mono);
+  font-size:11px;color:#b0b0b0;line-height:1;
+}
+.pomo-cell.empty:hover .pg-plus{color:#000080;}
 .pomo-cell.filled{background:#fffaf5;}
 .pomo-cell.filled:hover{border-color:#cc0000;}
-.pomo-cell.part .pg-t{opacity:.5;}
+.pomo-cell.part .pg-t,.pomo-cell.part .pg-img{opacity:.5;}
 .pomo-cell.live{background:#e4f0e4;border-color:#008000;color:#008000;}
+
+/* ── 贴纸库（自己抠的透明底图，存本机） ── */
+.stk-body{margin:8px auto 0;width:460px;max-width:100%;font-family:var(--font-ui);}
+.stk-drop{
+  border:2px dashed var(--win-dark);background:#fff;padding:14px 10px;text-align:center;
+  font-size:12px;color:#404040;
+}
+.stk-drop.over{border-color:#000080;background:#eaf0fb;}
+.stk-hint{font-size:11px;color:#909090;margin-top:6px;line-height:1.5;}
+.stk-bar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  font-size:11px;color:#404040;margin:8px 0 5px;
+}
+.stk-bar .stk-tip{color:#909090;}
+.stk-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px;
+  max-height:44vh;overflow-y:auto;padding:2px;
+}
+.stk-item{
+  position:relative;background:#fff;padding:4px 3px 3px;text-align:center;cursor:pointer;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.stk-item:hover{background:#fffaf5;}
+.stk-item img{width:100%;height:52px;object-fit:contain;display:block;pointer-events:none;}
+.stk-item .stk-name{
+  font-size:10px;color:#606060;margin-top:2px;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.stk-item .stk-del{
+  position:absolute;top:1px;right:1px;width:15px;height:14px;line-height:1;
+  background:var(--win-gray);color:#000;font-size:9px;cursor:pointer;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.stk-item .stk-del:hover{background:#cc0000;color:#fff;}
+.stk-empty{font-size:12px;color:#909090;padding:14px 4px;text-align:center;line-height:1.6;}
+.stk-item.off{opacity:.4;}
+.stk-item.off::after{
+  content:"停用";position:absolute;left:2px;bottom:16px;font-size:9px;
+  background:#808080;color:#fff;padding:0 3px;
+}
+.stk-src{
+  position:absolute;top:1px;left:1px;font-size:9px;padding:0 3px;line-height:14px;
+  background:#000080;color:#fff;font-family:var(--font-ui);
+}
+.stk-src.local{background:#008000;}
+.stk-ops{display:flex;gap:2px;justify-content:center;margin-top:2px;}
+.stk-ops button{
+  flex:1;font-size:9px;line-height:14px;padding:0;cursor:pointer;
+  background:var(--win-gray);color:#000;font-family:var(--font-ui);
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.stk-ops button:hover{background:var(--win-light);}
+.stk-note{font-size:11px;color:#606060;line-height:1.6;margin:6px 0 0;}
+
+/* ── 自定义 CSS 实验室 ── */
+.css-lab{margin:8px auto 0;width:460px;max-width:100%;font-family:var(--font-ui);}
+.css-lab textarea{
+  width:100%;height:190px;background:#fff;color:#000;font-family:var(--font-mono);
+  font-size:12px;line-height:1.5;padding:6px;outline:none;resize:vertical;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
+.css-lab .css-tip{font-size:11px;color:#707070;line-height:1.7;margin-top:6px;}
+.css-lab .css-tip code{
+  background:#eee;padding:0 3px;font-family:var(--font-mono);font-size:11px;color:#000080;
+}
+.css-lab .css-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;}
+.css-lab .css-state{font-size:11px;color:#008000;}
 
 /* ── 任务卡上的能量标签（字号跟随各自标签的设置） ── */
 .etag-mini{
@@ -1427,6 +1517,9 @@ body{
         <button class="pxl-btn primary" onclick="requestNotify()" style="width:100%;margin-bottom:8px;">🔔 开启后台通知</button>
         <div class="setting-title" style="margin-top:14px;">🔑 密码</div>
         <button class="pxl-btn" onclick="openChangePwModal()" style="width:100%;margin-bottom:8px;">🔑 修改密码</button>
+        <div class="setting-title" style="margin-top:14px;">🎨 外观</div>
+        <button class="pxl-btn" onclick="openStickerLib('pomo')" style="width:100%;margin-bottom:8px;">🍅 贴纸库（导入自己抠的图）</button>
+        <button class="pxl-btn" onclick="openCssLab()" style="width:100%;margin-bottom:8px;">✏️ 自定义 CSS（自由改界面）</button>
         <div class="setting-title" style="margin-top:14px;">💾 数据管理</div>
         <button class="pxl-btn" onclick="exportAll()" style="width:100%;margin-bottom:8px;">💾 全量导出备份</button>
         <button class="pxl-btn" onclick="forceReloadFromCloud()" style="width:100%;margin-top:8px;">☁️ 从云端强制恢复数据</button>
@@ -1474,6 +1567,61 @@ body{
     <div class="modal-btns">
       <button class="pxl-btn" onclick="closeModal('habitModal')">取消</button>
       <button class="pxl-btn primary" onclick="saveHabit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- STICKER LIBRARY MODAL -->
+<div class="overlay" id="stickerModal">
+  <div class="modal" style="max-width:560px;">
+    <button class="close-btn" onclick="closeModal('stickerModal')">✕</button>
+    <div class="modal-title" id="stkModalTitle">🍅 番茄贴纸库</div>
+    <div class="stk-body">
+      <div class="stk-drop" id="stkDrop">
+        把透明底图片拖进来，或
+        <button class="pxl-btn" onclick="document.getElementById('stkFile').click()">选择图片</button>
+        <input type="file" id="stkFile" accept="image/*" multiple style="display:none;"
+               onchange="stkImportFiles(this.files);this.value='';"/>
+        <div class="stk-hint">
+          支持一次多选。图片会自动缩到 256px 以内、存在这台设备的本地库里，不会挤占云端同步。
+        </div>
+      </div>
+      <div class="stk-bar">
+        <span>共 <b id="stkCount">0</b> 张</span>
+        <span class="stk-tip">点图片可改名 · 右上角 ✕ 删除 · 在格子上右键可换一张</span>
+      </div>
+      <div class="stk-grid" id="stkGrid"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="pxl-btn" onclick="closeModal('stickerModal');openCssLab();">✏️ 自定义 CSS</button>
+      <button class="pxl-btn primary" onclick="closeModal('stickerModal')">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM CSS LAB -->
+<div class="overlay" id="cssLabModal">
+  <div class="modal" style="max-width:560px;">
+    <button class="close-btn" onclick="closeModal('cssLabModal')">✕</button>
+    <div class="modal-title">✏️ 自定义 CSS</div>
+    <div class="css-lab">
+      <textarea id="cssLabInput" spellcheck="false" placeholder="/* 在这里写 CSS，边写边生效 */"></textarea>
+      <div class="css-bar">
+        <button class="pxl-btn primary" onclick="saveCssLab()">保存</button>
+        <button class="pxl-btn" onclick="applyCssLabPreview()">试一下</button>
+        <button class="pxl-btn" onclick="clearCssLab()">清空</button>
+        <span class="css-state" id="cssLabState"></span>
+      </div>
+      <div class="css-tip">
+        这段 CSS 会跟着账号一起同步，任何设备打开都生效。仓库里 <code>stickers/</code> 下的图片可以直接当背景用，例如：<br>
+        <code>.icon-btn{background:url(stickers/ui/btn.png) center/contain no-repeat;}</code><br>
+        常用选择器：<code>body</code> 整体底色 · <code>.pxl-btn</code> 按钮 · <code>.icon-btn</code> 小图标按钮 ·
+        <code>.tab</code> 顶部标签 · <code>.modal-title</code> 窗口标题栏 · <code>.pomo-cell</code> 番茄格 ·
+        <code>.task-card</code> 任务卡。写错了不会弄坏数据，清空即可还原。
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="pxl-btn primary" onclick="saveCssLab();closeModal('cssLabModal');">完成</button>
     </div>
   </div>
 </div>
@@ -2518,6 +2666,382 @@ function pomoStripHtml(t, goalFallback){
 }
 
 // ═══════════════════════════════════════
+// 贴纸库 STK — 自己抠的透明底图，按「分类」存在本机 IndexedDB
+// 现在只用到 'pomo' 一类，以后加别的图标只要换个 cat 就行
+// 记录里只存贴纸 id（很短），图片本体不进云端同步
+// ═══════════════════════════════════════
+const STK = {
+  list: [],          // 本机导入的：{id, cat, name, src, ts}
+  repo: [],          // 仓库里带过来的：{id:'repo:路径', cat, name, src, repo:true}
+  ready: false,
+  db: null,
+  cat: 'pomo',       // 当前打开的分类
+  MAX: 256,          // 导入时缩到的最长边
+  LABEL: {pomo:'🍅 番茄贴纸库'}
+};
+
+// 仓库贴纸：读 stickers.json 清单，格式两种都认
+//   {"pomo":[{"file":"stickers/pomo/a.png","name":"胖番茄"}, "stickers/pomo/b.png"]}
+//   或者直接一个数组，当成 pomo 用
+function stkLoadRepo(){
+  return fetch('stickers.json', {cache:'no-cache'})
+    .then(r => r.ok ? r.json() : null)
+    .then(js => {
+      if(!js) return [];
+      const groups = Array.isArray(js) ? {pomo:js} : js;
+      const out = [];
+      Object.keys(groups).forEach(cat=>{
+        const arr = Array.isArray(groups[cat]) ? groups[cat] : [];
+        arr.forEach(item=>{
+          const file = (typeof item === 'string') ? item : (item && item.file);
+          if(!file) return;
+          const nm = (typeof item === 'object' && item.name)
+            ? item.name
+            : file.split('/').pop().replace(/\.[a-z0-9]+$/i,'');
+          out.push({id:'repo:'+file, cat:cat, name:nm, src:file, repo:true});
+        });
+      });
+      return out;
+    })
+    .catch(()=>[]);
+}
+
+// 停用名单存在状态里，跟着云端一起同步
+function stkOffSet(){
+  if(!S.stkOff || typeof S.stkOff !== 'object') S.stkOff = {};
+  return S.stkOff;
+}
+function stkEnabled(id){ return !stkOffSet()[id]; }
+function stkToggle(id){
+  const off = stkOffSet();
+  if(off[id]) delete off[id]; else off[id] = 1;
+  saveState();
+  renderStickerLib();
+  renderTasks();
+}
+
+function stkOpenDB(){
+  if(STK.db) return Promise.resolve(STK.db);
+  return new Promise((res, rej)=>{
+    let rq;
+    try { rq = indexedDB.open('mmm-stickers', 1); }
+    catch(e){ return rej(e); }
+    rq.onupgradeneeded = e=>{
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('assets')){
+        db.createObjectStore('assets', {keyPath:'id'}).createIndex('cat','cat',{unique:false});
+      }
+    };
+    rq.onsuccess = e=>{ STK.db = e.target.result; res(STK.db); };
+    rq.onerror   = ()=>rej(rq.error);
+  });
+}
+
+function stkStore(mode){
+  return stkOpenDB().then(db=>db.transaction('assets', mode).objectStore('assets'));
+}
+
+function stkLoadAll(){
+  return stkStore('readonly').then(os=>new Promise((res, rej)=>{
+    const r = os.getAll();
+    r.onsuccess = ()=>res(r.result||[]);
+    r.onerror   = ()=>rej(r.error);
+  })).then(list=>{
+    STK.list = (list||[]).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    STK.ready = true;
+    return STK.list;
+  }).catch(()=>{ STK.list = []; STK.ready = true; return STK.list; });
+}
+
+// 本机 + 仓库一起读
+function stkLoadEverything(){
+  return Promise.all([stkLoadAll(), stkLoadRepo()]).then(([local, repo])=>{
+    STK.repo = repo || [];
+    STK.ready = true;
+    return STK.repo.length + STK.list.length;
+  });
+}
+
+function stkPut(rec){
+  return stkStore('readwrite').then(os=>new Promise((res, rej)=>{
+    const r = os.put(rec);
+    r.onsuccess = ()=>res(rec);
+    r.onerror   = ()=>rej(r.error);
+  }));
+}
+
+function stkDel(id){
+  return stkStore('readwrite').then(os=>new Promise((res, rej)=>{
+    const r = os.delete(id);
+    r.onsuccess = ()=>res();
+    r.onerror   = ()=>rej(r.error);
+  }));
+}
+
+// 抽签用：仓库 + 本机，且只算启用的
+function stkOf(cat){
+  const c = cat || 'pomo';
+  return stkAll(c).filter(s=>stkEnabled(s.id));
+}
+// 管理面板用：全部，包括停用的
+function stkAll(cat){
+  const c = cat || 'pomo';
+  return STK.repo.filter(s=>s.cat===c).concat(STK.list.filter(s=>s.cat===c));
+}
+function stkById(id){
+  if(!id) return null;
+  return STK.repo.find(s=>s.id===id) || STK.list.find(s=>s.id===id) || null;
+}
+
+// 随机抽一张（记番茄的时候用）
+function stkPick(cat){
+  const arr = stkOf(cat);
+  if(!arr.length) return '';
+  return arr[Math.floor(Math.random()*arr.length)].id;
+}
+
+// 按种子稳定地抽一张：同一个格子每次渲染看到的是同一张，不会闪
+function stkPickStable(cat, seed){
+  const arr = stkOf(cat);
+  if(!arr.length) return null;
+  const s = String(seed||'');
+  let h = 2166136261;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return arr[(h>>>0) % arr.length];
+}
+
+function stkImgHtml(s, cls){
+  if(!s) return '';
+  return '<img class="'+(cls||'pg-img')+'" src="'+s.src+'" alt="'+escAttr(s.name||'')+'" draggable="false">';
+}
+
+// 导入：读文件 → 等比缩小 → 存 PNG（保住透明底）
+function stkShrink(file, max){
+  return new Promise((res, rej)=>{
+    const fr = new FileReader();
+    fr.onerror = ()=>rej(new Error('文件读不出来'));
+    fr.onload = ()=>{
+      const raw = fr.result;
+      // GIF 缩了会丢动画，小于 300KB 就原样收下
+      if(/^data:image\/gif/i.test(raw) && raw.length < 300*1024) return res(raw);
+      const img = new Image();
+      img.onerror = ()=>rej(new Error('这不是能显示的图片'));
+      img.onload = ()=>{
+        let w = img.naturalWidth||img.width, h = img.naturalHeight||img.height;
+        if(!w || !h) return rej(new Error('图片尺寸读不出来'));
+        const k = Math.min(1, max/Math.max(w,h));
+        w = Math.max(1, Math.round(w*k));
+        h = Math.max(1, Math.round(h*k));
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const g = c.getContext('2d');
+        g.imageSmoothingEnabled = true;
+        g.imageSmoothingQuality = 'high';
+        g.drawImage(img, 0, 0, w, h);
+        try { res(c.toDataURL('image/png')); } catch(e){ res(raw); }
+      };
+      img.src = raw;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+async function stkImportFiles(files){
+  const arr = Array.from(files||[]).filter(f=>/^image\//.test(f.type||''));
+  if(!arr.length){ showToast('没挑到图片文件'); return; }
+  let ok = 0, bad = 0;
+  for(const f of arr){
+    try{
+      const src = await stkShrink(f, STK.MAX);
+      const rec = {
+        id: 'sk'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+        cat: STK.cat,
+        name: (f.name||'贴纸').replace(/\.[a-z0-9]+$/i,'').slice(0,24),
+        src: src,
+        ts: Date.now()
+      };
+      await stkPut(rec);
+      STK.list.push(rec);
+      ok++;
+    }catch(e){ bad++; }
+  }
+  renderStickerLib();
+  renderTasks();
+  showToast('已导入 '+ok+' 张贴纸'+(bad?('，'+bad+' 张失败'):''));
+}
+
+function openStickerLib(cat){
+  STK.cat = cat || 'pomo';
+  const ttl = document.getElementById('stkModalTitle');
+  if(ttl) ttl.textContent = STK.LABEL[STK.cat] || '贴纸库';
+  openModal('stickerModal');
+  const go = ()=>{ renderStickerLib(); stkWireDrop(); };
+  if(STK.ready) go(); else stkLoadEverything().then(go);
+}
+
+function renderStickerLib(){
+  const grid = document.getElementById('stkGrid');
+  const cnt  = document.getElementById('stkCount');
+  if(!grid) return;
+  const all = stkAll(STK.cat);
+  const on  = all.filter(s=>stkEnabled(s.id)).length;
+  if(cnt) cnt.textContent = on + ' / ' + all.length;
+  if(!all.length){
+    grid.innerHTML = '<div class="stk-empty">还没有贴纸。<br>'
+      + '把抠好的透明底 PNG 拖进上面的框（存在这台设备），<br>'
+      + '或者把图片提交进仓库的 stickers/ 目录、在 stickers.json 里登记（所有设备都能看到）。<br>'
+      + '之后每记一个番茄，就会从库里随机抽一张贴到格子上。</div>';
+    return;
+  }
+  grid.innerHTML = all.map(s=>{
+    const off = !stkEnabled(s.id);
+    const q = "'" + s.id.replace(/'/g, "\\'") + "'";
+    let h = '<div class="stk-item'+(off?' off':'')+'" title="'+escAttr(s.name||'')+'">'
+      + '<span class="stk-src'+(s.repo?'':' local')+'">'+(s.repo?'仓库':'本机')+'</span>';
+    if(!s.repo){
+      h += '<span class="stk-del" title="删除这张" onclick="stkRemove('+q+')">✕</span>';
+    }
+    h += '<img src="'+s.src+'" alt="" draggable="false">'
+      + '<div class="stk-name">'+escHtml(s.name||'未命名')+'</div>'
+      + '<div class="stk-ops">'
+      +   '<button onclick="stkToggle('+q+')" title="参不参与抽签">'+(off?'启用':'停用')+'</button>'
+      +   (s.repo
+            ? '<button onclick="stkCopyPath('+q+')" title="复制路径，可用在自定义 CSS 里">路径</button>'
+            : '<button onclick="stkRename('+q+')" title="改名字">改名</button>')
+      + '</div>'
+      + '</div>';
+    return h;
+  }).join('');
+}
+
+// 仓库图片的相对路径，复制出来就能写进自定义 CSS
+function stkCopyPath(id){
+  const s = stkById(id); if(!s) return;
+  const txt = s.src;
+  const done = ()=>showToast('已复制：'+txt);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(()=>prompt('复制这段路径', txt));
+  } else {
+    prompt('复制这段路径', txt);
+  }
+}
+
+function stkRename(id){
+  const s = stkById(id); if(!s) return;
+  if(s.repo){ showToast('仓库里的贴纸请在仓库里改名'); return; }
+  const v = prompt('给这张贴纸起个名字', s.name||'');
+  if(v === null) return;
+  s.name = v.trim().slice(0,24) || '未命名';
+  stkPut(s).then(renderStickerLib);
+}
+
+function stkRemove(id){
+  const s = stkById(id); if(!s) return;
+  if(s.repo){ showToast('仓库里的贴纸请在仓库里删，这里可以先停用'); return; }
+  if(!confirm('删掉贴纸「'+(s.name||'未命名')+'」？已经贴在格子上的会换成别的图。')) return;
+  stkDel(id).then(()=>{
+    STK.list = STK.list.filter(x=>x.id!==id);
+    renderStickerLib();
+    renderTasks();
+  });
+}
+
+let _stkDropWired = false;
+function stkWireDrop(){
+  if(_stkDropWired) return;
+  const box = document.getElementById('stkDrop');
+  if(!box) return;
+  _stkDropWired = true;
+  ['dragenter','dragover'].forEach(ev=>box.addEventListener(ev, e=>{
+    e.preventDefault(); e.stopPropagation(); box.classList.add('over');
+  }));
+  ['dragleave','drop'].forEach(ev=>box.addEventListener(ev, e=>{
+    e.preventDefault(); e.stopPropagation(); box.classList.remove('over');
+  }));
+  box.addEventListener('drop', e=>{
+    const fs = e.dataTransfer && e.dataTransfer.files;
+    if(fs && fs.length) stkImportFiles(fs);
+  });
+}
+
+// ═══════════════════════════════════════
+// 自定义 CSS：写在状态里跟着云端同步，开机注入一个 <style>
+// ═══════════════════════════════════════
+function userCssEl(){
+  let el = document.getElementById('mmm-user-css');
+  if(!el){
+    el = document.createElement('style');
+    el.id = 'mmm-user-css';
+    document.head.appendChild(el);
+  }
+  return el;
+}
+function applyUserCss(css){
+  const text = (typeof css === 'string') ? css : (S.customCSS || '');
+  userCssEl().textContent = text;
+}
+function openCssLab(){
+  const ta = document.getElementById('cssLabInput');
+  if(ta) ta.value = S.customCSS || '';
+  const st = document.getElementById('cssLabState');
+  if(st) st.textContent = '';
+  openModal('cssLabModal');
+}
+function applyCssLabPreview(){
+  const ta = document.getElementById('cssLabInput'); if(!ta) return;
+  applyUserCss(ta.value);
+  const st = document.getElementById('cssLabState');
+  if(st) st.textContent = '预览中（还没保存）';
+}
+function saveCssLab(){
+  const ta = document.getElementById('cssLabInput'); if(!ta) return;
+  S.customCSS = ta.value;
+  applyUserCss(S.customCSS);
+  saveState();
+  const st = document.getElementById('cssLabState');
+  if(st) st.textContent = '已保存 ✓';
+  showToast('外观已更新');
+}
+function clearCssLab(){
+  if(!confirm('清空自定义 CSS，界面回到默认样子？')) return;
+  const ta = document.getElementById('cssLabInput');
+  if(ta) ta.value = '';
+  S.customCSS = '';
+  applyUserCss('');
+  saveState();
+  showToast('已还原默认外观');
+}
+
+// 手机上没有右键：长按番茄格 = 换一张贴纸（松手后那一下点击不算删除）
+let _pgPressTimer = null, _pgSwallowClick = false;
+document.addEventListener('touchstart', e=>{
+  const cell = e.target.closest && e.target.closest('.pomo-cell.filled');
+  if(!cell) return;
+  const tid = cell.getAttribute('data-tid'), idx = cell.getAttribute('data-idx');
+  if(tid == null || idx == null) return;
+  clearTimeout(_pgPressTimer);
+  _pgPressTimer = setTimeout(()=>{
+    _pgSwallowClick = true;
+    rerollPomoSticker(Number(tid), Number(idx));
+  }, 550);
+}, {passive:true});
+['touchend','touchmove','touchcancel'].forEach(ev=>{
+  document.addEventListener(ev, ()=>clearTimeout(_pgPressTimer), {passive:true});
+});
+document.addEventListener('click', e=>{
+  if(!_pgSwallowClick) return;
+  const cell = e.target.closest && e.target.closest('.pomo-cell.filled');
+  if(cell){ e.stopPropagation(); e.preventDefault(); }
+  _pgSwallowClick = false;
+}, true);
+
+// 开机把贴纸读进内存，读完补一次渲染
+document.addEventListener('DOMContentLoaded', ()=>{
+  stkLoadEverything().then(n=>{ if(n && typeof renderTasks==='function') renderTasks(); });
+  applyUserCss();
+});
+
+// ═══════════════════════════════════════
 // 番茄格子表：一个方格 = 一个番茄钟，完成后显示 🍅 和具体时长
 // t.pomoLog = [{m:分钟, ts:完成时间, p:是否中途停下的半个番茄}]
 // t.pomoSlots = 想摆几个格子（没设就按目标时长 / 25 分钟推算）
@@ -2553,6 +3077,47 @@ function togglePomoGrid(id){
   renderTasks();
 }
 
+// 格子大小：四档循环，记在状态里
+const POMO_SIZES = ['s','m','l','xl'];
+const POMO_SIZE_NAME = {s:'小', m:'中', l:'大', xl:'特大'};
+function pomoCellSize(){
+  const v = S.pomoCellSize;
+  return POMO_SIZES.indexOf(v) >= 0 ? v : 'm';
+}
+function cyclePomoCellSize(){
+  const next = POMO_SIZES[(POMO_SIZES.indexOf(pomoCellSize()) + 1) % POMO_SIZES.length];
+  S.pomoCellSize = next;
+  saveState();
+  renderTasks();
+  showToast('格子大小：'+POMO_SIZE_NAME[next]);
+}
+
+// 每条记录第一次渲染时锁定一张贴纸，之后它就一直是那张
+function stkForRecord(r, i){
+  if(!r) return null;
+  const s = stkById(r.sk);
+  if(s) return s;
+  const pick = stkPickStable('pomo', (r.ts||'') + '#' + i + '#' + (r.m||0));
+  if(pick){ r.sk = pick.id; saveStateSoon(); }
+  return pick;
+}
+
+// 右键换一张
+function rerollPomoSticker(id, idx, ev){
+  if(ev) ev.preventDefault();
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return false;
+  const r = pomoLogOf(t)[idx]; if(!r) return false;
+  const arr = stkOf('pomo');
+  if(!arr.length){ openStickerLib('pomo'); return false; }
+  if(arr.length === 1){ showToast('库里只有一张，先去多导几张吧'); return false; }
+  let next = r.sk;
+  while(next === r.sk){ next = arr[Math.floor(Math.random()*arr.length)].id; }
+  r.sk = next;
+  saveState();
+  renderTasks();
+  return false;
+}
+
 function setPomoSlots(id, delta, goalFallback){
   const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
   const cur = pomoSlotCount(t, goalFallback);
@@ -2568,7 +3133,7 @@ function logPomoSession(t, mins, partial){
   if(!t) return;
   mins = Math.max(0, Math.round(mins||0));
   if(!mins) return;
-  pomoLogOf(t).push({m:mins, ts:new Date().toISOString(), p:!!partial});
+  pomoLogOf(t).push({m:mins, ts:new Date().toISOString(), p:!!partial, sk:stkPick('pomo')});
   t.pomoMin = (t.pomoMin||0) + mins;
 }
 
@@ -2577,25 +3142,39 @@ function pomoGridHtml(t, goalFallback){
   const log = pomoLogOf(t);
   const slots = pomoSlotCount(t, goalFallback);
   const running = (pomoTaskId==t.id && pomoTimer);
-  let h = '<div class="pomo-grid-wrap">'
+  const hasStk = stkOf('pomo').length > 0;
+  let h = '<div class="pomo-grid-wrap" data-psz="'+pomoCellSize()+'">'
     + '<div class="pomo-grid-hd">'
     +   '<span>'+PG_ICON+' 番茄格</span>'
     +   '<span class="pg-count">'+log.length+' / '+slots+'</span>'
     +   '<button class="pg-slot-btn" onclick="setPomoSlots('+t.id+',-1,'+(goalFallback||DEFAULT_POMO_GOAL)+')" title="少一格">−</button>'
     +   '<button class="pg-slot-btn" onclick="setPomoSlots('+t.id+',1,'+(goalFallback||DEFAULT_POMO_GOAL)+')" title="多一格">+</button>'
-    +   '<span class="pg-tip">点空格补记，点番茄可删掉</span>'
+    +   '<button class="pg-slot-btn" onclick="cyclePomoCellSize()" title="格子大小：'+POMO_SIZE_NAME[pomoCellSize()]+'（点击切换）">⤢</button>'
+    +   '<button class="pg-slot-btn" onclick="openStickerLib(\'pomo\')" title="番茄贴纸库：导入自己抠的图">🍅</button>'
+    +   '<span class="pg-tip">'+(hasStk
+          ? '点空格补记，点番茄删掉，右键 / 长按换一张贴纸'
+          : '点空格补记，点番茄可删掉 · 点 🍅 导入自己的贴纸')+'</span>'
     + '</div><div class="pomo-grid">';
   for(let i=0;i<slots;i++){
     const r = log[i];
     if(r){
       const when = r.ts ? fmtDT(r.ts) : '';
-      const title = (r.p ? '半个番茄 ' : '完成 ') + fmtMin(r.m) + (when ? ' · '+when : '') + '（点击删除）';
-      h += '<div class="pomo-cell filled'+(r.p?' part':'')+'" title="'+escAttr(title)+'" onclick="delPomoRecord('+t.id+','+i+')">'
-        + '<span class="pg-t">🍅</span><span class="pg-m">'+fmtMin(r.m)+'</span></div>';
+      const s = stkForRecord(r, i);
+      const title = (r.p ? '半个番茄 ' : '完成 ') + fmtMin(r.m) + (when ? ' · '+when : '')
+        + '（点击删除' + (hasStk ? '，右键换贴纸' : '') + '）';
+      h += '<div class="pomo-cell filled'+(r.p?' part':'')+'" title="'+escAttr(title)+'"'
+        + ' data-tid="'+t.id+'" data-idx="'+i+'"'
+        + ' onclick="delPomoRecord('+t.id+','+i+')"'
+        + ' oncontextmenu="return rerollPomoSticker('+t.id+','+i+',event)">'
+        + (s ? stkImgHtml(s) : '<span class="pg-t">🍅</span>')
+        + '<span class="pg-m">'+fmtMin(r.m)+'</span></div>';
     } else if(i===log.length && running){
       h += '<div class="pomo-cell live" title="正在跑这一格"><span class="pg-t">⏳</span><span class="pg-m">进行中</span></div>';
     } else {
-      h += '<div class="pomo-cell empty" title="点击手动补记一个番茄钟" onclick="addPomoManual('+t.id+')">+</div>';
+      const ghost = stkPickStable('pomo', 'empty#'+t.id+'#'+i);
+      h += '<div class="pomo-cell empty" title="点击手动补记一个番茄钟" onclick="addPomoManual('+t.id+')">'
+        + (ghost ? stkImgHtml(ghost) + '<span class="pg-plus">+</span>' : '+')
+        + '</div>';
     }
   }
   h += '</div></div>';
