@@ -448,6 +448,14 @@ body{
 .modal .form-select{width:440px;max-width:100%;display:block;}
 .modal-btns{display:flex;gap:6px;margin:10px auto;width:460px;max-width:100%;justify-content:flex-end;}
 
+/* 宽弹窗（写卡片用）：内容跟着窗口撑满 */
+.modal.wide{display:flex;flex-direction:column;}
+.modal.wide .form-row{width:auto;max-width:none;margin:8px 16px 0;}
+.modal.wide .form-label{width:auto;max-width:none;}
+.modal.wide .modal-btns{width:auto;max-width:none;margin:10px 16px;}
+.modal.wide #cardBodyRow{flex:1;display:flex;flex-direction:column;min-height:0;}
+.modal.wide #cardBody{flex:1;width:100%;box-sizing:border-box;}
+
 /* ══════════════════════════════════════
    TASKS
    ══════════════════════════════════════ */
@@ -565,6 +573,15 @@ body{
   font-family:var(--font-mono);font-size:calc(9px + var(--pcell) * .012);
   color:#707070;line-height:1;
 }
+/* 格子底图（可在贴纸库里换成自己的图） */
+.pomo-cell{background-size:100% 100%;background-repeat:no-repeat;background-position:center;}
+.pomo-cell.filled.has-skin{background-color:transparent;border-color:transparent;}
+.pomo-cell.empty.has-skin{background-color:transparent;border-color:transparent;}
+.pomo-cell.live.has-skin{background-color:transparent;border-color:transparent;}
+.pomo-grid-wrap.has-headskin .pomo-grid-hd{
+  background-size:100% 100%;background-repeat:no-repeat;
+}
+
 /* 自己抠的透明底贴纸 */
 .pg-img{
   width:calc(var(--pcell) * .70);height:calc(var(--pcell) * .58);
@@ -1827,6 +1844,14 @@ body{
           ⚡ 按常用时长自动分配面额
         </button>
         <span class="stk-tip" style="margin-left:6px;">格子上出现哪张图，取决于这一格跑了多少分钟</span>
+        <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+          <span class="stk-tip">格子外观：</span>
+          <button class="pxl-btn" onclick="pomoSkinPick('filled')">已完成格底</button>
+          <button class="pxl-btn" onclick="pomoSkinPick('empty')">空格底</button>
+          <button class="pxl-btn" onclick="pomoSkinPick('live')">进行中格底</button>
+          <button class="pxl-btn" onclick="pomoSkinPick('head')">标题条底</button>
+          <button class="pxl-btn" onclick="pomoSkinClear()">全部还原</button>
+        </div>
       </div>
       <div class="stk-bar">
         <span>共 <b id="stkCount">0</b> 张</span>
@@ -2187,7 +2212,7 @@ body{
 // ═══════════════════════════════════════
 var S = {
   charName:'MMM', earned:0, spent:0,
-  stkVal:{}, shopMeta:{}, shopOwned:{}, emojiMap:{}, textMap:{}, iconSize:{},
+  stkVal:{}, shopMeta:{}, shopOwned:{}, emojiMap:{}, textMap:{}, iconSize:{}, pomoSkin:{},
   avatar:null,
   tasks:[], journal:[], cards:[],
   habits:[], checkins:{}, dayNotes:{}, ciEvents:[], ciLists:[], energyTags:[],
@@ -2358,7 +2383,7 @@ function mergeCloudIntoLocal(cloud){
   if(typeof cloud.earned==='number') S.earned = Math.max(S.earned||0, cloud.earned);
   if(typeof cloud.spent ==='number') S.spent  = Math.max(S.spent||0,  cloud.spent);
   if(typeof cloud.xp==='number')     S.earned = Math.max(S.earned||0, cloud.xp);
-  ['stkVal','shopMeta','shopOwned','emojiMap','textMap','iconSize'].forEach(k=>{
+  ['stkVal','shopMeta','shopOwned','emojiMap','textMap','iconSize','pomoSkin'].forEach(k=>{
     if(cloud[k] && typeof cloud[k]==='object'){
       if(!S[k] || typeof S[k]!=='object') S[k] = {};
       Object.keys(cloud[k]).forEach(id=>{ if(S[k][id] == null) S[k][id] = cloud[k][id]; });
@@ -2598,6 +2623,7 @@ function migrateState(loaded) {
   if (!S.shopOwned || typeof S.shopOwned !== 'object') S.shopOwned = {};
   if (!S.emojiMap  || typeof S.emojiMap  !== 'object') S.emojiMap  = {};
   if (!S.textMap   || typeof S.textMap   !== 'object') S.textMap   = {};
+  if (!S.pomoSkin  || typeof S.pomoSkin  !== 'object') S.pomoSkin  = {};
   if (!S.iconSize  || typeof S.iconSize  !== 'object') S.iconSize  = {};
   delete S.level; delete S.xp;
   if (typeof S.nextId !== 'number') S.nextId  = 1;
@@ -3342,6 +3368,50 @@ function stkSetValue(id){
   renderTasks();
 }
 
+// ── 格子外观：底图从「🎨 素材」柜里挑 ──
+function pomoSkin(){
+  if(!S.pomoSkin || typeof S.pomoSkin !== 'object') S.pomoSkin = {};
+  return S.pomoSkin;
+}
+const POMO_SKIN_NAME = {filled:'已完成格', empty:'空格', live:'进行中格', head:'标题条'};
+function pomoSkinPick(slot){
+  stkPickOpen('给「'+(POMO_SKIN_NAME[slot]||slot)+'」选一张底图', id=>{
+    if(id) pomoSkin()[slot] = id;
+    else delete pomoSkin()[slot];
+    saveState();
+    applyPomoSkin();
+    renderTasks();
+    showToast(id ? '底图已换' : '已还原');
+  }, 'ui');
+}
+function pomoSkinClear(){
+  if(!confirm('把番茄格的底图全部还原成默认样式？')) return;
+  S.pomoSkin = {};
+  saveState();
+  applyPomoSkin();
+  renderTasks();
+  showToast('已还原');
+}
+// 注入一段样式，把底图挂到对应的格子上
+function applyPomoSkin(){
+  let el = document.getElementById('mmm-pomo-skin');
+  if(!el){ el = document.createElement('style'); el.id = 'mmm-pomo-skin'; document.head.appendChild(el); }
+  const sk = pomoSkin();
+  const url = id=>{ const x = stkById(id); return x ? x.src : ''; };
+  let css = '';
+  ['filled','empty','live'].forEach(k=>{
+    const u = url(sk[k]);
+    if(u) css += '.pomo-cell.'+k+'{background-image:url("'+u+'");}\n';
+  });
+  const uh = url(sk.head);
+  if(uh) css += '.pomo-grid-hd{background-image:url("'+uh+'");}\n';
+  el.textContent = css;
+}
+// 有底图的格子要去掉原来的立体边框，交给图片自己表现
+function pomoSkinClass(kind){
+  return pomoSkin()[kind] ? ' has-skin' : '';
+}
+
 // 按番茄钟上的常用时长，给贴纸轮流分配面额
 const POMO_COMMON_MINS = [5,10,15,30,60,90];
 function stkAutoValues(){
@@ -3637,6 +3707,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   stkLoadEverything().then(n=>{
     if(typeof renderTasks==='function') renderTasks();
     if(typeof updateWalletUI==='function') updateWalletUI();
+    applyPomoSkin();
     applyEmojiSkins();
   });
   startEmojiWatcher();
@@ -3761,7 +3832,7 @@ function pomoGridHtml(t, goalFallback){
   const slots = pomoSlotCount(t, goalFallback);
   const running = (pomoTaskId==t.id && pomoTimer);
   const hasStk = stkOf('pomo').length > 0;
-  let h = '<div class="pomo-grid-wrap" data-psz="'+pomoCellSize()+'">'
+  let h = '<div class="pomo-grid-wrap'+(pomoSkin().head?' has-headskin':'')+'" data-psz="'+pomoCellSize()+'">'
     + '<div class="pomo-grid-hd">'
     +   '<span>'+PG_ICON+' 番茄格</span>'
     +   '<span class="pg-count">'+log.length+' / '+slots+'</span>'
@@ -3780,19 +3851,19 @@ function pomoGridHtml(t, goalFallback){
       const s = stkForRecord(r, i);
       const title = (r.p ? '半个番茄 ' : '完成 ') + fmtMin(r.m) + (when ? ' · '+when : '')
         + '（点击删除' + (hasStk ? '，右键换贴纸' : '') + '）';
-      h += '<div class="pomo-cell filled'+(r.p?' part':'')+'" title="'+escAttr(title)+'"'
+      h += '<div class="pomo-cell filled'+(r.p?' part':'')+pomoSkinClass('filled')+'" title="'+escAttr(title)+'"'
         + ' data-tid="'+t.id+'" data-idx="'+i+'"'
         + ' onclick="delPomoRecord('+t.id+','+i+')"'
         + ' oncontextmenu="return rerollPomoSticker('+t.id+','+i+',event)">'
         + (s ? stkImgHtml(s) : '<span class="pg-t">🍅</span>')
         + '<span class="pg-m">'+fmtMin(r.m)+'</span></div>';
     } else if(i===log.length && running){
-      h += '<div class="pomo-cell live" title="正在跑这一格"><span class="pg-t">⏳</span><span class="pg-m">进行中</span></div>';
+      h += '<div class="pomo-cell live'+pomoSkinClass('live')+'" title="正在跑这一格"><span class="pg-t">⏳</span><span class="pg-m">进行中</span></div>';
     } else {
       const lastM = log.length ? (log[log.length-1].m || 25) : 25;
       const gpool = stkGroupFor(lastM).pool;
       const ghost = gpool.length ? gpool[i % gpool.length] : null;
-      h += '<div class="pomo-cell empty" title="点击手动补记一个番茄钟" onclick="addPomoManual('+t.id+')">'
+      h += '<div class="pomo-cell empty'+pomoSkinClass('empty')+'" title="点击手动补记一个番茄钟" onclick="addPomoManual('+t.id+')">'
         + (ghost ? stkImgHtml(ghost) + '<span class="pg-plus">+</span>' : '+')
         + '</div>';
     }
@@ -8651,12 +8722,12 @@ function doChangePassword(){
 <!-- FLEETING MODAL -->
 <!-- CARD MODAL -->
 <div class="overlay" id="cardModal">
-  <div class="modal" style="max-width:min(980px,94vw);width:94vw;max-height:94vh;display:flex;flex-direction:column;">
+  <div class="modal wide" style="max-width:min(1100px,96vw);width:96vw;height:92vh;max-height:92vh;">
     <button class="close-btn" onclick="closeModal('cardModal')">✕</button>
     <div class="modal-title" id="cardModalTitle">新建卡片</div>
     <input type="hidden" id="editCardId"/>
     <div class="form-row" id="cardBodyRow">
-      <textarea class="form-textarea" id="cardBody" placeholder="用自己的话写——为什么这个重要？和你在想的东西有什么关系？" style="min-height:64vh;height:auto;resize:vertical;line-height:1.9;font-size:16px;overflow-y:auto;padding:14px 16px;"></textarea>
+      <textarea class="form-textarea" id="cardBody" placeholder="用自己的话写——为什么这个重要？和你在想的东西有什么关系？" style="min-height:200px;line-height:1.9;font-size:16px;overflow-y:auto;padding:14px 16px;resize:none;"></textarea>
     </div>
     <div class="form-row" id="cardTagsRow">
       <label class="form-label">标签（逗号分隔）</label>
