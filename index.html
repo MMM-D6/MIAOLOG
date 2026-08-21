@@ -135,6 +135,31 @@ body{
   align-items:center;
 }
 
+/* 顶栏折叠 */
+.topbar{position:relative;transition:min-height .18s ease,padding .18s ease;}
+.hud-fold{
+  position:absolute;right:6px;top:2px;z-index:5;
+  width:20px;height:15px;line-height:1;padding:0;font-size:9px;cursor:pointer;
+  background:rgba(0,0,0,.35);color:#ffe9b0;
+  border:1px solid rgba(255,225,150,.45);
+}
+.hud-fold:hover{background:#ffe08a;color:#3a2400;}
+.hud-mini{display:none;}
+.topbar.folded{min-height:0;padding:0;}
+.topbar.folded .char-panel,
+.topbar.folded .pomo-panel{display:none;}
+.topbar.folded .hud-fold{display:none;}
+.topbar.folded .hud-mini{
+  display:flex;align-items:center;gap:10px;
+  grid-column:1 / -1;
+  padding:2px 8px;cursor:pointer;font-family:var(--font-ui);font-size:11px;color:#dfe7f8;
+}
+.hud-mini-name{font-weight:bold;color:#fff;}
+.hud-mini-cash{font-family:var(--font-mono);color:#ffe9b0;font-size:12px;}
+.hud-mini-stat{color:#a8b6d8;}
+.hud-mini-arrow{margin-left:auto;color:#ffe9b0;}
+.hud-mini:hover .hud-mini-arrow{color:#fff;}
+
 /* ══ 游戏化 HUD ══ */
 .char-panel{display:flex;align-items:center;gap:9px;}
 .hud-portrait{position:relative;flex-shrink:0;padding:3px;
@@ -290,6 +315,7 @@ body{
 .emo-img.is-sm{width:.9em;height:.9em;vertical-align:-.12em;}
 .emo-img.is-lg{width:1.5em;height:1.5em;vertical-align:-.32em;}
 .emo-img.is-xl{width:2em;height:2em;vertical-align:-.5em;}
+.ui-skin{display:inline;}
 
 /* ── POMODORO ── */
 .pomo-panel{
@@ -1440,7 +1466,14 @@ body{
   </div>
 
   <!-- TOP BAR -->
-  <div class="topbar">
+  <div class="topbar" id="topbar">
+    <button class="hud-fold" id="hudFoldBtn" onclick="toggleHud()" title="收起 / 展开顶栏">▲</button>
+    <div class="hud-mini" id="hudMini" onclick="toggleHud()" title="点击展开顶栏">
+      <span class="hud-mini-name" id="hudMiniName">MMM</span>
+      <span class="hud-mini-cash" id="hudMiniCash">🍅 0</span>
+      <span class="hud-mini-stat" id="hudMiniStat"></span>
+      <span class="hud-mini-arrow">▼</span>
+    </div>
     <div class="char-panel">
       <div class="hud-portrait"><div class="avatar-frame" >
         <div class="avatar-default" id="avatarDefault">
@@ -1719,7 +1752,7 @@ body{
         <div class="setting-title" style="margin-top:14px;">🎨 外观</div>
         <button class="pxl-btn" onclick="openStickerLib('pomo')" style="width:100%;margin-bottom:8px;">🍅 贴纸库（导入自己抠的图）</button>
         <button class="pxl-btn" onclick="openCssLab()" style="width:100%;margin-bottom:8px;">✏️ 自定义 CSS（自由改界面）</button>
-        <button class="pxl-btn" onclick="openEmojiLab()" style="width:100%;margin-bottom:8px;">😀 emoji / 文字图标换成贴图</button>
+        <button class="pxl-btn" onclick="openEmojiLab()" style="width:100%;margin-bottom:8px;">😀 界面图标 / 文字自定义</button>
         <button class="pxl-btn" onclick="openFontLab()" style="width:100%;margin-bottom:8px;">🔤 字体设置</button>
         <button class="pxl-btn" onclick="stkExportZip()" style="width:100%;margin-bottom:8px;">📦 导出贴纸包（准备提交到 GitHub）</button>
         <div class="setting-title" style="margin-top:14px;">💾 数据管理</div>
@@ -1856,17 +1889,18 @@ body{
 <div class="overlay" id="emojiLabModal">
   <div class="modal" style="max-width:560px;">
     <button class="close-btn" onclick="closeModal('emojiLabModal')">✕</button>
-    <div class="modal-title">😀 图标贴图</div>
+    <div class="modal-title">😀 界面图标 / 文字</div>
     <div class="stk-body">
       <div class="stk-bar">
         <span>可替换的图标</span>
         <button class="pxl-btn" onclick="iconAddCustom()">＋ 自定义文字</button>
-        <span class="stk-tip">点一个，再选贴图，全站都会换掉；点「大小」调尺寸</span>
+        <span class="stk-tip">点图换贴纸，点「改字」改说法，全站同步生效</span>
       </div>
       <div class="stk-grid" id="emojiGrid"></div>
       <div class="stk-note">
         换掉的只是显示，原来的文字还在数据里，随时能还原。<br>
-        贴图从「😀 图标」柜子里挑；输入框和笔记编辑区不会被替换，不用担心弄坏内容。
+        贴图从「😀 图标」柜子里挑；输入框和笔记编辑区不会被替换，不用担心弄坏内容。<br>
+        列表里灰掉的（×0）是当前页面上没出现、但仍然可以先改好的固定标签。
       </div>
     </div>
     <div class="modal-btns">
@@ -2153,7 +2187,7 @@ body{
 // ═══════════════════════════════════════
 var S = {
   charName:'MMM', earned:0, spent:0,
-  stkVal:{}, shopMeta:{}, shopOwned:{}, emojiMap:{},
+  stkVal:{}, shopMeta:{}, shopOwned:{}, emojiMap:{}, textMap:{}, iconSize:{},
   avatar:null,
   tasks:[], journal:[], cards:[],
   habits:[], checkins:{}, dayNotes:{}, ciEvents:[], ciLists:[], energyTags:[],
@@ -2324,7 +2358,7 @@ function mergeCloudIntoLocal(cloud){
   if(typeof cloud.earned==='number') S.earned = Math.max(S.earned||0, cloud.earned);
   if(typeof cloud.spent ==='number') S.spent  = Math.max(S.spent||0,  cloud.spent);
   if(typeof cloud.xp==='number')     S.earned = Math.max(S.earned||0, cloud.xp);
-  ['stkVal','shopMeta','shopOwned','emojiMap'].forEach(k=>{
+  ['stkVal','shopMeta','shopOwned','emojiMap','textMap','iconSize'].forEach(k=>{
     if(cloud[k] && typeof cloud[k]==='object'){
       if(!S[k] || typeof S[k]!=='object') S[k] = {};
       Object.keys(cloud[k]).forEach(id=>{ if(S[k][id] == null) S[k][id] = cloud[k][id]; });
@@ -2563,6 +2597,8 @@ function migrateState(loaded) {
   if (!S.shopMeta  || typeof S.shopMeta  !== 'object') S.shopMeta  = {};
   if (!S.shopOwned || typeof S.shopOwned !== 'object') S.shopOwned = {};
   if (!S.emojiMap  || typeof S.emojiMap  !== 'object') S.emojiMap  = {};
+  if (!S.textMap   || typeof S.textMap   !== 'object') S.textMap   = {};
+  if (!S.iconSize  || typeof S.iconSize  !== 'object') S.iconSize  = {};
   delete S.level; delete S.xp;
   if (typeof S.nextId !== 'number') S.nextId  = 1;
   // Finance (记账理财)
@@ -2715,6 +2751,7 @@ function updateHudStats(){
 
 function updateWalletUI(){
   updateHudStats();
+  updateHudMini();
   const bal = walletBalance();
   const badge = document.getElementById('walletBadge');
   if(badge) badge.textContent = '🍅 ' + bal;
@@ -2738,6 +2775,32 @@ function updateWalletUI(){
 }
 // 别名：老代码里的 updateXPUI 全部指向钱包
 function updateXPUI(){ updateWalletUI(); }
+
+function toggleHud(){
+  S.hudFolded = !S.hudFolded;
+  applyHudFold();
+  saveState();
+}
+function applyHudFold(){
+  const bar = document.getElementById('topbar');
+  if(!bar) return;
+  bar.classList.toggle('folded', !!S.hudFolded);
+  const btn = document.getElementById('hudFoldBtn');
+  if(btn) btn.textContent = S.hudFolded ? '▼' : '▲';
+  updateHudMini();
+}
+function updateHudMini(){
+  const nm = document.getElementById('hudMiniName');
+  if(nm) nm.textContent = S.charName || 'MMM';
+  const cash = document.getElementById('hudMiniCash');
+  if(cash) cash.textContent = '🍅 ' + walletBalance();
+  const st = document.getElementById('hudMiniStat');
+  if(st){
+    const today = (document.querySelector('#hudToday b')||{}).textContent || '0';
+    const streak = (document.querySelector('#hudStreak b')||{}).textContent || '0';
+    st.textContent = '今天 ' + today + 'm · 连续 ' + streak + ' 天';
+  }
+}
 
 function openShopTab(){
   const t = document.getElementById('tabShop');
@@ -3570,6 +3633,7 @@ try { window.STK = STK; } catch(e) {}
 document.addEventListener('DOMContentLoaded', ()=>{
   applyUserCss();
   applyUserFont();
+  applyHudFold();
   stkLoadEverything().then(n=>{
     if(typeof renderTasks==='function') renderTasks();
     if(typeof updateWalletUI==='function') updateWalletUI();
@@ -8114,19 +8178,44 @@ function iconAddCustom(){
   if(key.length > 12){ showToast('太长了，建议只替换短标签'); return; }
   emojiAssign(key);
 }
+// 文字改写：S.textMap = {原文: 想显示的文字}
+function textMap(){
+  if(!S.textMap || typeof S.textMap !== 'object') S.textMap = {};
+  return S.textMap;
+}
+function skinKeys(){
+  const set = {};
+  Object.keys(emojiMap()).forEach(k=>{ if(k) set[k]=1; });
+  Object.keys(textMap()).forEach(k=>{ if(k) set[k]=1; });
+  return Object.keys(set);
+}
+
 function emojiRegex(){
-  const keys = Object.keys(emojiMap()).filter(k=>k);
+  const keys = skinKeys();
   if(!keys.length) return null;
   keys.sort((a,b)=>b.length-a.length);
   const esc = keys.map(k=>k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   return new RegExp('(' + esc.join('|') + ')', 'g');
 }
+// 把之前替换过的地方还原成原文
+function unskinAll(root){
+  const scope = root || document.getElementById('app') || document.body;
+  if(!scope) return;
+  const shells = scope.querySelectorAll('.ui-skin');
+  shells.forEach(n=>{
+    const t = document.createTextNode(n.getAttribute('data-o') || '');
+    if(n.parentNode) n.parentNode.replaceChild(t, n);
+  });
+  if(shells.length && scope.normalize) scope.normalize();
+}
+
 function applyEmojiSkins(root){
-  const re = emojiRegex();
-  if(!re) return;
   const scope = root || document.getElementById('app') || document.body;
   if(!scope) return;
   _emoBusy = true;
+  unskinAll(scope);
+  const re = emojiRegex();
+  if(!re){ _emoBusy = false; return; }
   try{
     const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
       acceptNode(node){
@@ -8150,12 +8239,22 @@ function applyEmojiSkins(root){
       while((mm = rx.exec(node.nodeValue))){
         if(mm.index > last) frag.appendChild(document.createTextNode(node.nodeValue.slice(last, mm.index)));
         const sk = stkById(emojiMap()[mm[0]]);
-        if(sk){
-          const img = document.createElement('img');
-          img.className = 'emo-img is-' + iconSizeOf(mm[0]);
-          img.src = sk.src;
-          img.alt = mm[0];
-          frag.appendChild(img);
+        const alt = textMap()[mm[0]];
+        if(sk || typeof alt === 'string'){
+          // 包一层壳，记住原文，随时能原样还原
+          const shell = document.createElement('span');
+          shell.className = 'ui-skin';
+          shell.setAttribute('data-o', mm[0]);
+          if(sk){
+            const img = document.createElement('img');
+            img.className = 'emo-img is-' + iconSizeOf(mm[0]);
+            img.src = sk.src;
+            img.alt = mm[0];
+            shell.appendChild(img);
+          } else {
+            shell.textContent = alt;
+          }
+          frag.appendChild(shell);
         } else {
           frag.appendChild(document.createTextNode(mm[0]));
         }
@@ -8174,7 +8273,7 @@ function scheduleEmojiSkins(){
 function startEmojiWatcher(){
   const app = document.getElementById('app');
   if(!app || !window.MutationObserver) return;
-  new MutationObserver(()=>{ if(!_emoBusy && Object.keys(emojiMap()).length) scheduleEmojiSkins(); })
+  new MutationObserver(()=>{ if(!_emoBusy && skinKeys().length) scheduleEmojiSkins(); })
     .observe(app, {childList:true, subtree:true});
 }
 
@@ -8195,9 +8294,18 @@ function scanEmojis(){
     re.lastIndex = 0;
     while((m = re.exec(txt))){ found[m[0]] = (found[m[0]]||0) + 1; }
   }
-  Object.keys(emojiMap()).forEach(k=>{ if(!found[k]) found[k] = 0; });
+  skinKeys().forEach(k=>{ if(!found[k]) found[k] = 0; });
+  // 界面上常见的固定文字，直接列出来给你挑
+  UI_TEXT_PRESETS.forEach(k=>{ if(found[k] == null) found[k] = 0; });
   return found;
 }
+
+// 界面上那些固定标签，方便一键改名
+const UI_TEXT_PRESETS = [
+  '任务','Log','记账','日历打卡','卡片笔记','BOX','商店','设置',
+  '番茄格','新建卡片','保存','取消','完成','导出','编辑','随机回溯',
+  '无绑定任务','自动续','累计','货架','我的藏品','买下','已有'
+];
 
 function openEmojiLab(){
   renderEmojiLab();
@@ -8216,14 +8324,23 @@ function renderEmojiLab(){
   grid.innerHTML = keys.map(k=>{
     const sk = stkById(emojiMap()[k]);
     const q = JSON.stringify(k).replace(/"/g,'&quot;');
+    const alt = textMap()[k];
+    const shown = (typeof alt === 'string') ? alt : k;
     return '<div class="stk-item emo-skip">'
       + '<div onclick="emojiAssign('+q+')" title="点击换图">'
       +   (sk ? '<img src="'+sk.src+'" alt="">'
-              : '<div style="height:52px;display:flex;align-items:center;justify-content:center;font-size:26px;">'+escHtml(k)+'</div>')
-      +   '<div class="stk-name">'+escHtml(k)+(found[k]?(' ×'+found[k]):'')+'</div>'
+              : '<div style="height:52px;display:flex;align-items:center;justify-content:center;'
+                + 'font-size:'+(shown.length>4?'14px':'26px')+';line-height:1.3;word-break:break-all;padding:0 3px;">'
+                + escHtml(shown)+'</div>')
+      +   '<div class="stk-name" title="'+escAttr(k)+'">'
+      +     escHtml(k) + (typeof alt === 'string' ? ' → '+escHtml(alt) : '')
+      +     (found[k]?(' ×'+found[k]):'')
+      +   '</div>'
       + '</div>'
-      + (sk ? '<div class="stk-ops"><button onclick="iconCycleSize('+q+')" title="调整显示尺寸">'
-              + iconSizeOf(k)+'</button></div>' : '')
+      + '<div class="stk-ops">'
+      +   (sk ? '<button onclick="iconCycleSize('+q+')" title="调整显示尺寸">'+iconSizeOf(k)+'</button>' : '')
+      +   '<button onclick="textRename('+q+')" title="把这段文字改成别的说法">改字</button>'
+      + '</div>'
       + '</div>';
   }).join('');
 }
@@ -8233,14 +8350,33 @@ function emojiAssign(emo){
     else delete emojiMap()[emo];
     saveState();
     renderEmojiLab();
-    applyEmojiSkins();
     renderAll();
+    applyEmojiSkins();
   }, 'icon');
 }
-function emojiClearAll(){
-  if(!confirm('把所有 emoji 都换回原来的样子？')) return;
-  S.emojiMap = {};
+// 把一段界面文字换成别的说法
+function textRename(key){
+  const cur = textMap()[key];
+  const v = prompt('把界面上的「'+key+'」显示成什么？\n（留空 = 还原成原来的文字）',
+                   typeof cur === 'string' ? cur : key);
+  if(v === null) return;
+  const nv = v.trim();
+  if(!nv || nv === key) delete textMap()[key];
+  else textMap()[key] = nv.slice(0,24);
   saveState();
+  renderEmojiLab();
+  renderAll();
+  applyEmojiSkins();
+  showToast(nv && nv !== key ? '已改成「'+nv+'」' : '已还原');
+}
+
+function emojiClearAll(){
+  if(!confirm('把所有图标和文字都换回原来的样子？')) return;
+  S.emojiMap = {};
+  S.textMap = {};
+  S.iconSize = {};
+  saveState();
+  _emoBusy = true; unskinAll(); _emoBusy = false;
   renderEmojiLab();
   renderAll();
   showToast('已还原');
@@ -8515,12 +8651,12 @@ function doChangePassword(){
 <!-- FLEETING MODAL -->
 <!-- CARD MODAL -->
 <div class="overlay" id="cardModal">
-  <div class="modal" style="max-width:620px;max-height:92vh;display:flex;flex-direction:column;">
+  <div class="modal" style="max-width:min(980px,94vw);width:94vw;max-height:94vh;display:flex;flex-direction:column;">
     <button class="close-btn" onclick="closeModal('cardModal')">✕</button>
     <div class="modal-title" id="cardModalTitle">新建卡片</div>
     <input type="hidden" id="editCardId"/>
     <div class="form-row" id="cardBodyRow">
-      <textarea class="form-textarea" id="cardBody" placeholder="用自己的话写——为什么这个重要？和你在想的东西有什么关系？" style="min-height:52vh;height:auto;resize:vertical;line-height:1.9;font-size:16px;overflow-y:auto;padding:12px 14px;"></textarea>
+      <textarea class="form-textarea" id="cardBody" placeholder="用自己的话写——为什么这个重要？和你在想的东西有什么关系？" style="min-height:64vh;height:auto;resize:vertical;line-height:1.9;font-size:16px;overflow-y:auto;padding:14px 16px;"></textarea>
     </div>
     <div class="form-row" id="cardTagsRow">
       <label class="form-label">标签（逗号分隔）</label>
