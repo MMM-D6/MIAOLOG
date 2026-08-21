@@ -1009,14 +1009,15 @@ body{
   padding:10px 12px;margin-bottom:8px;
   font-family:var(--font-ui);color:#000;font-size:13px;line-height:1.7;
 }
-.card-note.idea-card{border-left-color:#800080;}
-.card-note-type{font-family:var(--font-ui);font-size:10px;font-weight:bold;color:#000080;margin-bottom:6px;letter-spacing:1px;}
-.idea-card .card-note-type{color:#800080;}
-.card-quote{font-style:italic;color:#000;border-left:3px solid #000080;padding-left:8px;margin-bottom:8px;line-height:1.7;white-space:pre-wrap;word-break:break-word;}
-.card-body{color:#000;margin-bottom:6px;white-space:pre-wrap;word-break:break-word;}
+.card-note-type{display:none;}
+.card-body{color:#000;margin-bottom:6px;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.8;}
 .card-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;}
-.card-tag{font-size:11px;background:#000080;color:#fff;padding:1px 6px;border:1px solid #000060;}
-.idea-card .card-tag{background:#800080;border-color:#600060;}
+.card-tag{
+  font-size:11px;background:#000080;color:#fff;padding:1px 6px;
+  border:1px solid #000060;cursor:pointer;
+}
+.card-tag:hover{background:#1084d0;}
+.card-tag.on{background:#cc0000;border-color:#900;}
 .card-actions{display:flex;gap:4px;align-items:center;margin-top:6px;border-top:1px solid #c0c0c0;padding-top:6px;flex-wrap:wrap;}
 .card-action-btn{
   font-size:11px;padding:2px 7px;font-family:var(--font-ui);
@@ -1025,9 +1026,64 @@ body{
   cursor:pointer;
 }
 .card-action-btn:hover{background:var(--win-light);}
-.card-link-btn{color:#800080;}
 .card-ts{font-size:10px;color:#808080;margin-left:auto;font-family:var(--font-ui);}
-.card-link-panel{margin-top:6px;background:#f0f0f0;border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);padding:6px 8px;}
+/* ── 随机回溯卡片 ── */
+.recall-btn{
+  background:linear-gradient(180deg,#f3e8ff,#dcc4f5);
+  border-color:#fff #6a3a92 #6a3a92 #fff;color:#4a1d6e;font-weight:bold;
+}
+.recall-btn:hover{background:linear-gradient(180deg,#fff,#e9d6fb);}
+.rc-card{
+  position:relative;margin-bottom:16px;background:#fff;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  box-shadow:3px 3px 0 rgba(74,29,110,.25);
+}
+.rc-head{
+  display:flex;align-items:center;gap:6px;padding:4px 8px;
+  background:linear-gradient(90deg,#4a1d6e,#8a4fb8);
+  color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:bold;letter-spacing:1px;
+}
+.rc-head .rc-when{margin-left:auto;font-family:var(--font-mono);font-weight:normal;opacity:.85;letter-spacing:0;}
+.rc-head .rc-x{
+  cursor:pointer;padding:0 5px;line-height:1;background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.4);
+}
+.rc-head .rc-x:hover{background:#cc0000;}
+.rc-body{
+  padding:14px 16px 12px;font-size:16px;color:#111;line-height:1.85;
+  white-space:pre-wrap;word-break:break-word;font-family:var(--font-ui);
+}
+.rc-quotemark{color:#b088d0;font-size:22px;line-height:0;vertical-align:-4px;margin-right:4px;}
+.rc-meta{padding:0 16px 10px;}
+.rc-foot{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:7px 12px;background:#f2ecf8;border-top:1px solid #d8c8ea;
+}
+.rc-foot .spacer{flex:1;}
+.rc-like{
+  display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none;
+  font-family:var(--font-ui);font-size:12px;color:#8a6a9a;padding:2px 8px;
+  background:#fff;border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.rc-like:hover{background:#ffeef4;}
+.rc-like.on{color:#cc0044;border-color:#cc0044;background:#fff0f5;}
+.rc-like .rc-heart{font-size:13px;}
+.rc-replies{padding:0 12px 10px;}
+.rc-rtoggle{
+  font-family:var(--font-ui);font-size:12px;color:#4a1d6e;cursor:pointer;user-select:none;
+  padding:4px 0;display:inline-block;
+}
+.rc-rtoggle:hover{text-decoration:underline;}
+.rc-reply{
+  background:#faf7fd;border-left:3px solid #a878d0;padding:7px 10px;margin-bottom:6px;position:relative;
+}
+.rc-reply .rc-rt{font-family:var(--font-mono);font-size:10px;color:#9a8aaa;margin-bottom:3px;}
+.rc-reply .rc-rx{position:absolute;top:5px;right:5px;color:#cc0000;font-size:11px;}
+.rc-rinput{
+  width:100%;background:#fff;color:#000;padding:8px 10px;font-size:14px;line-height:1.7;
+  outline:none;resize:vertical;font-family:var(--font-ui);
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
 
 /* ── HIGHLIGHTS ── */
 .hl-yellow{background:#ffff80;padding:0 1px;}
@@ -1547,7 +1603,7 @@ body{
         <button class="pxl-btn primary" onclick="openModal('journalModal');setTimeout(jDraftRestore,50)">💭 + 记录此刻</button>
         <input class="search-bar" id="journalSearch" placeholder="关键词搜索..." oninput="renderJournal()"/>
         <button class="pxl-btn" onclick="exportJournal()">📄 导出</button>
-        <button class="pxl-btn" onclick="showRandomEntry()" style="border-color:#800080;color:var(--purple);">>> 随机回溯</button>
+        <button class="pxl-btn recall-btn" onclick="showRandomEntry()" title="随机翻出一条过去的记录">🎲 随机回溯</button>
       </div>
       <div id="randomCard" style="display:none;"></div>
       <div id="archiveJ" class="archive-row"></div>
@@ -1733,6 +1789,12 @@ body{
         </div>
       </div>
       <div class="stk-tabs" id="stkTabs"></div>
+      <div id="stkPomoTools" style="display:none;margin-top:6px;">
+        <button class="pxl-btn" onclick="stkAutoValues()" title="按番茄钟按钮的常用时长，给贴纸轮流分配面额">
+          ⚡ 按常用时长自动分配面额
+        </button>
+        <span class="stk-tip" style="margin-left:6px;">格子上出现哪张图，取决于这一格跑了多少分钟</span>
+      </div>
       <div class="stk-bar">
         <span>共 <b id="stkCount">0</b> 张</span>
         <span class="stk-tip">点图片可改名 · 右上角 ✕ 删除 · 在格子上右键可换一张</span>
@@ -3217,6 +3279,21 @@ function stkSetValue(id){
   renderTasks();
 }
 
+// 按番茄钟上的常用时长，给贴纸轮流分配面额
+const POMO_COMMON_MINS = [5,10,15,30,60,90];
+function stkAutoValues(){
+  const arr = stkAll('pomo');
+  if(!arr.length){ showToast('这个柜子里还没有贴纸'); return; }
+  if(!confirm('把 '+arr.length+' 张番茄贴纸按 5 / 10 / 15 / 30 / 60 / 90 分钟轮流分配面额？\n（原来手动设过的会被覆盖）')) return;
+  if(!S.stkVal || typeof S.stkVal !== 'object') S.stkVal = {};
+  arr.forEach((sk,i)=>{ S.stkVal[sk.id] = POMO_COMMON_MINS[i % POMO_COMMON_MINS.length]; });
+  saveState();
+  renderStickerLib();
+  updateWalletUI();
+  renderTasks();
+  showToast('已分配面额，格子上的图会跟着时长走');
+}
+
 // 记一个 m 分钟的番茄时，挑面额最贴近的那张贴纸；同面额的多张里随机
 function stkPickForMinutes(m){
   const arr = stkOf('pomo');
@@ -3324,6 +3401,8 @@ function renderStickerLib(){
       + ' onclick="stkSwitchCat(\''+c.k+'\')">'+c.n+' ('+stkAll(c.k).length+')</button>'
     ).join('');
   }
+  const tools = document.getElementById('stkPomoTools');
+  if(tools) tools.style.display = (STK.cat === 'pomo') ? 'block' : 'none';
   const hint = document.getElementById('stkDropHint');
   if(hint){
     const tip = ((STK.CATS||[]).find(c=>c.k===STK.cat)||{}).tip || '';
@@ -3550,13 +3629,30 @@ function cyclePomoCellSize(){
   showToast('格子大小：'+POMO_SIZE_NAME[next]);
 }
 
-// 每条记录第一次渲染时锁定一张贴纸，之后它就一直是那张
+// 贴纸和格子里的分钟数必须对得上：
+// 先找出面额离这一格最近的那一组，记录上原来那张如果不在这组里就换掉
+function stkGroupFor(m){
+  const arr = stkOf('pomo');
+  if(!arr.length) return {best:null, pool:[]};
+  let best = Infinity;
+  arr.forEach(sk=>{ best = Math.min(best, Math.abs(stkValOf(sk.id) - m)); });
+  return {best:best, pool:arr.filter(sk=>Math.abs(stkValOf(sk.id) - m) === best)};
+}
 function stkForRecord(r, i){
   if(!r) return null;
-  const s = stkById(r.sk);
-  if(s) return s;
-  const pick = stkPickStable('pomo', (r.ts||'') + '#' + i + '#' + (r.m||0));
-  if(pick){ r.sk = pick.id; saveStateSoon(); }
+  const m = r.m || 0;
+  const {pool} = stkGroupFor(m);
+  if(!pool.length) return null;
+  const cur = stkById(r.sk);
+  // 原来那张还在正确的面额组里，就继续用它
+  if(cur && pool.some(sk=>sk.id === cur.id)) return cur;
+  // 否则在这一组里稳定地挑一张，并把它记下来
+  const seed = (r.ts||'') + '#' + i + '#' + m;
+  let h = 2166136261;
+  for(let k=0;k<seed.length;k++){ h ^= seed.charCodeAt(k); h = Math.imul(h, 16777619); }
+  const pick = pool[(h>>>0) % pool.length];
+  r.sk = pick.id;
+  saveStateSoon();
   return pick;
 }
 
@@ -3629,7 +3725,9 @@ function pomoGridHtml(t, goalFallback){
     } else if(i===log.length && running){
       h += '<div class="pomo-cell live" title="正在跑这一格"><span class="pg-t">⏳</span><span class="pg-m">进行中</span></div>';
     } else {
-      const ghost = stkPickStable('pomo', 'empty#'+t.id+'#'+i);
+      const lastM = log.length ? (log[log.length-1].m || 25) : 25;
+      const gpool = stkGroupFor(lastM).pool;
+      const ghost = gpool.length ? gpool[i % gpool.length] : null;
       h += '<div class="pomo-cell empty" title="点击手动补记一个番茄钟" onclick="addPomoManual('+t.id+')">'
         + (ghost ? stkImgHtml(ghost) + '<span class="pg-plus">+</span>' : '+')
         + '</div>';
@@ -5936,25 +6034,29 @@ function openRandomCard(jid){
   card.style.display='block';
 
   // build skeleton once per entry switch
-  card.innerHTML=`<div style="background:var(--surface2);border:2px solid var(--purple);padding:16px 18px;margin-bottom:16px;">
-    <div style="font-size:11px;font-weight:bold;color:#800080;margin-bottom:8px;">✦ 过去的自己说</div>
-    <div id="rc-body" style="font-size:17px;color:#000;line-height:1.6;white-space:pre-wrap;margin-bottom:8px;"></div>
-    <div id="rc-tags" style="margin-bottom:8px;"></div>
-    <div id="rc-ts" style="font-size:11px;color:#808080;margin-bottom:10px;"></div>
-    <div style="margin-bottom:10px;">
-      <div id="rc-rtoggle" style="font-size:12px;color:#000080;margin-bottom:6px;cursor:pointer;user-select:none;">▸ 回复与补充 (0)</div>
+  card.innerHTML=`<div class="rc-card">
+    <div class="rc-head">
+      <span>过去的自己说</span>
+      <span class="rc-when" id="rc-ts"></span>
+      <span class="rc-x" id="rc-closebtn" title="关闭">✕</span>
+    </div>
+    <div class="rc-body" id="rc-body"></div>
+    <div class="rc-meta" id="rc-tags"></div>
+    <div class="rc-replies">
+      <div class="rc-rtoggle" id="rc-rtoggle">▸ 回复与补充 (0)</div>
       <div id="rc-rsection" style="display:none;">
         <div id="rc-rlist"></div>
-        <textarea id="rc-rinput" rows="3" placeholder="写下此刻的想法、补充或反驳..."
-          style="width:100%;background:#fff;border:2px inset #808080;color:#000;padding:7px 10px;font-size:13px;outline:none;resize:vertical;margin-top:6px;"></textarea>
+        <textarea class="rc-rinput" id="rc-rinput" rows="3" placeholder="写下此刻的想法、补充或反驳..."></textarea>
         <button class="pxl-btn primary" id="rc-rbtn" style="margin-top:6px;">添加补充</button>
       </div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <button class="pxl-btn" id="rc-nextbtn" style="border-color:#800080;color:#800080;">再抽一条</button>
-      <button class="pxl-btn" id="rc-likebtn" onclick="rcToggleLike()" title="点赞这条记忆">♡ 点赞</button>
-      <span id="rc-likecount" style="font-size:12px;color:#cc0000;min-width:30px;cursor:pointer;" onclick="rcEditLikes()" title="点击手动修改点赞数"></span>
-      <button class="pxl-btn" id="rc-closebtn">关闭</button>
+    <div class="rc-foot">
+      <span class="rc-like" id="rc-likebtn" onclick="rcToggleLike()" title="点赞这条记忆">
+        <span class="rc-heart">♡</span><span id="rc-liketext">点赞</span>
+      </span>
+      <span id="rc-likecount" style="font-size:11px;color:#9a8aaa;cursor:pointer;" onclick="rcEditLikes()" title="点击手动修改点赞数"></span>
+      <span class="spacer"></span>
+      <button class="pxl-btn recall-btn" id="rc-nextbtn">🎲 再抽一条</button>
     </div>
   </div>`;
 
@@ -5969,7 +6071,7 @@ function openRandomCard(jid){
   };
 
   rcRefresh();
-  card.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(card.scrollIntoView) card.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 function rcRefresh(){
@@ -5978,7 +6080,8 @@ function rcRefresh(){
   if(!j.replies) j.replies=[];
   if(!j.links)   j.links=[];
 
-  const b=document.getElementById('rc-body');      if(b) b.textContent=j.text;
+  const b=document.getElementById('rc-body');
+  if(b) b.innerHTML='<span class="rc-quotemark">“</span>'+escHtml(j.text||'');
   const ts=document.getElementById('rc-ts');       if(ts) ts.textContent=fmtDT(j.createdAt);
   const tg=document.getElementById('rc-tags');
   if(tg) tg.innerHTML=j.tags&&j.tags.length
@@ -5989,17 +6092,21 @@ function rcRefresh(){
   const lb=document.getElementById('rc-likebtn');
   const lk=document.getElementById('rc-likecount');
   const likes=j.likes||0;
-  if(lb){ lb.textContent=likes>0?'♥ 已点赞':'♡ 点赞'; lb.style.color=likes>0?'#cc0000':''; lb.style.borderColor=likes>0?'#cc0000':''; }
-  if(lk){ lk.textContent=likes>0?'×'+likes:'设置'; lk.style.color=likes>0?'#cc0000':'#808080'; }
+  if(lb){
+    lb.classList.toggle('on', likes>0);
+    const heart=lb.querySelector('.rc-heart'); if(heart) heart.textContent=likes>0?'♥':'♡';
+    const txt=lb.querySelector('#rc-liketext'); if(txt) txt.textContent=likes>0?'已点赞':'点赞';
+  }
+  if(lk){ lk.textContent=likes>0?('×'+likes):''; }
 
   const rl=document.getElementById('rc-rlist');
   if(rl) rl.innerHTML=j.replies.length
-    ? j.replies.map((r,i)=>'<div style="border-left:2px solid var(--blue);padding:6px 10px;margin-bottom:6px;position:relative;">'
-        +'<div style="font-size:10px;color:#808080;margin-bottom:3px;">'+r.at+'</div>'
-        +'<div style="font-size:15px;color:#000;white-space:pre-wrap;">'+r.text+'</div>'
-        +'<button class="icon-btn" onclick="rcDelReply('+i+')" style="position:absolute;top:4px;right:4px;color:#cc0000;font-size:11px;">✕</button>'
+    ? j.replies.map((r,i)=>'<div class="rc-reply">'
+        +'<div class="rc-rt">'+escHtml(r.at||'')+'</div>'
+        +'<div style="font-size:14px;color:#111;white-space:pre-wrap;line-height:1.7;">'+escHtml(r.text||'')+'</div>'
+        +'<button class="icon-btn rc-rx" onclick="rcDelReply('+i+')">✕</button>'
         +'</div>').join('')
-    : '<div style="font-size:14px;color:#808080;margin-bottom:6px;">（还没有补充）</div>';
+    : '<div style="font-size:13px;color:#9a8aaa;margin-bottom:6px;">（还没有补充）</div>';
 }
 
 function rcAddReply(){
@@ -6183,69 +6290,25 @@ window.addEventListener('appinstalled',()=>{
 // ═══════════════════════════════════════
 // NOTES — Zettelkasten (atomic cards)
 // ═══════════════════════════════════════
-function newCard(threadId){
+function newCard(){
   document.getElementById('cardModalTitle').textContent='新建卡片';
   document.getElementById('editCardId').value='';
-  document.getElementById('cardQuote').value='';
   document.getElementById('cardBody').value='';
   document.getElementById('cardTags').value='';
-  document.getElementById('cardThreadId').value=threadId||'';
-  document.getElementById('cardThreadHint').style.display=threadId?'block':'none';
-  document.getElementById('typeQuote').checked=true;
-  document.getElementById('quoteRow').style.display='block';
-  document.getElementById('bodyLabel').textContent='我的想法 / 评注';
-  // 初始化标签行位置（Quote 在 body 前，Idea 在 body 后）
-  const _isQ2=document.getElementById('typeQuote').checked;
-  const _modal=document.querySelector('#cardModal .modal');
-  const _tagsRow=document.getElementById('cardTagsRow');
-  const _bodyRow=document.getElementById('cardBodyRow');
-  if(_isQ2){
-    _modal.insertBefore(_tagsRow, _bodyRow);
-  } else {
-    const _btns=_modal.querySelector('.modal-btns');
-    _modal.insertBefore(_tagsRow, _btns);
-  }
   openModal('cardModal');
-  setTimeout(()=>document.getElementById('cardQuote').focus(),100);
+  setTimeout(()=>document.getElementById('cardBody').focus(),100);
 }
 
-document.addEventListener('DOMContentLoaded',()=>{
-  document.querySelectorAll('input[name="cardType"]').forEach(r=>{
-    r.addEventListener('change',()=>{
-      const isQ=document.getElementById('typeQuote').checked;
-      document.getElementById('quoteRow').style.display=isQ?'block':'none';
-      document.getElementById('bodyLabel').textContent=isQ?'我的想法 / 评注':'想法内容';
-      if(!isQ) setTimeout(()=>document.getElementById('cardBody').focus(),50);
-      // Quote: 标签行在 body 前；Idea: 标签行在 body 后
-      const modal=document.querySelector('#cardModal .modal');
-      const tagsRow=document.getElementById('cardTagsRow');
-      const bodyRow=document.getElementById('cardBodyRow');
-      if(isQ){
-        // 把标签行移到 body 行前
-        modal.insertBefore(tagsRow, bodyRow);
-      } else {
-        // 把标签行移到 body 行后（modal-btns 前）
-        const btns=modal.querySelector('.modal-btns');
-        modal.insertBefore(tagsRow, btns);
-      }
-    });
-  });
-});
-
 function saveCard(){
-  const type=document.querySelector('input[name="cardType"]:checked').value;
-  const quote=document.getElementById('cardQuote').value.trim();
   const body=document.getElementById('cardBody').value.trim();
-  if(type==='quote'&&!quote) return;
-  if(type==='idea'&&!body) return;
+  if(!body) return;
   const tags=document.getElementById('cardTags').value.split(',').map(s=>s.trim()).filter(Boolean);
   const editId=document.getElementById('editCardId').value;
   if(editId){
     const c=S.cards.find(x=>x.id==editId);
-    if(c){c.type=type;c.quote=quote;c.body=body;c.tags=tags;c.editedAt=new Date().toISOString();}
+    if(c){ c.body=body; c.tags=tags; c.editedAt=new Date().toISOString(); }
   } else {
-    const _tid=document.getElementById('cardThreadId').value||null;
-    S.cards.unshift({id:S.nextId++,type,quote,body,tags,links:[],threadId:_tid||null,createdAt:new Date().toISOString()});
+    S.cards.unshift({id:S.nextId++, body, tags, createdAt:new Date().toISOString()});
     addXP(5,'卡片笔记');
   }
   saveState(); closeModal('cardModal'); renderCards();
@@ -6255,147 +6318,17 @@ function editCard(id){
   const c=S.cards.find(x=>x.id==id); if(!c) return;
   document.getElementById('cardModalTitle').textContent='编辑卡片';
   document.getElementById('editCardId').value=id;
-  document.getElementById('cardQuote').value=c.quote||'';
-  document.getElementById('cardBody').value=c.body||'';
+  // 老卡片里如果有 quote，合并进正文，不再分两栏
+  document.getElementById('cardBody').value=[(c.quote||'').trim(), (c.body||'').trim()].filter(Boolean).join('\n\n');
   document.getElementById('cardTags').value=(c.tags||[]).join(', ');
-  const isQ=c.type==='quote';
-  document.getElementById('typeQuote').checked=isQ;
-  document.getElementById('typeIdea').checked=!isQ;
-  document.getElementById('quoteRow').style.display=isQ?'block':'none';
-  document.getElementById('bodyLabel').textContent=isQ?'我的想法 / 评注':'想法内容';
-  const _isQ3=document.getElementById('typeQuote').checked;
-  const _modal3=document.querySelector('#cardModal .modal');
-  const _tagsRow3=document.getElementById('cardTagsRow');
-  const _bodyRow3=document.getElementById('cardBodyRow');
-  if(_isQ3){ _modal3.insertBefore(_tagsRow3, _bodyRow3); }
-  else { const _btns3=_modal3.querySelector('.modal-btns'); _modal3.insertBefore(_tagsRow3, _btns3); }
   openModal('cardModal');
+  setTimeout(()=>document.getElementById('cardBody').focus(),100);
 }
 
 function deleteCard(id){
   pushUndo();
-  S.cards.forEach(c=>{
-    if(c.links) c.links=c.links.filter(x=>x!=id);
-    if(c.threadId==id) c.threadId=null;
-  });
   S.cards=S.cards.filter(x=>x.id!=id);
   saveState(); renderCards(); showUndoBar('卡片已删除');
-}
-
-let _clJid=null;
-
-function toggleCardLinks(id){
-  const panel=document.getElementById('cl-panel-'+id);
-  const btn=document.getElementById('cl-btn-'+id);
-  if(!panel) return;
-  const open=panel.style.display==='none';
-  panel.style.display=open?'block':'none';
-  if(btn) btn.textContent=open?'▾ 收起链接':'▸ 链接 ('+(S.cards.find(x=>x.id==id)||{links:[]}).links.length+')';
-  if(open) buildLinkPanel(id);
-}
-
-function buildLinkPanel(id){
-  _clJid=id;
-  const panel=document.getElementById('cl-panel-'+id); if(!panel) return;
-  const c=S.cards.find(x=>x.id==id); if(!c) return;
-  if(!c.links) c.links=[];
-  panel.innerHTML='<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;"><div id="cl-linked-'+id+'"></div><div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;"><input id="cl-kw-'+id+'" placeholder="搜索卡片..." autocomplete="off" style="flex:1;min-width:80px;background:#fff;border:2px inset #808080;color:#000;padding:5px 8px;font-family:var(--font-vt);font-size:15px;outline:none;"/></div><div id="cl-results-'+id+'" style="margin-top:6px;"></div></div>';
-  document.getElementById('cl-kw-'+id).addEventListener('input',function(){ renderLinkResults(id,this.value); });
-  renderLinked(id);
-  renderLinkResults(id,'');
-}
-
-function renderLinked(id){
-  const c=S.cards.find(x=>x.id==id); if(!c) return;
-  const el=document.getElementById('cl-linked-'+id); if(!el) return;
-  if(!(c.links||[]).length){el.innerHTML='<div style="font-size:13px;color:#999;margin-bottom:4px;">还没有链接</div>';return;}
-  el.innerHTML='';
-  c.links.forEach(lid=>{
-    const lk=S.cards.find(x=>x.id==lid); if(!lk) return;
-    const quote=lk.quote||'', body=lk.body||'';
-    const wrap=document.createElement('div');
-    wrap.style.cssText='border-bottom:1px solid #eee;padding:6px 0;';
-    // expand/collapse toggle
-    let expanded=false;
-    const preview=document.createElement('div');
-    preview.style.cssText='font-size:13px;color:#555;cursor:pointer;font-family:Arial,sans-serif;line-height:1.5;';
-    const previewText=(lk.type==='quote'?quote:body).slice(0,60)+((lk.type==='quote'?quote:body).length>60?'…':'');
-    preview.textContent=previewText;
-    preview.title='点击查看完整内容';
-    const full=document.createElement('div');
-    full.style.cssText='display:none;margin-top:6px;background:#f9f9f9;border-radius:3px;padding:8px;font-family:Arial,sans-serif;';
-    if(quote){
-      const qEl=document.createElement('div');
-      qEl.style.cssText='font-size:13px;color:#333;font-style:italic;border-left:3px solid #4a90d9;padding-left:8px;margin-bottom:6px;white-space:pre-wrap;line-height:1.6;';
-      qEl.textContent=quote;
-      full.appendChild(qEl);
-    }
-    if(body){
-      const bEl=document.createElement('div');
-      bEl.style.cssText='font-size:14px;color:#111;white-space:pre-wrap;line-height:1.6;';
-      bEl.textContent=body;
-      full.appendChild(bEl);
-    }
-    const ts=document.createElement('div');
-    ts.style.cssText='font-size:11px;color:#999;margin-top:6px;';
-    ts.textContent=fmtDT(lk.createdAt);
-    full.appendChild(ts);
-    preview.onclick=()=>{
-      expanded=!expanded;
-      full.style.display=expanded?'block':'none';
-      preview.style.color=expanded?'#111':'#555';
-    };
-    const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:flex-start;gap:6px;';
-    row.appendChild(preview);
-    const xbtn=document.createElement('button');
-    xbtn.className='icon-btn';
-    xbtn.textContent='✕';
-    xbtn.style.cssText='color:#e94560;font-size:10px;flex-shrink:0;';
-    xbtn.onclick=()=>removeCardLink(id,lid);
-    row.appendChild(xbtn);
-    wrap.appendChild(row);
-    wrap.appendChild(full);
-    el.appendChild(wrap);
-  });
-}
-
-function renderLinkResults(id,kw){
-  const c=S.cards.find(x=>x.id==id); if(!c) return;
-  const el=document.getElementById('cl-results-'+id); if(!el) return;
-  const q=(kw||'').toLowerCase();
-  const filtered=S.cards.filter(x=>{
-    if(x.id==id) return false;
-    if((c.links||[]).includes(x.id)) return false;
-    if(!q) return true;
-    const txt=((x.quote||'')+(x.body||'')+(x.tags||[]).join(' ')).toLowerCase();
-    return txt.includes(q);
-  });
-  if(!filtered.length){el.innerHTML='<div style="font-size:12px;color:#808080;padding:4px 0;">没有符合条件的卡片</div>';return;}
-  el.innerHTML='<select id="cl-sel-'+id+'" style="width:100%;background:#fff;border:2px inset #808080;color:#000;padding:5px 8px;font-family:var(--font-vt);font-size:14px;outline:none;margin-bottom:6px;"><option value="">选择要链接的卡片 ('+filtered.length+')...</option>'+filtered.map(x=>'<option value="'+x.id+'">'+(x.type==='quote'?'[Q] ':'[I] ')+((x.type==='quote'?x.quote:x.body)||'').slice(0,50)+'…</option>').join('')+'</select><button class="pxl-btn" onclick="addCardLink('+id+')" style="border-color:#000080;color:var(--blue);">🔗 建立链接</button>';
-}
-
-function addCardLink(id){
-  const c=S.cards.find(x=>x.id==id); if(!c) return;
-  const sel=document.getElementById('cl-sel-'+id);
-  const lid=sel?parseInt(sel.value):0; if(!lid) return;
-  if(!c.links) c.links=[];
-  if(!c.links.includes(lid)) c.links.push(lid);
-  const lk=S.cards.find(x=>x.id==lid);
-  if(lk){if(!lk.links)lk.links=[];if(!lk.links.includes(id))lk.links.push(id);}
-  saveState(); renderLinked(id); renderLinkResults(id,document.getElementById('cl-kw-'+id).value);
-  const btn=document.getElementById('cl-btn-'+id);
-  if(btn) btn.textContent='▾ 收起链接 ('+c.links.length+')';
-}
-
-function removeCardLink(id,lid){
-  const c=S.cards.find(x=>x.id==id); if(!c) return;
-  c.links=(c.links||[]).filter(x=>x!=lid);
-  const lk=S.cards.find(x=>x.id==lid);
-  if(lk) lk.links=(lk.links||[]).filter(x=>x!=id);
-  saveState(); renderLinked(id); renderLinkResults(id,document.getElementById('cl-kw-'+id).value);
-  const btn=document.getElementById('cl-btn-'+id);
-  if(btn) btn.textContent='▸ 链接 ('+c.links.length+')';
 }
 
 function applyHlToText(text, hls){
@@ -6416,88 +6349,81 @@ function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 
 var _activeTagFilter = null;
 
+// 点标签 = 只看挂了这个标签的卡片，跟正文里是否出现这几个字无关
 function filterCardsByTag(tag){
-  _activeTagFilter = tag;
-  const inp=document.getElementById('cardSearch'); if(inp) inp.value=tag;
+  _activeTagFilter = (_activeTagFilter === tag) ? null : tag;
   renderCards();
-  document.getElementById('sec-notes').scrollIntoView({behavior:'smooth',block:'start'});
+  const sec=document.getElementById('sec-notes');
+  if(sec && sec.scrollIntoView) sec.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function clearCardTagFilter(){
   _activeTagFilter = null;
-  const inp=document.getElementById('cardSearch'); if(inp) inp.value='';
   renderCards();
 }
 
 function renderCards(){
-  const kw=((document.getElementById('cardSearch')||{}).value||'').toLowerCase();
-  if(_activeTagFilter && kw!==_activeTagFilter.toLowerCase()) _activeTagFilter=null;
+  const kw=((document.getElementById('cardSearch')||{}).value||'').toLowerCase().trim();
   const bar=document.getElementById('cardTagFilterBar');
   if(bar){
     if(_activeTagFilter){
       bar.style.display='flex';
-      bar.innerHTML='正在按标签筛选：<b>'+_activeTagFilter+'</b><button class="pxl-btn" style="font-size:11px;padding:0 6px;" onclick="clearCardTagFilter()">✕ 清除</button>';
+      bar.innerHTML='正在按标签筛选：<b>#'+escHtml(_activeTagFilter)+'</b>'
+        + '<button class="pxl-btn" style="font-size:11px;padding:0 6px;" onclick="clearCardTagFilter()">✕ 清除</button>';
     } else {
       bar.style.display='none';
       bar.innerHTML='';
     }
   }
   const list=document.getElementById('cardList'); if(!list) return;
+
   const items=(S.cards||[]).filter(c=>{
+    // 标签筛选走精确匹配
+    if(_activeTagFilter && !(c.tags||[]).some(t=>t===_activeTagFilter)) return false;
     if(!kw) return true;
-    return ((c.quote||'')+(c.body||'')+(c.tags||[]).join(' ')).toLowerCase().includes(kw);
+    return (cardText(c)+' '+(c.tags||[]).join(' ')).toLowerCase().includes(kw);
   });
+
   if(!items.length){
-    list.innerHTML='<div class="empty-state" style="color:#999;background:#fff;padding:40px 20px;text-align:center;"><div style="font-size:40px;margin-bottom:12px;">🗃</div>一卡一想法，从这里开始</div>';
+    list.innerHTML='<div class="empty-state" style="color:#999;background:#fff;padding:40px 20px;text-align:center;">'
+      + '<div style="font-size:40px;margin-bottom:12px;">🗃</div>'
+      + (_activeTagFilter ? ('没有挂着 #'+escHtml(_activeTagFilter)+' 的卡片') : '一卡一想法，从这里开始')
+      + '</div>';
     return;
   }
+
   list.innerHTML='';
-  // 子卡集合（有 threadId 的卡片）不单独渲染
-  const allCards=S.cards||[];
-  const childIds=new Set(allCards.filter(c=>c.threadId).map(c=>c.id));
   items.forEach(function(c){
-    if(childIds.has(c.id)) return; // 子卡跳过，在主卡下渲染
-    const isQ=c.type==='quote';
     const wrap=document.createElement('div');
-    wrap.className='card-note'+(isQ?'':' idea-card');
+    wrap.className='card-note';
     wrap.id='cn-'+c.id;
-    const typeEl=document.createElement('div');
-    typeEl.className='card-note-type';
-    typeEl.textContent=isQ?'QUOTE':'IDEA';
-    wrap.appendChild(typeEl);
-    if(c.quote){
-      const qEl=document.createElement('div');
-      qEl.className='card-quote';
-      qEl.innerHTML=applyHlToText(c.quote,c.quoteHl);
-      qEl.addEventListener('mouseup',function(e){ onCardSelect(e,c.id,'quote'); });
-      wrap.appendChild(qEl);
-    }
-    if(c.body){
-      const bEl=document.createElement('div');
-      bEl.className='card-body';
-      bEl.innerHTML=applyHlToText(c.body,c.bodyHl);
-      bEl.addEventListener('mouseup',function(e){ onCardSelect(e,c.id,'body'); });
-      wrap.appendChild(bEl);
-    }
+
+    const bEl=document.createElement('div');
+    bEl.className='card-body';
+    bEl.innerHTML=applyHlToText(cardText(c), c.bodyHl);
+    bEl.addEventListener('mouseup',function(e){ onCardSelect(e,c.id,'body'); });
+    wrap.appendChild(bEl);
+
     if((c.tags||[]).length){
       const tEl=document.createElement('div');
       tEl.className='card-tags';
-      tEl.innerHTML=c.tags.map(function(t){ const esc=t.replace(/'/g,"\\'"); return '<span class="card-tag" style="cursor:pointer;" onclick="filterCardsByTag(\''+esc+'\')" title="查看带此标签的卡片">'+t+'</span>'; }).join('');
+      tEl.innerHTML=c.tags.map(function(t){
+        const esc=String(t).replace(/'/g,"\\'");
+        const on=(_activeTagFilter===t)?' on':'';
+        return '<span class="card-tag'+on+'" onclick="filterCardsByTag(\''+esc+'\')" title="只看这个标签的卡片">'+escHtml(t)+'</span>';
+      }).join('');
       wrap.appendChild(tEl);
     }
+
     const acts=document.createElement('div');
     acts.className='card-actions';
     const editBtn=document.createElement('button');
     editBtn.className='card-action-btn';
-    editBtn.textContent='[EDIT]';
+    editBtn.textContent='编辑';
     editBtn.onclick=function(){ editCard(c.id); };
-    const linkBtn=document.createElement('button');
-    linkBtn.className='card-action-btn card-link-btn';
-    linkBtn.textContent='🔗 链接 ('+(c.links||[]).length+')';
-    linkBtn.onclick=function(){ toggleCardLinks(c.id); };
     const expBtn=document.createElement('button');
     expBtn.className='card-action-btn';
-    expBtn.textContent='↓ 导出';
+    expBtn.textContent='导出';
     expBtn.onclick=function(){ openCardExportModal(c.id); };
     const ts=document.createElement('span');
     ts.className='card-ts';
@@ -6507,120 +6433,29 @@ function renderCards(){
     delBtn.textContent='✕';
     delBtn.style.color='#e94560';
     delBtn.onclick=function(){ deleteCard(c.id); };
-    // 串按钮：直接新建子卡
-    const threadBtn=document.createElement('button');
-    threadBtn.className='card-action-btn';
-    threadBtn.style.color='#800080';
-    const _children=allCards.filter(x=>x.threadId==String(c.id));
-    const _tOpen=!!c.threadOpen;
-    threadBtn.textContent='✦ 串'+(_children.length?'('+_children.length+')':'');
-    threadBtn.title=_children.length?'添加到串':'开启串';
-    threadBtn.onclick=function(){ newCard(String(c.id)); };
-    // 展开/折叠箭头（只在有子卡时显示）
-    const threadToggle=document.createElement('button');
-    threadToggle.className='card-action-btn';
-    threadToggle.style.cssText='color:#800080;padding:0 2px;font-size:10px;';
-    threadToggle.textContent=_tOpen?'▲':'▼';
-    threadToggle.title=_tOpen?'折叠串':'展开串';
-    threadToggle.style.display=_children.length?'':'none';
-    threadToggle.onclick=function(){ c.threadOpen=!c.threadOpen; renderCards(); };
     acts.appendChild(editBtn);
-    acts.appendChild(linkBtn);
     acts.appendChild(expBtn);
-    acts.appendChild(threadBtn);
-    acts.appendChild(threadToggle);
     acts.appendChild(ts);
     acts.appendChild(delBtn);
     wrap.appendChild(acts);
-    const panel=document.createElement('div');
-    panel.id='cl-panel-'+c.id;
-    panel.style.display='none';
-    panel.className='card-link-panel';
-    wrap.appendChild(panel);
     list.appendChild(wrap);
-    // 串展开区（默认折叠，只在 threadOpen 时显示）
-    if(_tOpen && _children.length>0){
-      const tWrap=document.createElement('div');
-      tWrap.style.cssText='margin-left:18px;border-left:3px solid #d0a0ff;padding-left:10px;margin-bottom:4px;';
-      _children.forEach(function(ch){
-        const cWrap=document.createElement('div');
-        cWrap.className='card-note'+( ch.type==='quote'?'':' idea-card');
-        cWrap.style.marginBottom='6px';
-        const cType=document.createElement('div');
-        cType.className='card-note-type';
-        cType.textContent=ch.type==='quote'?'QUOTE':'IDEA';
-        cWrap.appendChild(cType);
-        if(ch.quote){
-          const q=document.createElement('div'); q.className='card-quote';
-          q.innerHTML=applyHlToText(ch.quote,ch.quoteHl);
-          (function(cid){ q.addEventListener('mouseup',function(e){ onCardSelect(e,cid,'quote'); }); })(ch.id);
-          cWrap.appendChild(q);
-        }
-        if(ch.body){
-          const b=document.createElement('div'); b.className='card-body';
-          b.innerHTML=applyHlToText(ch.body,ch.bodyHl);
-          (function(cid){ b.addEventListener('mouseup',function(e){ onCardSelect(e,cid,'body'); }); })(ch.id);
-          cWrap.appendChild(b);
-        }
-        if((ch.tags||[]).length){ const t=document.createElement('div'); t.className='card-tags'; t.innerHTML=ch.tags.map(function(tg){ const esc=tg.replace(/'/g,"\\'"); return '<span class="card-tag" style="cursor:pointer;" onclick="filterCardsByTag(\''+esc+'\')" title="查看带此标签的卡片">'+tg+'</span>'; }).join(''); cWrap.appendChild(t); }
-        const cActs=document.createElement('div'); cActs.className='card-actions';
-        const cEdit=document.createElement('button'); cEdit.className='card-action-btn'; cEdit.textContent='[EDIT]'; cEdit.onclick=function(){ editCard(ch.id); }; cActs.appendChild(cEdit);
-        const cDetach=document.createElement('button'); cDetach.className='card-action-btn'; cDetach.textContent='↗ 独立'; cDetach.title='转为独立卡片并链接主卡'; cDetach.style.color='#0066cc';
-        (function(chId,pId){ cDetach.onclick=function(){ detachFromThread(chId,pId); }; })(ch.id, c.id);
-        cActs.appendChild(cDetach);
-        const cTs=document.createElement('span'); cTs.className='card-ts'; cTs.textContent=fmtDT(ch.createdAt); cActs.appendChild(cTs);
-        const cDel=document.createElement('button'); cDel.className='card-action-btn'; cDel.style.color='#e94560'; cDel.textContent='✕'; cDel.onclick=function(){ deleteCard(ch.id); }; cActs.appendChild(cDel);
-        cWrap.appendChild(cActs);
-        tWrap.appendChild(cWrap);
-      });
-
-      list.appendChild(tWrap);
-    }
   });
 }
 
-function detachFromThread(childId, parentId){
-  const cards=S.cards||[];
-  const child=cards.find(c=>c.id==childId);
-  const parent=cards.find(c=>c.id==parentId);
-  if(!child||!parent) return;
-  child.threadId=null; // 移出串
-  if(!parent.links) parent.links=[];
-  if(!parent.links.includes(childId)) parent.links.push(childId);
-  if(!child.links) child.links=[];
-  if(!child.links.includes(parentId)) child.links.push(parentId); // 双向 link
-  saveState(); renderCards();
-  showToast('已转为独立卡片并链接');
+// 老卡片可能还留着 quote 字段，显示时合并到正文里
+function cardText(c){
+  if(!c) return '';
+  const q=(c.quote||'').trim(), b=(c.body||'').trim();
+  return [q,b].filter(Boolean).join('\n\n');
 }
 
 function exportCards(){
-  const cards=S.cards||[];
-  // build index map: card.id -> export number
-  const idxMap={};
-  cards.forEach((c,i)=>{ idxMap[c.id]=i+1; });
-  let txt='=== 卡片笔记 ===\n';
-  txt+='导出时间: '+fmtDT(new Date().toISOString())+'\n\n';
-  cards.forEach((c,i)=>{
-    txt+='['+(i+1)+'] '+(c.type==='quote'?'QUOTE':'IDEA')+' · '+fmtDT(c.createdAt)+'\n';
-    if(c.quote) txt+='"'+c.quote+'"\n';
-    if(c.body) txt+=c.body+'\n';
-    if((c.tags||[]).length) txt+='标签: '+c.tags.join(', ')+'\n';
-    if((c.links||[]).length){
-      const linkNums=c.links.map(lid=>{ const n=idxMap[lid]; return n?'['+n+']':'[?]'; });
-      txt+='链接: '+linkNums.join(' ')+'\n';
-    }
+  let txt='卡片笔记导出 · '+new Date().toLocaleString()+'\n\n';
+  (S.cards||[]).forEach(c=>{
+    txt+='['+fmtDT(c.createdAt)+']\n'+cardText(c)+'\n';
+    if((c.tags||[]).length) txt+='#'+c.tags.join(' #')+'\n';
     txt+='\n---\n\n';
   });
-  // append link map at end
-  const hasLinks=cards.some(c=>(c.links||[]).length>0);
-  if(hasLinks){
-    txt+='\n=== 链接关系 ===\n';
-    cards.forEach((c,i)=>{
-      if(!(c.links||[]).length) return;
-      const linkNums=c.links.map(lid=>{ const n=idxMap[lid]; return n?'['+n+']':'[?]'; });
-      txt+='['+( i+1)+'] → '+linkNums.join(', ')+'\n';
-    });
-  }
   dl('cards.txt',txt);
 }
 
@@ -6630,89 +6465,26 @@ var _expCardId=null;
 
 function openCardExportModal(cardId){
   _expCardId=cardId;
-  var cards=S.cards||[];
-  var card=cards.find(function(c){return c.id==cardId;});
+  const card=(S.cards||[]).find(c=>c.id==cardId);
   if(!card) return;
-  var opts=document.getElementById('expScopeOpts');
-  opts.innerHTML='';
-  var mkOpt=function(val,label,checked){
-    var lbl=document.createElement('label');
-    lbl.style.cssText='display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;';
-    var inp=document.createElement('input');
-    inp.type='radio'; inp.name='expScope'; inp.value=val;
-    if(checked) inp.checked=true;
-    lbl.appendChild(inp);
-    lbl.appendChild(document.createTextNode(label));
-    opts.appendChild(lbl);
-  };
-  mkOpt('solo','仅此卡片',true);
-  var children=cards.filter(function(c){return c.threadId==String(cardId);});
-  if(children.length) mkOpt('thread','此卡片 + 串（共'+(children.length+1)+'张）',false);
-  if((card.links||[]).length){
-    mkOpt('links','此卡片 + 所有链接（共'+((card.links||[]).length+1)+'张）',false);
-    // 检查这些链接卡片里有没有自己的串
-    var linkedCards=(card.links||[]).map(function(lid){return cards.find(function(c){return c.id===lid;});}).filter(Boolean);
-    var linkedWithThread=linkedCards.filter(function(lc){return cards.some(function(c){return c.threadId==String(lc.id);});});
-    if(linkedWithThread.length){
-      var hint=document.createElement('div');
-      hint.style.cssText='margin-left:20px;margin-top:4px;';
-      var chk=document.createElement('input');
-      chk.type='checkbox'; chk.id='expLinksIncThread';
-      chk.style.cursor='pointer';
-      var lbl2=document.createElement('label');
-      lbl2.htmlFor='expLinksIncThread';
-      lbl2.style.cssText='font-size:12px;color:#800080;cursor:pointer;margin-left:6px;';
-      lbl2.textContent='同时包含链接卡片的串（'+linkedWithThread.length+'张链接卡片有串）';
-      hint.appendChild(chk); hint.appendChild(lbl2);
-      opts.appendChild(hint);
-    }
-  }
   openModal('cardExportModal');
 }
 
 function doCardExport(method){
-  var cards=S.cards||[];
-  var card=cards.find(function(c){return c.id==_expCardId;});
-  if(!card){showToast('找不到卡片');return;}
-  var scopeEl=document.querySelector('input[name="expScope"]:checked');
-  var scope=scopeEl?scopeEl.value:'solo';
-  var withTags=document.getElementById('expTags').checked;
-  var withTime=document.getElementById('expTime').checked;
-  var withType=document.getElementById('expType').checked;
-  var exportList=[];
-  if(scope==='thread'){
-    exportList=[card].concat(cards.filter(function(c){return c.threadId==String(_expCardId);}));
-  } else if(scope==='links'){
-    var linked=(card.links||[]).map(function(lid){return cards.find(function(c){return c.id===lid;});}).filter(Boolean);
-    var incThread=document.getElementById('expLinksIncThread');
-    var withLinkedThreads=incThread&&incThread.checked;
-    var expanded=[];
-    linked.forEach(function(lc){
-      expanded.push(lc);
-      if(withLinkedThreads){
-        cards.filter(function(c){return c.threadId==String(lc.id);}).forEach(function(tc){expanded.push(tc);});
-      }
-    });
-    exportList=[card].concat(expanded);
-  } else {
-    exportList=[card];
-  }
-  var title=(card.body||card.quote||'卡片').slice(0,20);
-  var txt=title+'\n---\n\n';
-  exportList.forEach(function(c){
-    var s='';
-    if(withType) s+=(c.type==='quote'?'QUOTE':'IDEA');
-    if(withTime) s+=(s?' · ':'')+fmtDT(c.createdAt);
-    if(s) txt+='['+s+']\n';
-    if(c.quote) txt+='"'+c.quote+'"\n';
-    if(c.body) txt+=c.body+'\n';
-    if(withTags&&(c.tags||[]).length) txt+='#'+c.tags.join(' #')+'\n';
-    txt+='\n';
-  });
+  const card=(S.cards||[]).find(c=>c.id==_expCardId);
+  if(!card){ showToast('找不到卡片'); return; }
+  const withTags=document.getElementById('expTags').checked;
+  const withTime=document.getElementById('expTime').checked;
+  const text=cardText(card);
+  const title=text.slice(0,20) || '卡片';
+  let txt='';
+  if(withTime) txt+='['+fmtDT(card.createdAt)+']\n';
+  txt+=text+'\n';
+  if(withTags && (card.tags||[]).length) txt+='#'+card.tags.join(' #')+'\n';
   if(method==='copy'){
     navigator.clipboard.writeText(txt)
-      .then(function(){showToast('已复制到剪切板 ✓');})
-      .catch(function(){showToast('复制失败');});
+      .then(function(){ showToast('已复制到剪切板 ✓'); })
+      .catch(function(){ showToast('复制失败'); });
   } else {
     dl(title.replace(/[^a-zA-Z0-9一-龥]/g,'_')+'.txt', txt);
   }
@@ -8747,26 +8519,8 @@ function doChangePassword(){
     <button class="close-btn" onclick="closeModal('cardModal')">✕</button>
     <div class="modal-title" id="cardModalTitle">新建卡片</div>
     <input type="hidden" id="editCardId"/>
-    <input type="hidden" id="cardThreadId"/>
-    <div id="cardThreadHint" style="display:none;font-size:11px;color:#800080;margin-bottom:6px;padding:4px 8px;background:#f8f0ff;border-left:3px solid #800080;">✦ 在串中添加卡片</div>
-    <div class="form-row">
-      <label class="form-label">类型</label>
-      <div style="display:flex;gap:8px;margin-top:2px;">
-        <label style="font-size:15px;color:#000;display:flex;align-items:center;gap:5px;cursor:pointer;">
-          <input type="radio" name="cardType" id="typeQuote" value="quote" checked/> Quote
-        </label>
-        <label style="font-size:15px;color:#000;display:flex;align-items:center;gap:5px;cursor:pointer;">
-          <input type="radio" name="cardType" id="typeIdea" value="idea"/> 想法
-        </label>
-      </div>
-    </div>
-    <div class="form-row" id="quoteRow">
-      <label class="form-label">Quote 原文</label>
-      <textarea class="form-textarea" id="cardQuote" rows="4" placeholder="从 Zotero 粘贴，引用符/作者/日期一起贴进来就好"></textarea>
-    </div>
     <div class="form-row" id="cardBodyRow">
-      <label class="form-label" id="bodyLabel">我的想法 / 评注</label>
-      <textarea class="form-textarea" id="cardBody" placeholder="用自己的话写——为什么这个重要？和你在想的东西有什么关系？" style="min-height:260px;height:auto;resize:vertical;line-height:1.8;font-size:15px;overflow-y:auto;"></textarea>
+      <textarea class="form-textarea" id="cardBody" placeholder="用自己的话写——为什么这个重要？和你在想的东西有什么关系？" style="min-height:52vh;height:auto;resize:vertical;line-height:1.9;font-size:16px;overflow-y:auto;padding:12px 14px;"></textarea>
     </div>
     <div class="form-row" id="cardTagsRow">
       <label class="form-label">标签（逗号分隔）</label>
@@ -8928,13 +8682,10 @@ function renderExtensions(){
   <div class="modal" style="max-width:380px;">
     <button class="close-btn" onclick="closeModal('cardExportModal')">✕</button>
     <div class="modal-title">导出卡片</div>
-    <div style="font-size:11px;font-weight:bold;color:#808080;margin-bottom:6px;letter-spacing:1px;">导出范围</div>
-    <div id="expScopeOpts" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;"></div>
     <div style="font-size:11px;font-weight:bold;color:#808080;margin-bottom:6px;letter-spacing:1px;">包含信息</div>
     <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;">
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="expTags" checked/> 标签</label>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="expTime" checked/> 时间信息</label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="expType" checked/> 卡片类别（QUOTE / IDEA）</label>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="pxl-btn primary" onclick="doCardExport('txt')">下载 .txt</button>
