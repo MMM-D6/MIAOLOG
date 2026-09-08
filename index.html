@@ -456,6 +456,29 @@ body{
 .modal.wide #cardBodyRow{flex:1;display:flex;flex-direction:column;min-height:0;}
 .modal.wide #cardBody{flex:1;width:100%;box-sizing:border-box;}
 
+/* ── 专注模式：单任务大屏，屏蔽其它干扰 ── */
+.focus-overlay{background:rgba(0,0,0,.72);}
+.focus-modal{max-width:600px;}
+.focus-task-name{font-size:18px;font-weight:bold;color:#000080;text-align:center;font-family:var(--font-ui);margin-top:4px;word-break:break-word;}
+.focus-timer{
+  font-family:'Courier New',monospace;font-size:52px;font-weight:bold;color:#cc0000;
+  letter-spacing:3px;text-align:center;margin:6px 0;
+}
+.focus-hint{font-size:11px;color:#909090;text-align:center;margin-bottom:6px;font-family:var(--font-ui);}
+
+/* ── 任务清理弹窗：危险区做得显眼一点，避免误触 ── */
+.cleanup-safe{
+  font-size:11px;color:#004000;line-height:1.7;background:#e4f0e4;
+  border-left:3px solid #008000;padding:6px 8px;margin-bottom:10px;
+}
+.cleanup-danger{
+  margin-top:14px;padding:8px;background:#fff4f4;
+  border:2px solid #cc0000;
+}
+.cleanup-danger-title{font-size:12px;font-weight:bold;color:#cc0000;margin-bottom:5px;font-family:var(--font-ui);}
+#cleanupDoBtn:disabled{opacity:.45;cursor:not-allowed;}
+#cleanupDoBtn:not(:disabled){background:#cc0000;color:#fff;font-weight:bold;}
+
 /* ══════════════════════════════════════
    TASKS
    ══════════════════════════════════════ */
@@ -536,6 +559,51 @@ body{
   font-size:10px;color:#008000;background:#e4f0e4;padding:0 4px;
   border:1px solid #008000;font-family:var(--font-ui);
 }
+
+/* ── 任务卡：大号进度条 + 时间轴打点（目标时长 与 自我觉察 的平衡区） ── */
+.tl-widget{margin-top:6px;}
+.tl-bar-row{display:flex;align-items:center;gap:6px;}
+.tl-bar{
+  position:relative;flex:1;max-width:none;height:18px;background:#fff;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+  overflow:visible;cursor:crosshair;
+}
+.tl-bar-fill{position:absolute;left:0;top:0;bottom:0;height:100%;background:#7fa8d9;transition:width .3s;}
+.tl-bar-fill.done{background:#a0a0a0;}
+.tl-mark{
+  position:absolute;top:-3px;width:10px;height:24px;margin-left:-5px;
+  background:#ff9900;border:1px solid #804d00;cursor:pointer;z-index:2;
+  clip-path:polygon(50% 0%,100% 30%,100% 100%,0% 100%,0% 30%);
+}
+.tl-mark:hover{background:#ffb84d;}
+.tl-mark.imported{background:#a0a0a0;border-color:#707070;}
+.tl-mark.has-img{
+  width:18px;height:18px;margin-left:-9px;top:-4px;
+  background-color:transparent;background-size:contain;background-repeat:no-repeat;background-position:center;
+  border:none;clip-path:none;
+}
+.tl-mark.has-img.imported{filter:grayscale(1) opacity(.55);}
+.tl-add-row{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;}
+.tl-mark-btn{font-size:11px;}
+.tl-draft{
+  margin-top:4px;padding:6px;background:#fffff0;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
+.tl-draft-meta{font-size:11px;color:#000080;font-weight:bold;margin-bottom:3px;font-family:var(--font-ui);}
+.tl-draft-text{width:100%;min-height:52px;resize:vertical;box-sizing:border-box;font-size:12px;}
+.tl-draft-btns{display:flex;justify-content:flex-end;gap:6px;margin-top:4px;}
+.tl-list{margin-top:6px;display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;padding-right:2px;}
+.tl-item{
+  display:flex;align-items:flex-start;gap:6px;padding:4px 6px;
+  background:var(--surface2);border-left:3px solid #ff9900;
+}
+.tl-item.imported{border-left-color:#a0a0a0;opacity:.75;}
+.tl-item-chk{margin-top:3px;flex-shrink:0;cursor:pointer;}
+.tl-item-body{flex:1;min-width:0;}
+.tl-item-meta{font-size:10px;color:#808080;font-family:var(--font-mono);}
+.tl-item-text{font-size:12px;color:#000;white-space:pre-wrap;word-break:break-word;cursor:text;}
+.tl-item-text:empty:before{content:'（点击补充想法/自我调节记录…）';color:#b4b4b4;font-style:italic;}
+.tl-item-actions{display:flex;gap:1px;flex-shrink:0;}
 
 /* ── 任务卡上的番茄格子表 ── */
 .pg-icon{display:inline-block;vertical-align:-1px;}
@@ -664,6 +732,32 @@ body{
 }
 .stk-ops button:hover{background:var(--win-light);}
 .stk-note{font-size:11px;color:#606060;line-height:1.6;margin:6px 0 0;}
+
+/* ── 贴纸库：总库分配（多柜子归属）、拖拽指示 ── */
+.stk-item .stk-name{cursor:text;}
+.stk-item[draggable="true"]{cursor:grab;}
+.stk-item.stk-dragging{opacity:.4;}
+.stk-tabs button.stk-tab-drop{outline:2px dashed #000080;outline-offset:1px;background:#eaf0fb;}
+.stk-cat-chips{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:2px;}
+.stk-chip{
+  font-size:8px;line-height:12px;padding:0 3px;background:#000080;color:#fff;
+  font-family:var(--font-ui);white-space:nowrap;
+}
+.stk-chip.empty{background:#a0a0a0;}
+.stk-chip.add{background:var(--win-gray);color:#000;cursor:pointer;border:1px solid var(--win-dark);}
+.stk-chip.add:hover{background:var(--win-light);}
+.stk-chip-x{cursor:pointer;margin-left:2px;}
+.stk-chip-x:hover{color:#ffcccc;}
+.stk-assign-menu{
+  display:flex;flex-direction:column;gap:2px;margin-top:2px;padding:3px;
+  background:#fffff0;border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
+.stk-assign-menu button{
+  font-size:9px;padding:2px 3px;cursor:pointer;background:var(--win-gray);color:#000;
+  border:1px solid var(--win-dark);font-family:var(--font-ui);text-align:left;
+}
+.stk-assign-menu button:hover{background:var(--win-light);}
+.stk-assign-menu button:disabled{opacity:.4;cursor:default;background:#000080;color:#fff;}
 
 /* ── 自定义 CSS 实验室 ── */
 .css-lab{margin:8px auto 0;width:460px;max-width:100%;font-family:var(--font-ui);}
@@ -1561,6 +1655,7 @@ body{
         <label for="pomoAutoRepeat" style="font-size:11px;color:#808080;cursor:pointer;">自动续</label>
       </div>
       <div class="pomo-notify" id="pomoNotify">🔔 开启通知后台可用</div>
+      <button class="pxl-btn" style="width:100%;margin-top:4px;" onclick="openFocusMode()" title="只看当前绑定任务的大进度条和计时器，屏蔽其它干扰">🎯 专注模式</button>
     </div>
   </div>
 
@@ -1614,6 +1709,7 @@ body{
             <button class="pxl-btn" onclick="exportSelectedProject()" title="导出左侧目录中选中的那个项目（JSON，可以再导入回来）">📤 导出项目</button>
             <button class="pxl-btn" onclick="document.getElementById('projImportInput').click()" title="导入项目 JSON 文件">📥 导入项目</button>
             <input type="file" id="projImportInput" accept=".json,application/json" style="display:none;" onchange="onProjectImportSelected(event)"/>
+            <button class="pxl-btn" onclick="openTaskCleanup()" title="任务清理设置：手动清空 / 定期自动清空">🧹</button>
           </div>
           <div id="energyTagBar"></div>
           <div id="archiveT" class="archive-row"></div>
@@ -1862,6 +1958,59 @@ body{
     <div class="modal-btns">
       <button class="pxl-btn" onclick="closeModal('stickerModal');openCssLab();">✏️ 自定义 CSS</button>
       <button class="pxl-btn primary" onclick="closeModal('stickerModal')">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOCUS MODE：只看当前绑定任务的大进度条 + 计时器 -->
+<div class="overlay focus-overlay" id="focusModal">
+  <div class="modal focus-modal">
+    <button class="close-btn" onclick="closeModal('focusModal')">✕</button>
+    <div class="modal-title">🎯 专注模式</div>
+    <div class="stk-body" id="focusBody" style="width:520px;"></div>
+  </div>
+</div>
+
+<!-- TASK CLEANUP：清空任务 / 定期清空。刻意做得不好误触 -->
+<div class="overlay" id="taskCleanupModal">
+  <div class="modal" style="max-width:520px;">
+    <button class="close-btn" onclick="closeModal('taskCleanupModal')">✕</button>
+    <div class="modal-title">🧹 任务清理</div>
+    <div class="stk-body">
+      <div class="cleanup-safe">
+        <b>Log 永远不受影响。</b>已经导入 Log 的记录存在另一份数据里，
+        清空任务不会碰它；跨设备同步时 Log 也只增不减。
+      </div>
+
+      <div class="form-row" style="width:auto;">
+        <label class="form-label" style="width:auto;">定期自动清空</label>
+        <select id="taskAutoResetSel" class="form-select" style="width:auto;" onchange="setTaskAutoReset(this.value)">
+          <option value="off">不自动清空</option>
+          <option value="daily">每天清空一次</option>
+          <option value="weekly">每周清空一次</option>
+          <option value="monthly">每月清空一次</option>
+        </select>
+        <div style="font-size:11px;color:#707070;margin-top:4px;line-height:1.6;" id="taskAutoResetInfo"></div>
+      </div>
+
+      <div class="cleanup-danger">
+        <div class="cleanup-danger-title">⚠️ 立刻清空所有任务</div>
+        <div id="cleanupStats" style="font-size:11px;color:#404040;line-height:1.7;margin-bottom:6px;"></div>
+        <label style="display:flex;align-items:flex-start;gap:5px;font-size:11px;color:#404040;cursor:pointer;margin-bottom:6px;">
+          <input type="checkbox" id="cleanupImportChk" checked style="margin-top:2px;cursor:pointer;"/>
+          <span>清空前，把还没导入的时间轴标记自动导入 Log（<b>建议勾着</b>，取消勾选这些记录会直接消失）</span>
+        </label>
+        <div style="font-size:11px;color:#404040;margin-bottom:3px;">
+          确认请在下面输入 <b style="color:#cc0000;">清空任务</b> 四个字：
+        </div>
+        <input class="form-input" id="cleanupConfirmInput" placeholder="在这里输入：清空任务"
+               style="width:100%;box-sizing:border-box;" oninput="onCleanupConfirmInput()"/>
+        <button class="pxl-btn" id="cleanupDoBtn" onclick="resetTasksManual()" disabled
+                style="width:100%;margin-top:6px;">🧹 确认清空（不可撤销）</button>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="pxl-btn primary" onclick="closeModal('taskCleanupModal')">关闭</button>
     </div>
   </div>
 </div>
@@ -2348,6 +2497,19 @@ function mergeCloudIntoLocal(cloud){
   };
   ['tasks','journal','cards','habits','ciEvents','ciLists','boxFiles',
    'fleeting','permanent','lit','ideas','drafts'].forEach(k=>{
+    // 任务被「清空重新开始」过的话，不能再把云端那份旧任务并回来，
+    // 否则刚清干净的任务会被其它设备的旧数据复活。
+    // 只对 tasks 生效：journal（Log）永远走并集，只增不减，绝不会因为清空任务而丢。
+    if(k === 'tasks'){
+      const localClr = Date.parse(S.tasksClearedAt||'') || 0;
+      const cloudClr = Date.parse(cloud.tasksClearedAt||'') || 0;
+      if(localClr && localClr > cloudClr) return;          // 本地清空更新 → 保持清空，忽略云端旧任务
+      if(cloudClr && cloudClr > localClr){                 // 云端清空更新 → 采纳云端的清空结果
+        S.tasks = Array.isArray(cloud.tasks) ? cloud.tasks.slice() : [];
+        S.tasksClearedAt = cloud.tasksClearedAt;
+        return;
+      }
+    }
     S[k] = unionById(S[k], cloud[k]);
   });
   if(S.finance && cloud.finance){
@@ -2383,7 +2545,7 @@ function mergeCloudIntoLocal(cloud){
   if(typeof cloud.earned==='number') S.earned = Math.max(S.earned||0, cloud.earned);
   if(typeof cloud.spent ==='number') S.spent  = Math.max(S.spent||0,  cloud.spent);
   if(typeof cloud.xp==='number')     S.earned = Math.max(S.earned||0, cloud.xp);
-  ['stkVal','shopMeta','shopOwned','emojiMap','textMap','iconSize','pomoSkin'].forEach(k=>{
+  ['stkVal','shopMeta','shopOwned','emojiMap','textMap','iconSize','pomoSkin','stkOff','stkNameOv'].forEach(k=>{
     if(cloud[k] && typeof cloud[k]==='object'){
       if(!S[k] || typeof S[k]!=='object') S[k] = {};
       Object.keys(cloud[k]).forEach(id=>{ if(S[k][id] == null) S[k][id] = cloud[k][id]; });
@@ -2508,6 +2670,21 @@ function migrateState(loaded) {
       else t.pomoSlots = Math.min(60, sl);
     }
     if(!t.pomoGrid) delete t.pomoGrid;
+    // 时间轴打点：只留结构正常的记录；pct 是打点当下就定格的百分比，不随目标时长改动而漂移
+    if(t.tlMarks !== undefined){
+      t.tlMarks = (Array.isArray(t.tlMarks) ? t.tlMarks : [])
+        .map(r=>{
+          if(!r || typeof r!=='object') return null;
+          const min = Math.round(Number(r.min));
+          if(!isFinite(min) || min<0) return null;
+          let pct = Math.round(Number(r.pct));
+          if(!isFinite(pct)) pct = 0;
+          pct = Math.min(100, Math.max(0, pct));
+          return {id:r.id||(S.nextId=(S.nextId||1)+1), pct:pct, min:min, ts:r.ts||new Date().toISOString(), text:String(r.text||''), imported:!!r.imported};
+        })
+        .filter(Boolean);
+      if(!t.tlMarks.length) delete t.tlMarks;
+    }
     // 权重只存 2-10 的整数，1 是默认值不用存
     if(t.weight!==undefined){
       const w = Math.round(Number(t.weight));
@@ -2625,6 +2802,9 @@ function migrateState(loaded) {
   if (!S.textMap   || typeof S.textMap   !== 'object') S.textMap   = {};
   if (!S.pomoSkin  || typeof S.pomoSkin  !== 'object') S.pomoSkin  = {};
   if (!S.iconSize  || typeof S.iconSize  !== 'object') S.iconSize  = {};
+  if (!S.stkOff    || typeof S.stkOff    !== 'object') S.stkOff    = {};
+  if (!S.stkNameOv || typeof S.stkNameOv !== 'object') S.stkNameOv = {};
+  if (!S.taskAutoReset || typeof S.taskAutoReset !== 'object') S.taskAutoReset = {mode:'off', lastReset:''};
   delete S.level; delete S.xp;
   if (typeof S.nextId !== 'number') S.nextId  = 1;
   // Finance (记账理财)
@@ -3186,27 +3366,359 @@ function pomoStripHtml(t, goalFallback){
 }
 
 // ═══════════════════════════════════════
+// 时间轴打点：目标时长 × 自我觉察 的平衡区
+// 大号进度条上可以随时打点，记录此刻的感受/自我调节想法，
+// 单条或批量导入到 Log（journal）里存档
+// 位置用百分比：打点那一刻按「已投入 / 目标」算出来就定格了，
+// 之后就算中途提前结束、或者目标时长改了，这个点也不会跟着挪
+// t.tlMarks = [{id, pct:打点时定格的百分比(0-100), min:当时的已投入分钟数(仅供参考), ts, text, imported}]
+// ═══════════════════════════════════════
+let _tlDraft = null;   // 未保存的草稿：{taskId, pct, min, text}
+
+// 当前绑定中的番茄钟，本轮已经跑掉的分钟数（还没结算进 t.pomoMin）
+function pomoLiveElapsedMin(t){
+  if(pomoTaskId==t.id && pomoTimer){
+    return Math.max(0, Math.floor((pomoMin*60 - pomoSec)/60));
+  }
+  return 0;
+}
+
+function tlMarksOf(t){
+  if(!Array.isArray(t.tlMarks)) t.tlMarks = [];
+  return t.tlMarks;
+}
+
+// 标记点的图标：默认是个小旗子，也可以去贴纸库的「📍 标记」柜子里挑一张图，全站统一换掉
+function tlMarkSkinId(){ return S.tlMarkSkin || ''; }
+function tlMarkSkinPick(){
+  stkPickOpen('给时间轴标记选一张图标（所有任务通用）', id=>{
+    if(id) S.tlMarkSkin = id; else delete S.tlMarkSkin;
+    saveState();
+    renderTasks();
+    showToast(id ? '标记图标已换' : '已还原成默认小旗子');
+  }, 'mark');
+}
+
+function timelineWidgetHtml(t, goalFallback){
+  const mins = (t.pomoMin||0) + pomoLiveElapsedMin(t);
+  const g = taskGoalMin(t, goalFallback);
+  const ratio = t.done ? 1 : (g>0 ? Math.min(1, mins/g) : 0);
+  const live = (pomoTaskId==t.id);
+  const marks = tlMarksOf(t);
+  const markSk = tlMarkSkinId() ? stkById(tlMarkSkinId()) : null;
+
+  let h = '<div class="tl-widget" id="tlw-'+t.id+'">';
+
+  h += '<div class="tl-bar-row">';
+  h += '<span class="pomo-ico">🍅</span>';
+  h += '<div class="tl-bar" id="tlbar-'+t.id+'" onclick="tlBarClick(event,'+t.id+')" title="点击进度条：在对应的百分比位置打一个点，记下此刻的想法">';
+  h +=   '<div class="tl-bar-fill'+(t.done?' done':'')+'" style="width:'+Math.round(ratio*100)+'%"></div>';
+  marks.forEach(m=>{
+    const pct = Math.min(100, Math.max(0, m.pct||0));
+    const style = 'left:'+pct.toFixed(1)+'%'+(markSk?';background-image:url(\''+markSk.src+'\')':'');
+    h += '<div class="tl-mark'+(m.imported?' imported':'')+(markSk?' has-img':'')+'" style="'+style+'" '
+      + 'title="'+escAttr(pct+'% · '+(m.text||'（还没写内容）'))+'" '
+      + 'onclick="event.stopPropagation();focusTlMark('+t.id+','+m.id+')"></div>';
+  });
+  h += '</div>';
+  h += '<span class="pomo-strip-txt">'+fmtMin(mins)+' / '
+    +   '<span class="pomo-goal" onclick="editPomoGoal('+t.id+')" title="点击设定这条任务的目标时长">'+fmtMin(g)+'</span>'
+    +   ' · '+Math.round(ratio*100)+'%'
+    + '</span>';
+  h += (live ? '<span class="pomo-live">绑定中</span>' : '');
+  h += '</div>'; // tl-bar-row
+
+  h += '<div class="tl-add-row">';
+  h += '<button class="pxl-btn tl-mark-btn" onclick="addTlMark('+t.id+')" title="在当前进度打一个时间点，写下此刻的感受和自我调节想法">📍 标记此刻</button>';
+  if(marks.some(m=>!m.imported)){
+    h += '<button class="pxl-btn tl-mark-btn" onclick="importAllCheckedTl('+t.id+')" title="把下面勾选的记录批量导入到 Log">📤 批量导入所选</button>';
+  }
+  h += '<button class="pxl-btn tl-mark-btn" onclick="tlMarkSkinPick()" title="从贴纸库选一张图，换掉标记点的小旗子图标（所有任务通用）">🖼️ 标记图标</button>';
+  h += '</div>';
+
+  if(_tlDraft && _tlDraft.taskId==t.id){
+    h += '<div class="tl-draft">';
+    h += '<div class="tl-draft-meta">📍 进度 '+_tlDraft.pct+'% 处的记录</div>';
+    h += '<textarea class="form-textarea tl-draft-text" id="tlDraftText" placeholder="此刻的感受、想法，或给自己的调节建议..." oninput="tlDraftSync(this)">'+escHtml(_tlDraft.text||'')+'</textarea>';
+    h += '<div class="tl-draft-btns">';
+    h += '<button class="pxl-btn" onclick="cancelTlDraft()">取消</button>';
+    h += '<button class="pxl-btn primary" onclick="saveTlDraft('+t.id+')">保存标记</button>';
+    h += '</div></div>';
+  }
+
+  if(marks.length){
+    h += '<div class="tl-list">';
+    marks.slice().reverse().forEach(m=>{
+      h += '<div class="tl-item'+(m.imported?' imported':'')+'" id="tlitem-'+t.id+'-'+m.id+'">';
+      h += '<input type="checkbox" class="tl-item-chk" data-tl="'+m.id+'"'+(m.imported?' disabled':'')+'/>';
+      h += '<div class="tl-item-body">';
+      h += '<div class="tl-item-meta">📍 '+(m.pct||0)+'% · '+fmtDT(m.ts)+(m.imported?' · ✓已导入Log':'')+'</div>';
+      h += '<div class="tl-item-text" contenteditable="true" oninput="syncTlMarkText('+t.id+','+m.id+',this)">'+escHtml(m.text||'')+'</div>';
+      h += '</div>';
+      h += '<div class="tl-item-actions">';
+      if(!m.imported) h += '<button class="icon-btn" onclick="importOneTl('+t.id+','+m.id+')" title="单条导入到 Log">📤</button>';
+      h += '<button class="icon-btn" onclick="deleteTlMark('+t.id+','+m.id+')" style="color:#cc0000;" title="删除这个标记">✕</button>';
+      h += '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+
+  h += '</div>'; // tl-widget
+  return h;
+}
+
+// 任务没单独设目标时长时，跟随所属项目的目标；都没设就用默认值
+function taskEffectiveGoal(t){
+  const proj = (S.tasks||[]).find(x=>x.id==t.projectId && x.type==='project');
+  return taskGoalMin(t, proj ? projGoalMin(proj) : DEFAULT_POMO_GOAL);
+}
+
+function addTlMark(id){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  const mins = (t.pomoMin||0) + pomoLiveElapsedMin(t);
+  const g = taskEffectiveGoal(t);
+  const pct = g>0 ? Math.round(Math.min(100, Math.max(0, mins/g*100))) : 0;
+  _tlDraft = {taskId:id, pct:pct, min:mins, text:''};
+  renderTasks();
+  setTimeout(()=>{ const ta=document.getElementById('tlDraftText'); if(ta) ta.focus(); }, 30);
+}
+
+// 直接点在进度条的某个位置上打点：点击的位置本身就是百分比，不用换算
+function tlBarClick(e, id){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const ratio = rect.width>0 ? Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width)) : 0;
+  const pct = Math.round(ratio*100);
+  const g = taskEffectiveGoal(t);
+  const min = g>0 ? Math.round(pct/100*g) : 0;   // 只作参考，实际投入以 pomoMin 为准
+  _tlDraft = {taskId:id, pct:pct, min:min, text:''};
+  renderTasks();
+  setTimeout(()=>{ const ta=document.getElementById('tlDraftText'); if(ta) ta.focus(); }, 30);
+}
+
+function tlDraftSync(el){
+  if(!_tlDraft) return;
+  _tlDraft.text = el.value;
+}
+
+function cancelTlDraft(){
+  _tlDraft = null;
+  renderTasks();
+}
+
+function saveTlDraft(id){
+  if(!_tlDraft || _tlDraft.taskId!=id) return;
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  tlMarksOf(t).push({id:S.nextId++, pct:_tlDraft.pct, min:_tlDraft.min, ts:new Date().toISOString(), text:(_tlDraft.text||'').trim()});
+  _tlDraft = null;
+  saveState();
+  renderTasks();
+}
+
+function focusTlMark(tid, mid){
+  const el = document.getElementById('tlitem-'+tid+'-'+mid);
+  if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.outline='2px dotted #ff9900'; setTimeout(()=>{el.style.outline='';},1200); }
+}
+
+function syncTlMarkText(tid, mid, el){
+  const t = (S.tasks||[]).find(x=>x.id==tid); if(!t) return;
+  const m = tlMarksOf(t).find(x=>x.id==mid); if(!m) return;
+  m.text = (el.innerText||el.textContent||'').replace(/\u00A0/g,' ');
+  saveStateSoon();
+}
+
+function deleteTlMark(tid, mid){
+  const t = (S.tasks||[]).find(x=>x.id==tid); if(!t) return;
+  t.tlMarks = tlMarksOf(t).filter(x=>x.id!=mid);
+  saveState();
+  renderTasks();
+}
+
+function tlMarkToJournalText(t, m){
+  return '📍【'+(t.name||'任务')+'】进度 '+(m.pct||0)+'%\n'+(m.text||'');
+}
+
+function importOneTl(tid, mid){
+  const t = (S.tasks||[]).find(x=>x.id==tid); if(!t) return;
+  const m = tlMarksOf(t).find(x=>x.id==mid); if(!m || m.imported) return;
+  if(!Array.isArray(S.journal)) S.journal=[];
+  S.journal.unshift({id:S.nextId++, text:tlMarkToJournalText(t,m), tags:['时间轴',t.name].filter(Boolean), createdAt:m.ts||new Date().toISOString()});
+  m.imported = true;
+  saveState();
+  renderTasks();
+  showToast('📤 已导入 1 条到 Log');
+}
+
+function importAllCheckedTl(id){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  const wrap = document.getElementById('tlw-'+id); if(!wrap) return;
+  const checked = Array.from(wrap.querySelectorAll('.tl-item-chk:checked')).map(c=>Number(c.dataset.tl));
+  if(!checked.length){ showToast('先勾选要导入的记录'); return; }
+  if(!Array.isArray(S.journal)) S.journal=[];
+  let n=0;
+  checked.forEach(mid=>{
+    const m = tlMarksOf(t).find(x=>x.id==mid);
+    if(!m || m.imported) return;
+    S.journal.unshift({id:S.nextId++, text:tlMarkToJournalText(t,m), tags:['时间轴',t.name].filter(Boolean), createdAt:m.ts||new Date().toISOString()});
+    m.imported = true;
+    n++;
+  });
+  saveState();
+  renderTasks();
+  showToast('📤 已批量导入 '+n+' 条到 Log');
+}
+
+// ═══════════════════════════════════════
+// 清空任务、重新开始（Log 里已经导入的记录不受影响，因为 Log 是独立存的数组）
+// 支持手动点一下，也可以设置到期自动清空（每天/每周/每月）
+// ═══════════════════════════════════════
+function taskAutoResetCfg(){
+  if(!S.taskAutoReset || typeof S.taskAutoReset !== 'object') S.taskAutoReset = {mode:'off', lastReset:''};
+  if(!S.taskAutoReset.mode) S.taskAutoReset.mode = 'off';
+  return S.taskAutoReset;
+}
+function taskAutoResetDueMs(mode){
+  const day = 24*3600*1000;
+  if(mode==='daily')   return day;
+  if(mode==='weekly')  return day*7;
+  if(mode==='monthly') return day*30;
+  return Infinity;
+}
+function setTaskAutoReset(mode){
+  const cfg = taskAutoResetCfg();
+  cfg.mode = mode;
+  if(mode !== 'off' && !cfg.lastReset) cfg.lastReset = new Date().toISOString();   // 从现在开始计时，不是一开就立刻清空
+  saveState();
+  renderTaskCleanup();
+  showToast(mode==='off' ? '已关闭定期清空' : '已开启：'+({daily:'每天',weekly:'每周',monthly:'每月'}[mode]||mode)+'自动清空一次任务');
+}
+// 页面打开时检查一次：到期了就自动清空（未导入的标记先自动导进 Log，再清空，绝不悄悄丢数据）
+function checkTaskAutoReset(){
+  const cfg = taskAutoResetCfg();
+  if(cfg.mode === 'off') return;
+  // 数据还没真正载入时绝不动手，免得把空状态当成「已清空」推到云端
+  if(!Array.isArray(S.tasks) || !Array.isArray(S.journal)) return;
+  if(!cfg.lastReset){ cfg.lastReset = new Date().toISOString(); saveState(); return; }
+  const last = new Date(cfg.lastReset).getTime();
+  if(!isFinite(last)) { cfg.lastReset = new Date().toISOString(); saveState(); return; }
+  if(Date.now() - last >= taskAutoResetDueMs(cfg.mode)){
+    performTasksReset({silent:true, importPending:true});
+  }
+}
+// 清空核心逻辑
+// silent=true：到期自动执行，不弹窗，未导入标记一律先导入 Log
+// importPending：是否把还没导入的时间轴标记补导进 Log（手动清空时由弹窗里的勾选框决定）
+function performTasksReset(opts){
+  opts = opts || {};
+  const pending = [];
+  (S.tasks||[]).forEach(t=>{
+    (t.tlMarks||[]).forEach(m=>{ if(!m.imported) pending.push({t,m}); });
+  });
+  let importN = 0;
+  if(pending.length && opts.importPending){
+    if(!Array.isArray(S.journal)) S.journal = [];
+    pending.forEach(({t,m})=>{
+      S.journal.unshift({id:S.nextId++, text:tlMarkToJournalText(t,m), tags:['时间轴',t.name].filter(Boolean), createdAt:m.ts||new Date().toISOString()});
+      importN++;
+    });
+  }
+  if(pomoTimer) stopPomo(true);
+  pomoTaskId = null;
+  const nameEl = document.getElementById('pomoTaskName'); if(nameEl) nameEl.textContent = '无绑定任务';
+  S.tasks = [];
+  // 清空的时间戳：跨设备同步时靠它判断「这是一次真的清空」，
+  // 免得其它设备上的旧任务又被并集合并回来（Log 不受这套逻辑影响，永远只增不减）
+  S.tasksClearedAt = new Date().toISOString();
+  _taskMonthFilter = null;
+  const cfg = taskAutoResetCfg();
+  cfg.lastReset = new Date().toISOString();
+  saveState();
+  renderTasks();
+  renderJournal();
+  showToast('🧹 任务已清空，重新开始！'+(importN?('已把 '+importN+' 条标记导入 Log。'):'')+'Log 里的记录都还在。');
+  return true;
+}
+
+// ── 任务清理弹窗：手动清空刻意做成「勾选 + 打字确认」，不好误触 ──
+function openTaskCleanup(){
+  const inp = document.getElementById('cleanupConfirmInput');
+  if(inp) inp.value = '';
+  const chk = document.getElementById('cleanupImportChk');
+  if(chk) chk.checked = true;
+  renderTaskCleanup();
+  onCleanupConfirmInput();
+  openModal('taskCleanupModal');
+}
+function renderTaskCleanup(){
+  const cfg = taskAutoResetCfg();
+  const sel = document.getElementById('taskAutoResetSel');
+  if(sel) sel.value = cfg.mode;
+
+  const info = document.getElementById('taskAutoResetInfo');
+  if(info){
+    if(cfg.mode==='off'){
+      info.textContent = '关闭时任务会一直累积，需要重新开始时可以用下面的手动清空。';
+    } else {
+      const due = new Date((new Date(cfg.lastReset||Date.now())).getTime() + taskAutoResetDueMs(cfg.mode));
+      info.textContent = '下次自动清空：'+fmtDT(due.toISOString())+'（打开页面时检查，会先把未导入的标记自动导入 Log）';
+    }
+  }
+
+  const stats = document.getElementById('cleanupStats');
+  if(stats){
+    const tasks = (S.tasks||[]).length;
+    let marks = 0, pending = 0;
+    (S.tasks||[]).forEach(t=>(t.tlMarks||[]).forEach(m=>{ marks++; if(!m.imported) pending++; }));
+    stats.innerHTML = '现在有 <b>'+tasks+'</b> 条任务／项目、<b>'+marks+'</b> 个时间轴标记，'
+      + '其中 <b style="color:'+(pending?'#cc0000':'#008000')+';">'+pending+'</b> 个还没导入 Log。<br>'
+      + 'Log 里现有 <b>'+((S.journal||[]).length)+'</b> 条记录，清空任务后依然是 '
+      + '<b>'+((S.journal||[]).length + (document.getElementById('cleanupImportChk')||{checked:true}).checked*pending)+'</b> 条。';
+  }
+}
+function onCleanupConfirmInput(){
+  const inp = document.getElementById('cleanupConfirmInput');
+  const btn = document.getElementById('cleanupDoBtn');
+  if(!btn) return;
+  btn.disabled = !inp || inp.value.trim() !== '清空任务';
+  renderTaskCleanup();   // 勾选/输入变化时刷新 Log 条数预览
+}
+function resetTasksManual(){
+  const inp = document.getElementById('cleanupConfirmInput');
+  if(!inp || inp.value.trim() !== '清空任务'){ showToast('请先输入「清空任务」四个字'); return; }
+  const chk = document.getElementById('cleanupImportChk');
+  const importPending = !chk || chk.checked;
+  if(!confirm('最后确认：清空所有任务、番茄记录和时间轴标记，不可撤销。\n'
+    + (importPending ? '未导入的标记会先自动导入 Log。' : '未导入的标记将被直接丢弃。')
+    + '\nLog 里已有的记录不受影响。')) return;
+  performTasksReset({silent:false, importPending:importPending});
+  closeModal('taskCleanupModal');
+}
+
+// ═══════════════════════════════════════
 // 贴纸库 STK — 自己抠的透明底图，按「分类」存在本机 IndexedDB
 // 现在只用到 'pomo' 一类，以后加别的图标只要换个 cat 就行
 // 记录里只存贴纸 id（很短），图片本体不进云端同步
 // ═══════════════════════════════════════
 const STK = {
-  list: [],          // 本机导入的：{id, cat, name, src, ts}
+  list: [],          // 本机导入的：{id, cats:[], name, src, ts}
   repo: [],          // 仓库里带过来的：{id:'repo:路径', cat, name, src, repo:true}
   ready: false,
   db: null,
-  cat: 'pomo',       // 当前打开的柜子
+  cat: 'pomo',       // 当前打开的柜子（'all' = 总库）
   MAX: 256,          // 导入时缩到的最长边
-  // 每个柜子各存各的，互不串味
+  // 一张贴纸可以同时分给多个柜子；新导入的图默认先落进「总库」，不属于任何柜子
   CATS: [
     {k:'pomo', n:'🍅 番茄',  tip:'贴在番茄格上的图，每张可以设面额'},
+    {k:'mark', n:'📍 标记',  tip:'贴在时间轴标记点上的图'},
     {k:'icon', n:'😀 图标',  tip:'用来替换 emoji 和界面上的文字图标'},
     {k:'shop', n:'🛒 商店',  tip:'商店里的商品图'},
     {k:'ui',   n:'🎨 素材',  tip:'背景、按钮底图之类，配合自定义 CSS 用'}
   ],
-  LABEL: {pomo:'🍅 番茄贴纸库', icon:'😀 图标贴纸库', shop:'🛒 商品图库', ui:'🎨 界面素材库'}
+  LABEL: {pomo:'🍅 番茄贴纸库', mark:'📍 标记贴纸库', icon:'😀 图标贴纸库', shop:'🛒 商品图库', ui:'🎨 界面素材库', all:'🌐 贴纸总库'}
 };
 function stkCatName(k){
+  if(k === 'all') return '🌐 总库';
   const c = (STK.CATS||[]).find(x=>x.k===k);
   return c ? c.n : k;
 }
@@ -3296,7 +3808,16 @@ function stkLoadAll(){
     r.onsuccess = ()=>res(r.result||[]);
     r.onerror   = ()=>rej(r.error);
   })).then(list=>{
-    STK.list = (list||[]).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    const arr = (list||[]).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    // 老数据迁移：单一 cat 字段 → 可多选的 cats 数组，迁移后写回本机库
+    arr.forEach(s=>{
+      if(!Array.isArray(s.cats)){
+        s.cats = s.cat ? [s.cat] : [];
+        delete s.cat;
+        stkPut(s);
+      }
+    });
+    STK.list = arr;
     STK.ready = true;
     return STK.list;
   }).catch(()=>{ STK.list = []; STK.ready = true; return STK.list; });
@@ -3329,19 +3850,97 @@ function stkDel(id){
 
 // 抽签用：仓库 + 本机，且只算启用的
 function stkOf(cat){
-  const c = cat || 'pomo';
-  return stkAll(c).filter(s=>stkEnabled(s.id));
+  return stkAll(cat).filter(s=>stkEnabled(s.id));
 }
-// 管理面板用：全部，包括停用的
+// 这张贴纸归属哪些柜子：仓库贴纸位置固定（stickers.json 决定），本机贴纸可以同时归好几个柜子
+function stkCatsOf(s){
+  if(!s) return [];
+  if(s.repo) return [s.cat];
+  return Array.isArray(s.cats) ? s.cats : (s.cat ? [s.cat] : []);
+}
+// 管理面板用：全部，包括停用的。cat==='all' 时返回总库里所有贴纸（不管分配到哪）
 function stkAll(cat){
   const c = cat || 'pomo';
-  const repo = STK.repo.filter(s=>s.cat===c);
+  if(c === 'all'){
+    const ids = new Set(STK.repo.map(s=>s.id));
+    return STK.repo.concat(STK.list.filter(s=>!ids.has(s.id)));
+  }
+  const repo = STK.repo.filter(s=>stkCatsOf(s).includes(c));
   const ids = new Set(repo.map(s=>s.id));
-  return repo.concat(STK.list.filter(s=>s.cat===c && !ids.has(s.id)));
+  return repo.concat(STK.list.filter(s=>stkCatsOf(s).includes(c) && !ids.has(s.id)));
 }
 function stkById(id){
   if(!id) return null;
   return STK.repo.find(s=>s.id===id) || STK.list.find(s=>s.id===id) || null;
+}
+// 导出/整理仓库时用：给单张贴纸挑一个主分类目录
+function stkPrimaryCat(s){
+  const cats = stkCatsOf(s);
+  return cats.length ? cats[0] : 'pomo';
+}
+
+// ── 把一张贴纸分配进（或移出）某个柜子：仓库贴纸位置固定，只能对本机贴纸操作 ──
+function stkAssignAdd(id, cat){
+  const s = stkById(id); if(!s){ return; }
+  if(s.repo){ showToast('仓库贴纸的位置由 stickers.json 决定'); return; }
+  if(!Array.isArray(s.cats)) s.cats = [];
+  if(!s.cats.includes(cat)){ s.cats.push(cat); stkPut(s); }
+  renderStickerLib();
+  renderTasks();
+  showToast('已加入「'+stkCatName(cat)+'」');
+}
+function stkAssignRemove(id, cat){
+  const s = stkById(id); if(!s){ return; }
+  if(s.repo){ showToast('仓库贴纸的位置由 stickers.json 决定'); return; }
+  s.cats = (Array.isArray(s.cats)?s.cats:[]).filter(c=>c!==cat);
+  stkPut(s);
+  renderStickerLib();
+  renderTasks();
+  showToast('已移出「'+stkCatName(cat)+'」');
+}
+function stkAssignMenuToggle(e, id){
+  if(e) e.stopPropagation();
+  document.querySelectorAll('.stk-assign-menu').forEach(el=>{
+    if(el.id !== 'stkAssignMenu-'+id) el.style.display='none';
+  });
+  const el = document.getElementById('stkAssignMenu-'+id);
+  if(el) el.style.display = (el.style.display==='flex') ? 'none' : 'flex';
+}
+function stkAssignMenuClose(id){
+  const el = document.getElementById('stkAssignMenu-'+id);
+  if(el) el.style.display='none';
+}
+
+// ── 拖拽：从「总库」把一张贴纸拖到某个柜子标签上，即分配进那个柜子 ──
+let _stkDragId = null;
+function stkItemDragStart(e, id){
+  const s = stkById(id);
+  if(!s || s.repo){ e.preventDefault(); return; }
+  _stkDragId = id;
+  e.dataTransfer.effectAllowed = 'copy';
+  try{ e.dataTransfer.setData('text/plain', id); }catch(err){}
+  e.currentTarget.classList.add('stk-dragging');
+}
+function stkItemDragEnd(e){
+  e.currentTarget.classList.remove('stk-dragging');
+  document.querySelectorAll('.stk-tab-drop').forEach(el=>el.classList.remove('stk-tab-drop'));
+  _stkDragId = null;
+}
+function stkTabDragOver(e, cat){
+  if(!_stkDragId || cat==='all') return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  e.currentTarget.classList.add('stk-tab-drop');
+}
+function stkTabDragLeave(e){
+  e.currentTarget.classList.remove('stk-tab-drop');
+}
+function stkTabDrop(e, cat){
+  e.preventDefault();
+  e.currentTarget.classList.remove('stk-tab-drop');
+  if(!_stkDragId || cat==='all') return;
+  stkAssignAdd(_stkDragId, cat);
+  _stkDragId = null;
 }
 
 // ── 面额：一张贴纸值多少分钟 ──
@@ -3456,7 +4055,7 @@ function stkPickStable(cat, seed){
 
 function stkImgHtml(s, cls){
   if(!s) return '';
-  return '<img class="'+(cls||'pg-img')+'" src="'+s.src+'" alt="'+escAttr(s.name||'')+'" draggable="false">';
+  return '<img class="'+(cls||'pg-img')+'" src="'+s.src+'" alt="'+escAttr(stkDisplayName(s))+'" draggable="false">';
 }
 
 // 导入：读文件 → 等比缩小 → 存 PNG（保住透明底）
@@ -3490,6 +4089,7 @@ function stkShrink(file, max){
   });
 }
 
+// 新导入的贴纸一律先落进「总库」，不预设归属，之后自己拖/分配到需要的柜子
 async function stkImportFiles(files){
   const arr = Array.from(files||[]).filter(f=>/^image\//.test(f.type||''));
   if(!arr.length){ showToast('没挑到图片文件'); return; }
@@ -3499,7 +4099,7 @@ async function stkImportFiles(files){
       const src = await stkShrink(f, STK.MAX);
       const rec = {
         id: 'sk'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
-        cat: STK.cat,
+        cats: [],
         name: (f.name||'贴纸').replace(/\.[a-z0-9]+$/i,'').slice(0,24),
         src: src,
         ts: Date.now()
@@ -3511,7 +4111,7 @@ async function stkImportFiles(files){
   }
   renderStickerLib();
   renderTasks();
-  showToast('已导入 '+ok+' 张贴纸'+(bad?('，'+bad+' 张失败'):''));
+  showToast('已导入 '+ok+' 张到总库'+(bad?('，'+bad+' 张失败'):'')+(ok?'，记得去分配到需要的柜子':''));
 }
 
 function openStickerLib(cat){
@@ -3528,48 +4128,87 @@ function renderStickerLib(){
   const cnt  = document.getElementById('stkCount');
   if(!grid) return;
   const tabs = document.getElementById('stkTabs');
+  const tabList = [{k:'all', n:'🌐 总库', tip:'所有贴纸都先落在这里，从这里分配到需要的柜子（可拖到柜子标签上，或点贴纸卡片上的「＋分配」）'}].concat(STK.CATS);
   if(tabs){
-    tabs.innerHTML = (STK.CATS||[]).map(c=>
+    tabs.innerHTML = tabList.map(c=>
       '<button class="'+(c.k===STK.cat?'on':'')+'" title="'+escAttr(c.tip)+'"'
-      + ' onclick="stkSwitchCat(\''+c.k+'\')">'+c.n+' ('+stkAll(c.k).length+')</button>'
+      + ' onclick="stkSwitchCat(\''+c.k+'\')"'
+      + (c.k!=='all' ? ' ondragover="stkTabDragOver(event,\''+c.k+'\')" ondragleave="stkTabDragLeave(event)" ondrop="stkTabDrop(event,\''+c.k+'\')"' : '')
+      + '>'+c.n+' ('+stkAll(c.k).length+')</button>'
     ).join('');
   }
   const tools = document.getElementById('stkPomoTools');
   if(tools) tools.style.display = (STK.cat === 'pomo') ? 'block' : 'none';
   const hint = document.getElementById('stkDropHint');
   if(hint){
-    const tip = ((STK.CATS||[]).find(c=>c.k===STK.cat)||{}).tip || '';
-    hint.innerHTML = '导进来的图会放进「'+stkCatName(STK.cat)+'」这个柜子：'+escHtml(tip)+'。<br>'
-      + '支持一次多选，自动缩到 256px 以内存在本机，不占云端同步。';
+    if(STK.cat === 'all'){
+      hint.innerHTML = '支持一次多选。新导入的图都先落在这个「总库」里，不属于任何柜子。<br>'
+        + '把图拖到上面的柜子标签上，或点贴纸卡片上的「＋分配」，分到需要的柜子（一张图可以同时分给好几个柜子）。<br>'
+        + '点贴纸下面的名字随时可以改名，仓库里的图也能改（只是改的是本机显示名，不会改仓库文件）。';
+    } else {
+      const tip = ((STK.CATS||[]).find(c=>c.k===STK.cat)||{}).tip || '';
+      hint.innerHTML = '这里只显示已经分配进「'+stkCatName(STK.cat)+'」的图：'+escHtml(tip)+'。<br>'
+        + '新导入的图请去「🌐 总库」分配；仓库贴纸的位置由 stickers.json 决定，改不了。';
+    }
   }
   const all = stkAll(STK.cat);
   const on  = all.filter(s=>stkEnabled(s.id)).length;
   if(cnt) cnt.textContent = on + ' / ' + all.length;
   if(!all.length){
-    grid.innerHTML = '<div class="stk-empty">「'+stkCatName(STK.cat)+'」这个柜子还是空的。<br>'
-      + '把抠好的透明底 PNG 拖进上面的框（存在这台设备），<br>'
-      + '或者把图片提交进仓库的 stickers/ 目录、在 stickers.json 里登记（所有设备都能看到）。<br>'
-      + '之后每记一个番茄，就会从库里随机抽一张贴到格子上。</div>';
+    grid.innerHTML = STK.cat === 'all'
+      ? ('<div class="stk-empty">总库还是空的。<br>'
+         + '把抠好的透明底 PNG 拖进上面的框（存在这台设备），<br>'
+         + '或者把图片提交进仓库的 stickers/ 目录、在 stickers.json 里登记（所有设备都能看到）。</div>')
+      : ('<div class="stk-empty">「'+stkCatName(STK.cat)+'」这个柜子还是空的。<br>'
+         + '去「🌐 总库」把已经导入的图分配过来，或者直接在总库里导入新图。</div>');
     return;
   }
   grid.innerHTML = all.map(s=>{
     const off = !stkEnabled(s.id);
     const q = "'" + s.id.replace(/'/g, "\\'") + "'";
-    let h = '<div class="stk-item'+(off?' off':'')+'" title="'+escAttr(s.name||'')+'">'
+    const nm = stkDisplayName(s);
+    let h = '<div class="stk-item'+(off?' off':'')+'" title="'+escAttr(nm)+'"'
+      + (!s.repo ? ' draggable="true" ondragstart="stkItemDragStart(event,'+q+')" ondragend="stkItemDragEnd(event)"' : '')
+      + '>'
       + '<span class="stk-src'+(s.repo?'':' local')+'">'+(s.repo?'仓库':'本机')+'</span>';
     if(!s.repo){
-      h += '<span class="stk-del" title="删除这张" onclick="stkRemove('+q+')">✕</span>';
+      h += '<span class="stk-del" title="彻底删除这张（所有柜子都会失去它）" onclick="stkRemove('+q+')">✕</span>';
     }
     h += '<img src="'+s.src+'" alt="" draggable="false">'
-      + '<div class="stk-name">'+escHtml(s.name||'未命名')+'</div>'
-      + '<div class="stk-ops">'
-      +   '<button onclick="stkToggle('+q+')" title="参不参与抽签">'+(off?'启用':'停用')+'</button>'
-      +   (STK.cat === 'pomo'
-            ? '<button onclick="stkSetValue('+q+')" title="这张值多少分钟">'+stkValOf(s.id)+'m</button>'
-            : (s.repo
-                ? '<button onclick="stkCopyPath('+q+')" title="复制路径">路径</button>'
-                : '<button onclick="stkRename('+q+')" title="改名字">改名</button>'))
-      + '</div>'
+      + '<div class="stk-name" onclick="stkRename('+q+')" title="点击改名">'+escHtml(nm)+'</div>';
+
+    if(STK.cat === 'all'){
+      const cats = stkCatsOf(s);
+      h += '<div class="stk-cat-chips">';
+      if(!cats.length) h += '<span class="stk-chip empty">未分配</span>';
+      cats.forEach(ck=>{
+        h += '<span class="stk-chip">'+stkCatName(ck)
+          + (s.repo?'':'<span class="stk-chip-x" title="从这个柜子移出" onclick="stkAssignRemove('+q+',\''+ck+'\')">✕</span>')
+          + '</span>';
+      });
+      if(!s.repo){
+        h += '<span class="stk-chip add" onclick="stkAssignMenuToggle(event,\''+s.id+'\')">＋分配</span>';
+      }
+      h += '</div>';
+      if(!s.repo){
+        h += '<div class="stk-assign-menu" id="stkAssignMenu-'+s.id+'" style="display:none;">'
+          + STK.CATS.map(c=>'<button onclick="stkAssignAdd('+q+',\''+c.k+'\');stkAssignMenuClose(\''+s.id+'\')"'
+              + (cats.includes(c.k)?' disabled':'') + '>'+c.n+'</button>').join('')
+          + '</div>';
+      }
+    }
+
+    h += '<div class="stk-ops">';
+    h += '<button onclick="stkToggle('+q+')" title="参不参与抽签">'+(off?'启用':'停用')+'</button>';
+    if(STK.cat === 'pomo'){
+      h += '<button onclick="stkSetValue('+q+')" title="这张值多少分钟">'+stkValOf(s.id)+'m</button>';
+    } else if(s.repo){
+      h += '<button onclick="stkCopyPath('+q+')" title="复制路径">路径</button>';
+    }
+    if(STK.cat !== 'all' && !s.repo){
+      h += '<button onclick="stkAssignRemove('+q+',\''+STK.cat+'\')" title="从这个柜子移出，贴纸还留在总库">移出</button>';
+    }
+    h += '</div>'
       + '</div>';
     return h;
   }).join('');
@@ -3587,19 +4226,39 @@ function stkCopyPath(id){
   }
 }
 
+// 显示名：本机贴纸用自己的 name；仓库贴纸如果本机改过名，优先显示改过的（只影响本机显示，不改仓库文件）
+function stkDisplayName(s){
+  if(!s) return '';
+  const ov = S.stkNameOv && S.stkNameOv[s.id];
+  return (ov != null && ov !== '') ? ov : (s.name || '未命名');
+}
+
+// 任何贴纸（含仓库贴纸）都能随时改名：本机贴纸直接改 name，仓库贴纸改本机的显示名覆盖
 function stkRename(id){
   const s = stkById(id); if(!s) return;
-  if(s.repo){ showToast('仓库里的贴纸请在仓库里改名'); return; }
-  const v = prompt('给这张贴纸起个名字', s.name||'');
+  const cur = stkDisplayName(s);
+  const v = prompt(s.repo ? '给这张仓库贴纸起一个本机显示名（不会改动仓库文件）' : '给这张贴纸起个名字', cur);
   if(v === null) return;
-  s.name = v.trim().slice(0,24) || '未命名';
-  stkPut(s).then(renderStickerLib);
+  const nv = v.trim().slice(0,24);
+  if(!S.stkNameOv || typeof S.stkNameOv !== 'object') S.stkNameOv = {};
+  if(s.repo){
+    if(!nv || nv === (s.name||'')) delete S.stkNameOv[id];
+    else S.stkNameOv[id] = nv;
+    saveState();
+    renderStickerLib();
+    renderTasks();
+    return;
+  }
+  s.name = nv || '未命名';
+  delete S.stkNameOv[id];   // 本机贴纸改名直接写进记录本身，不用再叠加覆盖层
+  saveState();
+  stkPut(s).then(()=>{ renderStickerLib(); renderTasks(); });
 }
 
 function stkRemove(id){
   const s = stkById(id); if(!s) return;
   if(s.repo){ showToast('仓库里的贴纸请在仓库里删，这里可以先停用'); return; }
-  if(!confirm('删掉贴纸「'+(s.name||'未命名')+'」？已经贴在格子上的会换成别的图。')) return;
+  if(!confirm('彻底删掉贴纸「'+stkDisplayName(s)+'」？它会从所有柜子里消失，已经贴出去的会换成别的图。')) return;
   stkDel(id).then(()=>{
     STK.list = STK.list.filter(x=>x.id!==id);
     renderStickerLib();
@@ -3916,6 +4575,11 @@ function renderTasks(){
     hideBtn.title = _hideDoneTasks ? '已隐藏完成任务（点击显示）' : '显示全部（点击隐藏已完成）';
   }
 
+  const arSel = document.getElementById('taskAutoResetSel');
+  const clMod = document.getElementById('taskCleanupModal');
+  if(arSel && clMod && clMod.classList.contains('open')
+     && document.activeElement !== arSel) arSel.value = taskAutoResetCfg().mode;
+
   // 月份归档条（按完成时间）
   const doneItems = S.tasks.filter(t=>t.done && t.doneAt);
   renderArchive('archiveT', doneItems.map(t=>({createdAt:t.doneAt})), _taskMonthFilter, m=>{ _taskMonthFilter=m; renderTasks(); });
@@ -4034,6 +4698,7 @@ function renderTasks(){
 
   list.innerHTML = html;
   renderTasksToc();
+  refreshFocusModeIfOpen();
 }
 
 function taskCardHtml(t, projectId, goalFallback){
@@ -4051,11 +4716,12 @@ function taskCardHtml(t, projectId, goalFallback){
   const tw = taskWeight(t);
   h += '<button class="task-weight'+(tw!==1?' set':'')+'" onclick="openWeightMenu(event,'+t.id+')" title="任务权重（1-10）">×'+tw+'</button>';
   h += '<button class="icon-btn" onclick="bindPomo('+t.id+')" title="'+(pomoTaskId==t.id?'点击解绑番茄钟':'绑定番茄钟')+'"'+(pomoTaskId==t.id?' style="background:#008000;color:#fff;"':'')+'>🍅</button>';
+  h += '<button class="icon-btn" onclick="enterFocusOnTask('+t.id+')" title="专注模式：绑定这条任务并进入大屏计时">🎯</button>';
   h += '<button class="icon-btn" onclick="togglePomoGrid('+t.id+')" title="番茄格子表"'+(t.pomoGrid?' style="background:#000080;color:#fff;"':'')+'>'+PG_ICON+'</button>';
   h += '<button class="icon-btn" onclick="deleteTask('+t.id+')" style="color:#cc0000;">✕</button>';
   h += '</div></div>';
   h += '<div class="task-note-editable" contenteditable="true" data-placeholder="点击添加想法笔记..." oninput="syncTaskNoteFromDOM('+t.id+',this)">'+escHtml(t.note||'')+'</div>';
-  h += pomoStripHtml(t, goalFallback);
+  h += timelineWidgetHtml(t, goalFallback);
   h += pomoGridHtml(t, goalFallback);
   h += '</div>';
   return h;
@@ -6372,7 +7038,59 @@ function tickPomo(){
 
 function updatePomoDisplay(){
   const m=p2(Math.floor(pomoSec/60)),s=p2(pomoSec%60);
-  document.getElementById('pomoDisplay').textContent=m+':'+s;
+  const txt = m+':'+s;
+  document.getElementById('pomoDisplay').textContent=txt;
+  const fd = document.getElementById('focusTimerDisplay');
+  if(fd) fd.textContent = txt;
+}
+
+// ═══════════════════════════════════════
+// 专注模式：只看当前绑定任务的大进度条 + 计时器，屏蔽其它干扰
+// ═══════════════════════════════════════
+function focusModalOpen(){
+  const el = document.getElementById('focusModal');
+  return !!(el && el.classList.contains('open'));
+}
+function refreshFocusModeIfOpen(){
+  if(focusModalOpen()) renderFocusMode();
+}
+function openFocusMode(){
+  openModal('focusModal');
+  renderFocusMode();
+}
+// 任务卡上的 🎯：先绑定这条任务（如果还没绑），再直接进专注模式
+function enterFocusOnTask(id){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  if(pomoTaskId != id){
+    pomoTaskId = id;
+    const nameEl = document.getElementById('pomoTaskName');
+    if(nameEl) nameEl.textContent = t.name;
+    renderTasks();
+  }
+  openFocusMode();
+}
+function renderFocusMode(){
+  const wrap = document.getElementById('focusBody');
+  if(!wrap) return;
+  const t = pomoTaskId ? (S.tasks||[]).find(x=>x.id==pomoTaskId) : null;
+  if(!t){
+    wrap.innerHTML = '<div class="focus-hint" style="margin-top:20px;">还没有绑定任务。<br>'
+      + '先回到任务列表，点任务卡上的 🎯 或 🍅，绑定一个任务后再进入专注模式。</div>';
+    return;
+  }
+  const proj = (S.tasks||[]).find(x=>x.id==t.projectId && x.type==='project');
+  const goalFallback = proj ? projGoalMin(proj) : DEFAULT_POMO_GOAL;
+  const running = !!pomoTimer;
+  const curDisp = document.getElementById('pomoDisplay');
+  let h = '<div class="focus-task-name">'+escHtml(t.name)+'</div>';
+  h += '<div class="focus-timer" id="focusTimerDisplay">'+(running && curDisp ? curDisp.textContent : '--:--')+'</div>';
+  h += '<div class="pomo-btns" style="justify-content:center;">'
+    + [5,10,15,30,60,90].map(m=>'<button class="pomo-btn'+(running&&pomoMin===m?' active':'')+'" data-min="'+m+'" onclick="startPomo('+m+')">'+m+'m</button>').join('')
+    + '<button class="pomo-btn" onclick="stopPomo()" style="color:#cc0000;">■ 停止</button>'
+    + '</div>';
+  h += '<div class="focus-hint">专注模式只显示这一条任务，退出后回到完整任务列表</div>';
+  h += timelineWidgetHtml(t, goalFallback);
+  wrap.innerHTML = h;
 }
 
 document.addEventListener('visibilitychange',()=>{
@@ -8065,7 +8783,7 @@ function shopMeta(id){
   const sk = stkById(id) || {};
   const m = S.shopMeta[id] || {};
   return {
-    name: m.name || sk.name || '未命名',
+    name: m.name || stkDisplayName(sk) || '未命名',
     price: Math.max(1, Math.round(Number(m.price != null ? m.price : (sk.price || 100)))),
     desc: m.desc || sk.desc || ''
   };
@@ -8473,12 +9191,13 @@ function renderStkPick(){
     grid.innerHTML = all.length
       ? all.map(sk=>{
           const q = "'" + sk.id.replace(/'/g, "\\'") + "'";
-          return '<div class="stk-item emo-skip" onclick="stkPickChoose('+q+')" title="'+escAttr(sk.name||'')+'">'
+          const nm = stkDisplayName(sk);
+          return '<div class="stk-item emo-skip" onclick="stkPickChoose('+q+')" title="'+escAttr(nm)+'">'
             + '<img src="'+sk.src+'" alt="">'
-            + '<div class="stk-name">'+escHtml(sk.name||'')+'</div></div>';
+            + '<div class="stk-name">'+escHtml(nm)+'</div></div>';
         }).join('')
       : ('<div class="stk-empty">「'+(_stkPickCat?stkCatName(_stkPickCat):'贴纸库')+'」里还没有图。<br>'
-         + '先去贴纸库把抠好的图导进这个柜子。</div>');
+         + '先去总库把抠好的图分配进这个柜子。</div>');
   }
 }
 function stkPickChoose(id){
@@ -8616,28 +9335,32 @@ function stkExportZip(){
     const manifest = {};
     const counter = {};
     local.forEach(sk=>{
-      const cat = sk.cat || 'pomo';
-      counter[cat] = (counter[cat]||0) + 1;
-      const num = String(counter[cat]).padStart(3, '0');
+      const cats = stkCatsOf(sk).length ? stkCatsOf(sk) : ['pomo'];
+      const primary = cats[0];
+      counter[primary] = (counter[primary]||0) + 1;
+      const num = String(counter[primary]).padStart(3, '0');
       const ext = /^data:image\/gif/i.test(sk.src) ? 'gif' : 'png';
-      const path = 'stickers/'+cat+'/'+cat+'-'+num+'.'+ext;
+      const path = 'stickers/'+primary+'/'+primary+'-'+num+'.'+ext;
       files.push({name: path, data: dataUrlBytes(sk.src)});
-      const entry = {file: path, name: sk.name || (cat+'-'+num), id: sk.id};
-      if(cat === 'pomo') entry.value = stkValOf(sk.id);
-      if(cat === 'shop'){
-        const m = shopMeta(sk.id);
-        entry.price = m.price;
-        entry.name = m.name;
-        if(m.desc) entry.desc = m.desc;
-      }
-      (manifest[cat] = manifest[cat] || []).push(entry);
+      // 一张图分给了好几个柜子的话，清单里每个柜子都会登记这同一个文件
+      cats.forEach(cat=>{
+        const entry = {file: path, name: stkDisplayName(sk) || (cat+'-'+num), id: sk.id};
+        if(cat === 'pomo') entry.value = stkValOf(sk.id);
+        if(cat === 'shop'){
+          const m = shopMeta(sk.id);
+          entry.price = m.price;
+          entry.name = m.name;
+          if(m.desc) entry.desc = m.desc;
+        }
+        (manifest[cat] = manifest[cat] || []).push(entry);
+      });
     });
     // 仓库里已有的也写进清单，免得覆盖后丢条目
     STK.repo.forEach(sk=>{
       const cat = sk.cat || 'pomo';
       const arr = (manifest[cat] = manifest[cat] || []);
       if(arr.some(e=>e.file === sk.src)) return;
-      const entry = {file: sk.src, name: sk.name, id: sk.id};
+      const entry = {file: sk.src, name: stkDisplayName(sk), id: sk.id};
       if(cat === 'pomo') entry.value = stkValOf(sk.id);
       if(cat === 'shop'){ const m = shopMeta(sk.id); entry.price = m.price; entry.name = m.name; }
       arr.push(entry);
@@ -8716,6 +9439,7 @@ function doChangePassword(){
   } catch(e) {}
   renderAll(); // instant paint from local
   await loadState(); // cloud sync (will re-render if cloud is newer)
+  checkTaskAutoReset(); // 到期就自动清空任务重新开始（Log 不受影响）
 })();
 </script>
 

@@ -1,4 +1,12 @@
-// MMM (ADHD RPG) — Service Worker v6
+// MMM (ADHD RPG) — Service Worker v10
+// v10: 手动清空改成「勾选+打字确认」的清理弹窗，不好误触；
+//      修复跨设备同步会把已清空任务并回来的问题（Log 永远只增不减）
+// v9: 任务区支持「清空任务、重新开始」——手动一键清空，也可设置每天/每周/每月自动清空；
+//     清空前会自动把还没导入 Log 的时间轴标记补导入，Log 里的数据完全不受影响
+// v8: 任务卡新增「专注模式」大屏；进度条标记改用百分比定格（不再随目标时长漂移）；
+//     标记图标可从贴纸库自定义；贴纸库重构成「总库 + 各柜子分配」，支持随时改名、拖拽分配
+// v7: 任务卡进度条加大，内嵌时间轴打点（目标时长 × 自我觉察），
+//     标记可单条/批量导入 Log
 // v6: 配合贴纸库
 //     - stickers.json 清单改成网络优先，仓库里新加的贴纸提交后立刻能看到
 //     - stickers/ 下的图片走「先用缓存、同时后台更新」，既快又不会长期过期
@@ -6,7 +14,7 @@
 //     修复：v4 中 STATIC_ASSETS 引用了不存在的 icons/ 文件，
 //     导致 cache.addAll 整体失败、Service Worker 无法安装；
 //     修复：index.html 离线回退之前从未真正入缓存，离线时无法打开
-const CACHE_NAME = 'adhd-rpg-v6';
+const CACHE_NAME = 'adhd-rpg-v10';
 
 // 只预缓存确定存在的静态资源（图标已内嵌在 manifest.json 的 data URL 中，仓库里没有 icons/ 目录）
 const STATIC_ASSETS = [
