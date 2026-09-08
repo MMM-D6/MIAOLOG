@@ -598,7 +598,6 @@ body{
   background:var(--surface2);border-left:3px solid #ff9900;
 }
 .tl-item.imported{border-left-color:#a0a0a0;opacity:.75;}
-.tl-item-chk{margin-top:3px;flex-shrink:0;cursor:pointer;}
 .tl-item-body{flex:1;min-width:0;}
 .tl-item-meta{font-size:10px;color:#808080;font-family:var(--font-mono);}
 .tl-item-text{font-size:12px;color:#000;white-space:pre-wrap;word-break:break-word;cursor:text;}
@@ -1036,6 +1035,8 @@ body{
 .entry-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
 .entry-ts{font-size:10px;color:#808080;font-family:var(--font-ui);}
 .entry-body{font-size:13px;color:#000;line-height:1.6;white-space:pre-wrap;word-break:break-word;font-family:var(--font-ui);}
+/* 从任务时间轴导进来的 Log：来源信息放得很淡，不抢正文 */
+.entry-src{font-size:10px;color:#b0b0b0;margin-top:4px;font-family:var(--font-ui);}
 .entry-img{margin-top:6px;max-width:100%;max-height:200px;border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
 .tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
 .tag{
@@ -3430,8 +3431,12 @@ function timelineWidgetHtml(t, goalFallback){
 
   h += '<div class="tl-add-row">';
   h += '<button class="pxl-btn tl-mark-btn" onclick="addTlMark('+t.id+')" title="在当前进度打一个时间点，写下此刻的感受和自我调节想法">📍 标记此刻</button>';
-  if(marks.some(m=>!m.imported)){
-    h += '<button class="pxl-btn tl-mark-btn" onclick="importAllCheckedTl('+t.id+')" title="把下面勾选的记录批量导入到 Log">📤 批量导入所选</button>';
+  const unimported = marks.filter(m=>!m.imported).length;
+  if(unimported){
+    h += '<button class="pxl-btn tl-mark-btn" onclick="importAllTl('+t.id+')" title="把这条任务下还没导入的标记一次性全部导入 Log">📤 一键导入全部（'+unimported+'）</button>';
+  }
+  if(marks.length){
+    h += '<button class="pxl-btn tl-mark-btn" onclick="copyTaskRecord('+t.id+')" title="把这条任务的全部记录复制到剪贴板，方便贴给 AI 做分析和自我觉察">📋 复制记录</button>';
   }
   h += '<button class="pxl-btn tl-mark-btn" onclick="tlMarkSkinPick()" title="从贴纸库选一张图，换掉标记点的小旗子图标（所有任务通用）">🖼️ 标记图标</button>';
   h += '</div>';
@@ -3450,13 +3455,12 @@ function timelineWidgetHtml(t, goalFallback){
     h += '<div class="tl-list">';
     marks.slice().reverse().forEach(m=>{
       h += '<div class="tl-item'+(m.imported?' imported':'')+'" id="tlitem-'+t.id+'-'+m.id+'">';
-      h += '<input type="checkbox" class="tl-item-chk" data-tl="'+m.id+'"'+(m.imported?' disabled':'')+'/>';
       h += '<div class="tl-item-body">';
       h += '<div class="tl-item-meta">📍 '+(m.pct||0)+'% · '+fmtDT(m.ts)+(m.imported?' · ✓已导入Log':'')+'</div>';
       h += '<div class="tl-item-text" contenteditable="true" oninput="syncTlMarkText('+t.id+','+m.id+',this)">'+escHtml(m.text||'')+'</div>';
       h += '</div>';
       h += '<div class="tl-item-actions">';
-      if(!m.imported) h += '<button class="icon-btn" onclick="importOneTl('+t.id+','+m.id+')" title="单条导入到 Log">📤</button>';
+      if(!m.imported) h += '<button class="icon-btn" onclick="importOneTl('+t.id+','+m.id+')" title="一键导入这条到 Log">📤</button>';
       h += '<button class="icon-btn" onclick="deleteTlMark('+t.id+','+m.id+')" style="color:#cc0000;" title="删除这个标记">✕</button>';
       h += '</div>';
       h += '</div>';
@@ -3535,38 +3539,76 @@ function deleteTlMark(tid, mid){
   renderTasks();
 }
 
-function tlMarkToJournalText(t, m){
-  return '📍【'+(t.name||'任务')+'】进度 '+(m.pct||0)+'%\n'+(m.text||'');
+// 导入 Log 的条目：正文就是你写的那段话本身，跟手写的 Log 长得一模一样；
+// 任务名和进度不进正文、也不进标签，而是存在 src 里，渲染时以很淡的一行放在下面
+function makeTlJournalEntry(t, m){
+  return {
+    id: S.nextId++,
+    text: (m.text||'').trim(),
+    tags: [],
+    src: {task: t.name||'', pct: m.pct||0},
+    createdAt: m.ts || new Date().toISOString()
+  };
 }
 
 function importOneTl(tid, mid){
   const t = (S.tasks||[]).find(x=>x.id==tid); if(!t) return;
   const m = tlMarksOf(t).find(x=>x.id==mid); if(!m || m.imported) return;
   if(!Array.isArray(S.journal)) S.journal=[];
-  S.journal.unshift({id:S.nextId++, text:tlMarkToJournalText(t,m), tags:['时间轴',t.name].filter(Boolean), createdAt:m.ts||new Date().toISOString()});
+  S.journal.unshift(makeTlJournalEntry(t, m));
   m.imported = true;
   saveState();
   renderTasks();
+  renderJournal();
   showToast('📤 已导入 1 条到 Log');
 }
 
-function importAllCheckedTl(id){
+// 一键把这条任务下所有还没导入的标记都导进 Log
+function importAllTl(id){
   const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
-  const wrap = document.getElementById('tlw-'+id); if(!wrap) return;
-  const checked = Array.from(wrap.querySelectorAll('.tl-item-chk:checked')).map(c=>Number(c.dataset.tl));
-  if(!checked.length){ showToast('先勾选要导入的记录'); return; }
+  const pending = tlMarksOf(t).filter(m=>!m.imported);
+  if(!pending.length){ showToast('没有待导入的记录'); return; }
   if(!Array.isArray(S.journal)) S.journal=[];
-  let n=0;
-  checked.forEach(mid=>{
-    const m = tlMarksOf(t).find(x=>x.id==mid);
-    if(!m || m.imported) return;
-    S.journal.unshift({id:S.nextId++, text:tlMarkToJournalText(t,m), tags:['时间轴',t.name].filter(Boolean), createdAt:m.ts||new Date().toISOString()});
+  pending.forEach(m=>{
+    S.journal.unshift(makeTlJournalEntry(t, m));
     m.imported = true;
-    n++;
   });
   saveState();
   renderTasks();
-  showToast('📤 已批量导入 '+n+' 条到 Log');
+  renderJournal();
+  showToast('📤 已导入 '+pending.length+' 条到 Log');
+}
+
+// 把这条任务的完整记录复制到剪贴板，方便贴给 AI 一起做分析和自我觉察
+function copyTaskRecord(id){
+  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
+  const marks = tlMarksOf(t).slice().sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
+  const g = taskEffectiveGoal(t);
+  const mins = (t.pomoMin||0) + pomoLiveElapsedMin(t);
+  const pct = g>0 ? Math.round(Math.min(100, mins/g*100)) : 0;
+
+  const lines = [];
+  lines.push('任务：'+(t.name||'（未命名）'));
+  lines.push('投入：'+fmtMin(mins)+' / 目标 '+fmtMin(g)+'（'+pct+'%）'+(t.done?' · 已完成':''));
+  if(t.note) lines.push('任务笔记：'+t.note);
+  lines.push('');
+  if(!marks.length){
+    lines.push('（还没有时间轴标记）');
+  } else {
+    lines.push('时间轴标记（共 '+marks.length+' 条）：');
+    marks.forEach(m=>{
+      lines.push('');
+      lines.push('· '+fmtDT(m.ts)+' — 进度 '+(m.pct||0)+'%');
+      lines.push('  '+((m.text||'').trim() || '（没写内容）').replace(/\n/g, '\n  '));
+    });
+  }
+  const txt = lines.join('\n');
+  const ok = ()=>showToast('📋 已复制这条任务的记录，可以直接贴给 AI 分析');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok).catch(()=>prompt('复制下面的内容：', txt));
+  } else {
+    prompt('复制下面的内容：', txt);
+  }
 }
 
 // ═══════════════════════════════════════
@@ -3619,7 +3661,7 @@ function performTasksReset(opts){
   if(pending.length && opts.importPending){
     if(!Array.isArray(S.journal)) S.journal = [];
     pending.forEach(({t,m})=>{
-      S.journal.unshift({id:S.nextId++, text:tlMarkToJournalText(t,m), tags:['时间轴',t.name].filter(Boolean), createdAt:m.ts||new Date().toISOString()});
+      S.journal.unshift(makeTlJournalEntry(t, m));
       importN++;
     });
   }
@@ -6773,6 +6815,7 @@ function renderJournal(){
       </div>
       <div id="j-view-${j.id}">
         <div class="entry-body">${j.text}</div>
+        ${j.src?`<div class="entry-src">${escHtml(j.src.task||'')}${j.src.pct!=null?' · '+j.src.pct+'%':''}</div>`:''}
         ${j.tags.length?`<div class="tags">${j.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
         ${(j.links&&j.links.length)?`<div style="margin-top:6px;font-size:12px;color:#800080;">🔗 ${j.links.length} 个关联条目</div>`:''}
         ${(j.replies&&j.replies.length)?`<div style="margin-top:3px;font-size:12px;color:#000080;">💬 ${j.replies.length} 条补充</div>`:''}
@@ -7398,6 +7441,7 @@ function exportJournal(){
   let txt='=== Log日志 ===\n\n';
   S.journal.forEach(j=>{
     txt+='['+fmtDT(j.createdAt)+']\n'+j.text+'\n';
+    if(j.src) txt+='（来自任务：'+(j.src.task||'')+(j.src.pct!=null?' · 进度 '+j.src.pct+'%':'')+'）\n';
     if(j.tags&&j.tags.length) txt+='标签: '+j.tags.join(', ')+'\n';
     txt+='\n---\n\n';
   });
