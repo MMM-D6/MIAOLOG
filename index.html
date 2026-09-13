@@ -774,12 +774,60 @@ body{
 
 /* ── 任务卡上的能量标签（字号跟随各自标签的设置） ── */
 .etag-mini{
-  display:inline-block;font-size:11px;font-weight:bold;padding:0 6px;
+  display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:bold;padding:0 6px;
   border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
-  margin-left:6px;vertical-align:middle;cursor:context-menu;
-  font-family:var(--font-ui);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  margin-left:6px;vertical-align:middle;cursor:pointer;
+  font-family:var(--font-ui);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .etag-mini:hover{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
+.etag-mini:active{transform:translate(1px,1px);}
+/* 这个状态下已经绑定了几条 Log */
+.etag-n{
+  font-family:var(--font-mono);font-size:9px;font-weight:bold;line-height:12px;
+  min-width:12px;padding:0 2px;text-align:center;
+  background:rgba(0,0,0,.55);color:#fff;
+}
+.etag-mini .etag-n.zero{background:rgba(0,0,0,.2);}
+
+/* ── 状态标签选择浮层（任务卡 / Log 条目共用） ── */
+.tagpop{
+  position:fixed;z-index:320;display:none;width:250px;padding:4px;
+  background:var(--win-gray);box-shadow:2px 2px 0 #000;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  font-family:var(--font-ui);font-size:12px;color:#000;
+}
+.tagpop.open{display:block;}
+.tagpop-search{
+  width:100%;box-sizing:border-box;font-family:var(--font-ui);font-size:12px;
+  padding:3px 5px;background:#fff;color:#000;outline:none;
+  border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
+.tagpop-list{max-height:210px;overflow-y:auto;margin-top:4px;}
+.tagpop-row{
+  display:flex;align-items:center;gap:6px;padding:3px 4px;cursor:pointer;
+}
+.tagpop-row:hover{background:#000080;color:#fff;}
+.tagpop-row.on{background:var(--win-light);}
+.tagpop-row.on:hover{background:#000080;color:#fff;}
+.tagpop-dot{
+  width:14px;height:14px;flex-shrink:0;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+}
+.tagpop-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tagpop-n{font-family:var(--font-mono);font-size:10px;opacity:.7;}
+.tagpop-ck{width:12px;text-align:center;font-weight:bold;}
+.tagpop-empty{font-size:11px;color:#606060;padding:6px 4px;line-height:1.5;}
+.tagpop-hint{font-size:10px;color:#606060;padding:3px 4px 1px;line-height:1.4;}
+
+/* Log 弹窗里的一排状态标签，点一下就绑定 */
+.jtagchips{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px;}
+.jtagchip{
+  font-size:11px;font-weight:bold;padding:1px 6px;cursor:pointer;user-select:none;
+  border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
+  font-family:var(--font-ui);opacity:.55;
+}
+.jtagchip:hover{opacity:.85;}
+.jtagchip.on{opacity:1;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
 .etag-pick{
   background:var(--win-gray);border:2px solid;
   border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
@@ -1044,6 +1092,9 @@ body{
   padding:1px 6px;font-family:var(--font-ui);
   border:1px solid #000060;
 }
+/* 与任务卡上的状态标签同名的，直接用它的颜色，并且点一下就抽同状态的旧记录 */
+.tag.state{cursor:pointer;font-weight:bold;}
+.tag.state:hover{outline:1px solid #000;outline-offset:1px;}
 .archive-row{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;}
 .arch-btn{
   font-size:11px;padding:2px 7px;font-family:var(--font-ui);
@@ -1706,7 +1757,7 @@ body{
             <input class="search-bar" id="quickAddProjectInput" placeholder="+ 新项目，回车创建..." style="width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddProject();}"/>
             <input class="search-bar" id="taskSearch" placeholder="搜索全部项目..." style="width:200px;" title="有关键词时跨所有项目查找，清空后回到当前选中的项目" oninput="renderTasks()"/>
             <button class="pxl-btn" id="hideDoneBtn" onclick="toggleHideDone()" title="隐藏已完成任务">☑</button>
-            <button class="pxl-btn" onclick="toggleEnergyTagBar()" title="管理能量标签">🏷️</button>
+            <button class="pxl-btn" onclick="toggleEnergyTagBar()" title="管理状态标签">🏷️</button>
             <button class="pxl-btn" onclick="exportSelectedProject()" title="导出左侧目录中选中的那个项目（JSON，可以再导入回来）">📤 导出项目</button>
             <button class="pxl-btn" onclick="document.getElementById('projImportInput').click()" title="导入项目 JSON 文件">📥 导入项目</button>
             <input type="file" id="projImportInput" accept=".json,application/json" style="display:none;" onchange="onProjectImportSelected(event)"/>
@@ -1747,7 +1798,7 @@ body{
     <!-- JOURNAL -->
     <div class="section" id="sec-journal">
       <div class="toolbar">
-        <button class="pxl-btn primary" onclick="openModal('journalModal');setTimeout(jDraftRestore,50)">💭 + 记录此刻</button>
+        <button class="pxl-btn primary" onclick="openModal('journalModal');setTimeout(function(){jDraftRestore();renderJournalTagChips();},50)">💭 + 记录此刻</button>
         <input class="search-bar" id="journalSearch" placeholder="关键词搜索..." oninput="renderJournal()"/>
         <button class="pxl-btn" onclick="exportJournal()">📄 导出</button>
         <button class="pxl-btn recall-btn" onclick="showRandomEntry()" title="随机翻出一条过去的记录">🎲 随机回溯</button>
@@ -2240,7 +2291,9 @@ body{
     <div class="modal-title">新建日记</div>
     <div class="form-row"><label class="form-label">今天想说...</label><textarea class="form-textarea" id="journalText" rows="8" placeholder="自由书写，这里只有你自己..." oninput="jDraftSave()"></textarea>
     <div id="j-draft-hint" style="font-size:11px;color:#808080;margin-top:3px;display:none;border-radius:0;transition:all 0.3s;"></div></div>
-    <div class="form-row"><label class="form-label">标签（逗号分隔）</label><input class="form-input" id="journalTags" placeholder="情绪, 反思, 想法" oninput="jDraftSave()"/></div>
+    <div class="form-row"><label class="form-label">标签（逗号分隔）</label><input class="form-input" id="journalTags" placeholder="情绪, 反思, 想法" oninput="jDraftSave();renderJournalTagChips();"/>
+      <div id="journalTagChips" class="jtagchips"></div>
+      <div style="font-size:11px;color:#808080;margin-top:4px;">点上面的状态就把这条 Log 绑给它，以后在任务卡上点同一个状态，就能把这段话抽回来</div></div>
     <div class="modal-btns">
       <button class="pxl-btn" onclick="closeModal('journalModal')">取消</button>
       <button class="pxl-btn primary" onclick="saveJournal()">保存 +5🍅</button>
@@ -2342,6 +2395,9 @@ body{
     </div>
   </div>
 </div>
+
+<!-- STATE TAG PICKER (任务卡 / Log 条目共用的状态选择浮层) -->
+<div class="tagpop" id="tagPop" onclick="event.stopPropagation()"></div>
 
 <!-- TAG CONTEXT MENU (right-click on any energy tag) -->
 <div class="ctx-menu" id="etagCtxMenu" onclick="event.stopPropagation()" oncontextmenu="event.preventDefault();event.stopPropagation()"></div>
@@ -2715,6 +2771,13 @@ function migrateState(loaded) {
   if(!Array.isArray(S.energyTags)) S.energyTags=[];
   // migrate legacy plain-string energy tags to {name,color} objects
   S.energyTags = S.energyTags.map(tg => typeof tg==='string' ? {name:tg, color:'#ffff00'} : tg);
+  // 一个任务现在可以同时挂多个状态：老的单个 energyTag 升级成数组
+  (S.tasks||[]).forEach(t=>{
+    if(!t) return;
+    if(!Array.isArray(t.energyTags)) t.energyTags = t.energyTag ? [t.energyTag] : [];
+    t.energyTags = t.energyTags.filter(Boolean);
+    delete t.energyTag;
+  });
   // 标签颜色现在完全自由，不再强制拉回荧光色；只补全缺失值
   S.energyTags.forEach(tg=>{
     if(!tg.color || !/^#[0-9a-fA-F]{6}$/.test(tg.color)) tg.color = '#ffff00';
@@ -3067,7 +3130,7 @@ function quickAddProject(){
   if(!name) return;
   const id = S.nextId++;
   S.tasks.unshift({
-    id: id, name, type:'project', desc:'', tags:[], projectId:null, note:'', energyTag:null,
+    id: id, name, type:'project', desc:'', tags:[], projectId:null, note:'', energyTags:[],
     done:false, createdAt:new Date().toISOString(), pomoMin:0
   });
   inp.value='';
@@ -3106,7 +3169,7 @@ function quickAddChildTask(projectId, sectionId){
   const arr = S.tasks;
   const anchorIdx = arr.findIndex(t=>t.id==anchorId);
   const newTask = {
-    id: S.nextId++, name, type:'todo', desc:'', tags:[], projectId, note:'', energyTag:null,
+    id: S.nextId++, name, type:'todo', desc:'', tags:[], projectId, note:'', energyTags:[],
     done:false, createdAt:new Date().toISOString(), pomoMin:0
   };
   arr.splice(anchorIdx<0?arr.length:anchorIdx+1, 0, newTask);
@@ -4870,8 +4933,12 @@ function syncTaskNoteFromDOM(id, el){
   saveStateSoon();
 }
 
-// 新建标签时的起始色（之后可以自由改成任意颜色）
-const ETAG_PALETTE = ['#ffff00','#aaff00','#00ffcc','#ff99ff','#ffb84d','#66ccff'];
+// 新建标签时的起始色（之后可以右键改成任意颜色）
+const ETAG_PALETTE = [
+  '#ffff00','#ffd400','#ffb84d','#ff8a5c','#ff5c7a','#ff99ff',
+  '#c58cff','#8f7bff','#66ccff','#00ffcc','#aaff00','#5fd35f',
+  '#c0c0c0','#9a8aaa','#607d8b','#000080'
+];
 
 // 标签可以自由选色，所以文字颜色要跟着底色自动切换黑/白
 function tagTextColor(hex){
@@ -4881,41 +4948,212 @@ function tagTextColor(hex){
   return luma < 140 ? '#fff' : '#000';
 }
 
+// 把任意字符串安全地写进内联事件里（属性用双引号包，所以引号一律转义）
+function jsStr(v){
+  return "'" + String(v==null?'':v)
+    .replace(/\\/g,'\\\\')
+    .replace(/'/g,"\\'")
+    .replace(/"/g,'\\x22')
+    .replace(/&/g,'\\x26')
+    .replace(/</g,'\\x3c')
+    .replace(/\r?\n/g,' ') + "'";
+}
+
+// 一个任务可以同时挂多个状态；老数据里的单个 energyTag 自动升级
+function taskTagNames(t){
+  if(Array.isArray(t.energyTags)) return t.energyTags.filter(Boolean);
+  return t.energyTag ? [t.energyTag] : [];
+}
+
+function findTagDef(name){
+  const k = String(name||'').trim().toLowerCase();
+  if(!k) return null;
+  return (S.energyTags||[]).find(tg=>tg && String(tg.name).trim().toLowerCase()===k) || null;
+}
+
+// 状态与 Log 的绑定关系：Log 条目的标签里出现这个状态名，就算绑定
+// 这条关系只读 Log，不写 Log —— 任务栏怎么改、怎么删，都碰不到 Log 里的文字
+function logsForTag(name){
+  const k = String(name||'').trim().toLowerCase();
+  if(!k) return [];
+  return (S.journal||[]).filter(j=>
+    Array.isArray(j.tags) && j.tags.some(t=>String(t).trim().toLowerCase()===k)
+  );
+}
+
 function energyTagHtml(t){
-  const tags = S.energyTags||[];
-  const idx = tags.findIndex(tg=>tg.name===t.energyTag);
-  const tag = idx>=0 ? tags[idx] : null;
+  const names = taskTagNames(t);
   let h = '';
-  if(tag){
-    const col = tag.color||'#ffff00';
-    h += '<span class="etag-mini" style="background:'+col+';color:'+tagTextColor(col)+';font-size:'+tagSize(tag)+'px;" oncontextmenu="openTagCtxMenu(event,'+idx+')" title="右键设置颜色和字号">'+escHtml(tag.name)+'</span>';
-  }
-  h += '<button class="etag-pick" id="etagPick-'+t.id+'" onclick="event.stopPropagation();openTagPicker('+t.id+')" title="更改能量标签">'+(tag?'▾':'＋标签')+'</button>';
+  names.forEach(nm=>{
+    const tg  = findTagDef(nm);
+    const col = (tg && tg.color) || '#c0c0c0';
+    const n   = logsForTag(nm).length;
+    h += '<span class="etag-mini" style="background:'+col+';color:'+tagTextColor(col)+';font-size:'+tagSize(tg||{})+'px;"'
+      + ' onclick="event.stopPropagation();openStateRecall('+jsStr(nm)+')"'
+      + ' oncontextmenu="openTagCtxMenuByName(event,'+jsStr(nm)+')"'
+      + ' title="点一下，抽一条这个状态下写过的 Log（已绑定 '+n+' 条）｜右键改颜色和字号">'
+      + escHtml(nm)
+      + '<span class="etag-n'+(n?'':' zero')+'">'+n+'</span>'
+      + '</span>';
+  });
+  h += '<button class="etag-pick" id="etagPick-'+t.id+'" onclick="event.stopPropagation();openTaskTagPop(event,'+t.id+')" title="给这个任务挂上/取下状态标签">'+(names.length?'＋':'＋状态')+'</button>';
   return h;
 }
 
-// 点 ▾ 才临时变成下拉框，平时保持成一个干净的色块
-function openTagPicker(id){
-  const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
-  const btn = document.getElementById('etagPick-'+id); if(!btn) return;
-  const sel = document.createElement('select');
-  sel.className = 'energy-select';
-  let opts = '<option value=""'+(!t.energyTag?' selected':'')+'>无标签</option>';
-  (S.energyTags||[]).forEach(tag=>{
-    opts += '<option value="'+escAttr(tag.name)+'"'+(t.energyTag===tag.name?' selected':'')+'>'+escHtml(tag.name)+'</option>';
-  });
-  sel.innerHTML = opts;
-  btn.replaceWith(sel);
-  sel.focus();
-  sel.addEventListener('change', ()=>setTaskEnergyTag(id, sel.value));
-  sel.addEventListener('blur', ()=>renderTasks());
+// ══════ 状态选择浮层：任务卡和 Log 条目共用 ══════
+let _tagPopCtx = null;
+
+function openTagPop(anchor, ctx){
+  const pop = document.getElementById('tagPop');
+  if(!pop || !anchor) return;
+  closeTagCtxMenu();
+  _tagPopCtx = ctx;
+  renderTagPop();
+  pop.classList.add('open');
+  const r = anchor.getBoundingClientRect();
+  const w = pop.offsetWidth, hh = pop.offsetHeight;
+  pop.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left)) + 'px';
+  const below = r.bottom + 4;
+  pop.style.top = (below + hh > window.innerHeight - 6 ? Math.max(6, r.top - hh - 4) : below) + 'px';
+  const inp = document.getElementById('tagPopSearch');
+  if(inp) inp.focus();
 }
 
-function setTaskEnergyTag(id, val){
+function closeTagPop(){
+  const pop = document.getElementById('tagPop');
+  if(pop) pop.classList.remove('open');
+  _tagPopCtx = null;
+}
+
+function renderTagPop(){
+  const pop = document.getElementById('tagPop');
+  if(!pop || !_tagPopCtx) return;
+  pop.innerHTML =
+      '<div class="ctx-title">'+escHtml(_tagPopCtx.title||'状态标签')+'</div>'
+    + '<input class="tagpop-search" id="tagPopSearch" placeholder="搜索，或输入新状态后回车"'
+    + ' oninput="renderTagPopList()"'
+    + ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();tagPopCreate();}"/>'
+    + '<div class="tagpop-list" id="tagPopList"></div>'
+    + '<div class="tagpop-hint">点一下挂上或取下 · 右键改颜色和字号 · 数字是这个状态下已经绑定的 Log 条数</div>';
+  renderTagPopList();
+}
+
+function renderTagPopList(){
+  const el = document.getElementById('tagPopList');
+  if(!el || !_tagPopCtx) return;
+  const box = document.getElementById('tagPopSearch');
+  const kw  = ((box && box.value)||'').trim().toLowerCase();
+  const sel = new Set((_tagPopCtx.selected()||[]).map(x=>String(x).trim().toLowerCase()));
+  const rows = (S.energyTags||[])
+    .map((tg,i)=>({tg,i}))
+    .filter(o=>o.tg && (!kw || String(o.tg.name).toLowerCase().includes(kw)));
+  if(!rows.length){
+    el.innerHTML = '<div class="tagpop-empty">'
+      + (kw ? '没有叫「'+escHtml(kw)+'」的状态，按回车新建一个' : '还没有状态标签，直接在上面输入一个，比如「不得劲」「脑子转不动」，回车新建')
+      + '</div>';
+    return;
+  }
+  el.innerHTML = rows.map(o=>{
+    const col = o.tg.color||'#ffff00';
+    const on  = sel.has(String(o.tg.name).trim().toLowerCase());
+    const n   = logsForTag(o.tg.name).length;
+    return '<div class="tagpop-row'+(on?' on':'')+'"'
+      + ' onclick="tagPopToggle('+jsStr(o.tg.name)+')"'
+      + ' oncontextmenu="openTagCtxMenu(event,'+o.i+')">'
+      + '<span class="tagpop-dot" style="background:'+col+';"></span>'
+      + '<span class="tagpop-name">'+escHtml(o.tg.name)+'</span>'
+      + '<span class="tagpop-n">'+n+'</span>'
+      + '<span class="tagpop-ck">'+(on?'✔':'')+'</span>'
+      + '</div>';
+  }).join('');
+}
+
+// 名字/颜色在别处改过之后，浮层还开着就顺手刷一下
+function tagPopRefresh(){
+  const pop = document.getElementById('tagPop');
+  if(pop && pop.classList.contains('open') && _tagPopCtx) renderTagPopList();
+}
+
+function tagPopToggle(name){
+  if(!_tagPopCtx) return;
+  _tagPopCtx.toggle(name);
+  renderTagPopList();
+}
+
+function tagPopCreate(){
+  const box = document.getElementById('tagPopSearch');
+  const name = ((box && box.value)||'').trim();
+  if(!name || !_tagPopCtx) return;
+  if(!Array.isArray(S.energyTags)) S.energyTags=[];
+  if(!findTagDef(name)){
+    S.energyTags.push({name, color: ETAG_PALETTE[S.energyTags.length % ETAG_PALETTE.length]});
+    saveState();
+    renderEnergyTagBar();
+  }
+  const exists = (_tagPopCtx.selected()||[]).some(x=>String(x).trim().toLowerCase()===name.toLowerCase());
+  if(!exists) _tagPopCtx.toggle(name);
+  if(box) box.value='';
+  renderTagPopList();
+}
+
+function openTaskTagPop(e, id){
+  e.stopPropagation();
   const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
-  t.energyTag = val || null;
-  saveState();
-  renderTasks();
+  openTagPop(e.currentTarget || e.target, {
+    title: '状态 · '+(t.name||''),
+    selected: ()=>taskTagNames(t),
+    toggle: (nm)=>{
+      const cur = taskTagNames(t).slice();
+      const i = cur.findIndex(x=>String(x).trim().toLowerCase()===String(nm).trim().toLowerCase());
+      if(i>=0) cur.splice(i,1); else cur.push(nm);
+      t.energyTags = cur;
+      delete t.energyTag;
+      saveState();
+      renderTasks();
+    }
+  });
+}
+
+// ══════ 状态回溯：从任务卡上的状态，抽一条以前写过的 Log ══════
+function openStateRecall(name){
+  closeTagPop();
+  closeTagCtxMenu();
+  const pool = logsForTag(name);
+  if(!pool.length){
+    if(confirm('「'+name+'」下面还没有绑定过 Log。\n\n现在写一条，把此刻的状态记下来？以后再点这个状态就能翻回来。')){
+      newLogWithTag(name);
+    }
+    return;
+  }
+  gotoTab('journal');
+  _rcState = name;
+  rcDraw();
+}
+
+function newLogWithTag(name){
+  closeTagPop();
+  closeTagCtxMenu();
+  gotoTab('journal');
+  openModal('journalModal');
+  setTimeout(()=>{
+    jDraftRestore();
+    const tg = document.getElementById('journalTags');
+    if(tg){
+      const arr = tg.value.split(',').map(x=>x.trim()).filter(Boolean);
+      if(!arr.some(x=>x.toLowerCase()===String(name).toLowerCase())) arr.push(name);
+      tg.value = arr.join(', ');
+    }
+    renderJournalTagChips();
+    const ta = document.getElementById('journalText');
+    if(ta) ta.focus();
+  }, 60);
+}
+
+// 没有 el 也能切标签页
+function gotoTab(name){
+  const tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  const el = tabs.find(t=>((t.getAttribute('onclick')||'').indexOf("'"+name+"'")>=0));
+  if(el) showTab(name, el);
 }
 
 // ── unified tag management bar (toolbar 🏷️ toggle) ──
@@ -4929,17 +5167,20 @@ function toggleEnergyTagBar(){
 function renderEnergyTagBar(){
   const bar = document.getElementById('energyTagBar');
   if(!bar) return;
-  let html = '<span style="font-size:11px;color:#000080;font-weight:bold;">🏷️ 标签管理：</span>';
+  let html = '<span style="font-size:11px;color:#000080;font-weight:bold;">🏷️ 状态管理：</span>';
   (S.energyTags||[]).forEach((tg,i)=>{
     const col = tg.color||'#ffff00';
+    const n = logsForTag(tg.name).length;
     html += '<span class="etag-chip" style="background:'+col+';color:'+tagTextColor(col)+';font-size:'+tagSize(tg)+'px;"'
-      + ' oncontextmenu="openTagCtxMenu(event,'+i+')" title="右键设置颜色和字号">'
+      + ' onclick="openStateRecall('+jsStr(tg.name)+')"'
+      + ' oncontextmenu="openTagCtxMenu(event,'+i+')" title="点一下抽一条这个状态下的 Log｜右键改颜色和字号">'
       + escHtml(tg.name)
+      + '<span class="etag-n'+(n?'':' zero')+'">'+n+'</span>'
       + '<span class="etag-del" onclick="deleteEnergyTag(event,'+i+')" title="删除标签">✕</span>'
       + '</span>';
   });
-  html += '<input class="form-input" id="newEnergyTagName" placeholder="+ 新标签，回车添加" style="width:140px;font-size:12px;padding:2px 6px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addEnergyTagFromBar();}"/>';
-  html += '<span style="font-size:11px;color:#707070;">右键标签 → 改颜色 / 改字号</span>';
+  html += '<input class="form-input" id="newEnergyTagName" placeholder="+ 新状态，回车添加" style="width:150px;font-size:12px;padding:2px 6px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addEnergyTagFromBar();}"/>';
+  html += '<span style="font-size:11px;color:#707070;">数字＝这个状态下已绑定的 Log 条数｜删除状态不会动 Log 里的任何文字</span>';
   bar.innerHTML = html;
 }
 
@@ -4950,6 +5191,13 @@ function tagSize(tg){
 }
 
 let _ctxTagIdx = null;
+
+// 任务卡上的 chip 只知道状态名，先换算成管理列表里的下标
+function openTagCtxMenuByName(e, name){
+  const i = (S.energyTags||[]).findIndex(tg=>tg && String(tg.name).trim().toLowerCase()===String(name).trim().toLowerCase());
+  if(i<0){ e.preventDefault(); e.stopPropagation(); return; }
+  openTagCtxMenu(e, i);
+}
 
 function openTagCtxMenu(e, i){
   e.preventDefault();
@@ -4992,8 +5240,11 @@ function renderTagCtxMenu(){
     + '</div>';
 
   h += '<div class="ctx-sep"></div>'
+    + '<div class="ctx-item" onclick="closeTagCtxMenu();openStateRecall('+jsStr(tg.name)+')">🎲 抽一条这个状态下的 Log（'+logsForTag(tg.name).length+'）</div>'
+    + '<div class="ctx-item" onclick="closeTagCtxMenu();newLogWithTag('+jsStr(tg.name)+')">💭 现在写一条，绑给这个状态</div>'
+    + '<div class="ctx-sep"></div>'
     + '<div class="ctx-item" onclick="renameEnergyTag('+_ctxTagIdx+')">✎ 重命名</div>'
-    + '<div class="ctx-item danger" onclick="deleteEnergyTagFromMenu('+_ctxTagIdx+')">✕ 删除标签</div>';
+    + '<div class="ctx-item danger" onclick="deleteEnergyTagFromMenu('+_ctxTagIdx+')">✕ 删除状态</div>';
 
   m.innerHTML = h;
 }
@@ -5016,27 +5267,58 @@ function renameEnergyTag(i){
   const name = val.trim();
   if(!name) return;
   if(name !== old && (S.energyTags||[]).some(x=>x.name===name)){ showToast('标签已存在'); return; }
-  (S.tasks||[]).forEach(t=>{ if(t.energyTag===old) t.energyTag = name; });
+  const lk = old.trim().toLowerCase();
+  (S.tasks||[]).forEach(t=>{
+    const cur = taskTagNames(t);
+    if(cur.some(x=>String(x).trim().toLowerCase()===lk)){
+      t.energyTags = cur.map(x=>String(x).trim().toLowerCase()===lk ? name : x);
+      delete t.energyTag;
+    }
+  });
+  // Log 那边同步改标签名，这样原来绑好的记录不会掉出去（正文一个字都不动）
+  (S.journal||[]).forEach(j=>{
+    if(Array.isArray(j.tags)) j.tags = j.tags.map(x=>String(x).trim().toLowerCase()===lk ? name : x);
+  });
   tg.name = name;
   saveState();
   renderEnergyTagBar();
   renderTasks();
+  renderJournal();
+  tagPopRefresh();
 }
 
 function deleteEnergyTagFromMenu(i){
   const tg = (S.energyTags||[])[i]; if(!tg) return;
   closeTagCtxMenu();
-  if(!confirm('删除标签"'+tg.name+'"？使用此标签的任务将失去标签。')) return;
-  (S.tasks||[]).forEach(t=>{ if(t.energyTag===tg.name) t.energyTag=null; });
+  removeEnergyTagAt(i);
+}
+
+// 统一的删除逻辑：任务上的状态摘掉，Log 里的文字和标签一个字都不动
+function removeEnergyTagAt(i){
+  const tg = (S.energyTags||[])[i]; if(!tg) return;
+  const n = logsForTag(tg.name).length;
+  const msg = '删除状态「'+tg.name+'」？\n\n任务卡上会摘掉这个状态。\n'
+    + (n ? ('Log 里已经绑定的 '+n+' 条记录不受影响，文字和标签都原样留着，\n以后重新建一个同名状态就会自动接回来。') : 'Log 不受任何影响。');
+  if(!confirm(msg)) return;
+  const lk = String(tg.name).trim().toLowerCase();
+  (S.tasks||[]).forEach(t=>{
+    const cur = taskTagNames(t);
+    if(cur.some(x=>String(x).trim().toLowerCase()===lk)){
+      t.energyTags = cur.filter(x=>String(x).trim().toLowerCase()!==lk);
+      delete t.energyTag;
+    }
+  });
   S.energyTags.splice(i,1);
   saveState();
   renderEnergyTagBar();
   renderTasks();
+  renderJournal();
+  tagPopRefresh();
 }
 
-document.addEventListener('click', ()=>{ closeTagCtxMenu(); closeWeightMenu(); });
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeTagCtxMenu(); closeWeightMenu(); } });
-window.addEventListener('resize', ()=>{ closeTagCtxMenu(); closeWeightMenu(); });
+document.addEventListener('click', ()=>{ closeTagCtxMenu(); closeWeightMenu(); closeTagPop(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeTagCtxMenu(); closeWeightMenu(); closeTagPop(); } });
+window.addEventListener('resize', ()=>{ closeTagCtxMenu(); closeWeightMenu(); closeTagPop(); });
 
 function addEnergyTagFromBar(){
   const inp = document.getElementById('newEnergyTagName');
@@ -5048,6 +5330,7 @@ function addEnergyTagFromBar(){
   // pick the next palette color in rotation
   const color = ETAG_PALETTE[S.energyTags.length % ETAG_PALETTE.length];
   S.energyTags.push({name, color});
+  tagPopRefresh();
   saveState();
   renderEnergyTagBar();
   renderTasks();
@@ -5086,13 +5369,7 @@ function hexOf(v){
 
 function deleteEnergyTag(e, i){
   e.stopPropagation();
-  const tg = (S.energyTags||[])[i]; if(!tg) return;
-  if(!confirm('删除标签"'+tg.name+'"？使用此标签的任务将失去标签。')) return;
-  (S.tasks||[]).forEach(t=>{ if(t.energyTag===tg.name) t.energyTag=null; });
-  S.energyTags.splice(i,1);
-  saveState();
-  renderEnergyTagBar();
-  renderTasks();
+  removeEnergyTagAt(i);
 }
 
 // ═══════════════════════════════════════
@@ -6594,7 +6871,7 @@ function projectExportPayload(p){
   // 子条目按 S.tasks 里的原始顺序，分栏和任务的归属靠顺序决定，不能打乱
   const items = (S.tasks||[]).filter(t=>t.projectId==p.id).map(projStripIds);
   // 顺带存一份用到的能量标签定义，换台设备导入后颜色和字号还是原来的
-  const used = new Set([p.energyTag].concat(items.map(i=>i.energyTag)).filter(Boolean));
+  const used = new Set(taskTagNames(p).concat(items.reduce((a,i)=>a.concat(taskTagNames(i)),[])).filter(Boolean));
   const tags = (S.energyTags||[]).filter(tg=>tg && used.has(tg.name));
   return {
     format: PROJ_FILE_FORMAT,
@@ -6794,6 +7071,64 @@ function saveJournalEdit(id){
   saveState(); renderJournal();
 }
 
+// Log 里的标签，如果和某个状态同名就用它的颜色，点一下抽同状态的旧记录
+function jTagHtml(t){
+  const name = String(t==null?'':t);
+  const tg = findTagDef(name);
+  if(!tg) return '<span class="tag">'+escHtml(name)+'</span>';
+  const col = tg.color||'#ffff00';
+  return '<span class="tag state" style="background:'+col+';color:'+tagTextColor(col)+';border-color:'+col+';"'
+    + ' onclick="openStateRecall('+jsStr(tg.name)+')" title="抽一条同状态下的记录">'+escHtml(tg.name)+'</span>';
+}
+
+// 给已经写好的 Log 补绑状态：只动标签，正文不动
+function openJournalTagPop(e, id){
+  e.stopPropagation();
+  const j = (S.journal||[]).find(x=>x.id==id); if(!j) return;
+  if(!Array.isArray(j.tags)) j.tags=[];
+  openTagPop(e.currentTarget || e.target, {
+    title: '绑定状态 · 这条 Log',
+    selected: ()=>j.tags,
+    toggle: (nm)=>{
+      const i = j.tags.findIndex(x=>String(x).trim().toLowerCase()===String(nm).trim().toLowerCase());
+      if(i>=0) j.tags.splice(i,1); else j.tags.push(nm);
+      saveState();
+      renderJournal();
+      renderTasks();
+    }
+  });
+}
+
+// 新建 Log 弹窗里的那排状态，点一下就写进标签框
+function renderJournalTagChips(){
+  const el = document.getElementById('journalTagChips');
+  if(!el) return;
+  const tags = S.energyTags||[];
+  if(!tags.length){
+    el.innerHTML = '<span style="font-size:11px;color:#808080;">还没有状态标签，可以先去任务页用 🏷️ 建几个，比如「不得劲」「脑子转不动」</span>';
+    return;
+  }
+  const box = document.getElementById('journalTags');
+  const cur = new Set(((box&&box.value)||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean));
+  el.innerHTML = tags.map(tg=>{
+    const col = tg.color||'#ffff00';
+    const on = cur.has(String(tg.name).trim().toLowerCase());
+    return '<span class="jtagchip'+(on?' on':'')+'" style="background:'+col+';color:'+tagTextColor(col)+';"'
+      + ' onclick="toggleJournalTagChip('+jsStr(tg.name)+')">'+(on?'✔ ':'')+escHtml(tg.name)+'</span>';
+  }).join('');
+}
+
+function toggleJournalTagChip(name){
+  const box = document.getElementById('journalTags');
+  if(!box) return;
+  const arr = box.value.split(',').map(x=>x.trim()).filter(Boolean);
+  const i = arr.findIndex(x=>x.toLowerCase()===String(name).trim().toLowerCase());
+  if(i>=0) arr.splice(i,1); else arr.push(name);
+  box.value = arr.join(', ');
+  jDraftSave();
+  renderJournalTagChips();
+}
+
 function renderJournal(){
   const search=(document.getElementById('journalSearch').value||'').toLowerCase();
   const entries=S.journal.filter(j=>{
@@ -6809,6 +7144,7 @@ function renderJournal(){
       <div class="entry-header">
         <span class="entry-ts">${fmtDT(j.createdAt)}${j.likes? '  <span style="color:#cc0000;cursor:pointer;" onclick="editJournalLikes('+j.id+')" title="点击手动修改点赞数">♥'+j.likes+'</span>' : '  <span style="color:#c0c0c0;cursor:pointer;font-size:11px;" onclick="editJournalLikes('+j.id+')" title="点击手动设置点赞数">♡</span>'}</span>
         <div style="display:flex;gap:4px;">
+          <button class="icon-btn" onclick="openJournalTagPop(event,${j.id})" title="绑定状态标签：以后在任务卡上点这个状态，就能把这条抽回来">🏷️</button>
           <button class="icon-btn" onclick="editJournal(${j.id})" title="编辑">[EDIT]</button>
           <button class="icon-btn" onclick="deleteJournal(${j.id})" style="color:#cc0000" title="删除">✕</button>
         </div>
@@ -6816,7 +7152,7 @@ function renderJournal(){
       <div id="j-view-${j.id}">
         <div class="entry-body">${j.text}</div>
         ${j.src?`<div class="entry-src">${escHtml(j.src.task||'')}${j.src.pct!=null?' · '+j.src.pct+'%':''}</div>`:''}
-        ${j.tags.length?`<div class="tags">${j.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
+        ${j.tags.length?`<div class="tags">${j.tags.map(t=>jTagHtml(t)).join('')}</div>`:''}
         ${(j.links&&j.links.length)?`<div style="margin-top:6px;font-size:12px;color:#800080;">🔗 ${j.links.length} 个关联条目</div>`:''}
         ${(j.replies&&j.replies.length)?`<div style="margin-top:3px;font-size:12px;color:#000080;">💬 ${j.replies.length} 条补充</div>`:''}
       </div>
@@ -6862,10 +7198,37 @@ function rcEditLikes(){
   editJournalLikes(_rcJid);
 }
 
-function showRandomEntry(){
-  if(!S.journal.length){showToast('还没有日记条目哦');return;}
-  const j=S.journal[Math.floor(Math.random()*S.journal.length)];
+// null = 全部 Log；有值 = 只在这个状态绑定的 Log 里抽
+let _rcState = null;
+
+function rcPool(){
+  return _rcState ? logsForTag(_rcState) : (S.journal||[]);
+}
+
+// 同一个池子里尽量不连着抽到同一条
+function rcDraw(){
+  const pool = rcPool();
+  if(!pool.length){
+    showToast(_rcState ? ('「'+_rcState+'」下面还没有绑定的 Log') : '还没有日记条目哦');
+    return;
+  }
+  let j = pool[Math.floor(Math.random()*pool.length)];
+  if(pool.length>1){
+    let guard=0;
+    while(j.id===_rcJid && guard++<8) j = pool[Math.floor(Math.random()*pool.length)];
+  }
   openRandomCard(j.id);
+}
+
+function showRandomEntry(){
+  _rcState = null;
+  rcDraw();
+}
+
+// 退出"只看某个状态"，回到全部 Log
+function rcClearState(){
+  _rcState = null;
+  rcDraw();
 }
 
 function openRandomCard(jid){
@@ -6880,7 +7243,7 @@ function openRandomCard(jid){
   // build skeleton once per entry switch
   card.innerHTML=`<div class="rc-card">
     <div class="rc-head">
-      <span>过去的自己说</span>
+      <span id="rc-title">过去的自己说</span>
       <span class="rc-when" id="rc-ts"></span>
       <span class="rc-x" id="rc-closebtn" title="关闭">✕</span>
     </div>
@@ -6899,8 +7262,10 @@ function openRandomCard(jid){
         <span class="rc-heart">♡</span><span id="rc-liketext">点赞</span>
       </span>
       <span id="rc-likecount" style="font-size:11px;color:#9a8aaa;cursor:pointer;" onclick="rcEditLikes()" title="点击手动修改点赞数"></span>
+      <button class="pxl-btn recall-btn" id="rc-nextbtn" style="margin-left:2px;">🎲 再抽一条</button>
       <span class="spacer"></span>
-      <button class="pxl-btn recall-btn" id="rc-nextbtn">🎲 再抽一条</button>
+      <span id="rc-poolinfo" style="font-size:11px;color:#8a6a9a;"></span>
+      <button class="pxl-btn" id="rc-allbtn" onclick="rcClearState()" style="display:none;font-size:11px;">↩ 全部 Log</button>
     </div>
   </div>`;
 
@@ -6909,7 +7274,7 @@ function openRandomCard(jid){
     s.style.display=s.style.display==='none'?'block':'none';
   };
   document.getElementById('rc-rbtn').onclick=rcAddReply;
-  document.getElementById('rc-nextbtn').onclick=showRandomEntry;
+  document.getElementById('rc-nextbtn').onclick=rcDraw;
   document.getElementById('rc-closebtn').onclick=function(){
     document.getElementById('randomCard').style.display='none';
   };
@@ -6929,7 +7294,16 @@ function rcRefresh(){
   const ts=document.getElementById('rc-ts');       if(ts) ts.textContent=fmtDT(j.createdAt);
   const tg=document.getElementById('rc-tags');
   if(tg) tg.innerHTML=j.tags&&j.tags.length
-    ? '<div class="tags">'+j.tags.map(t=>'<span class="tag">'+t+'</span>').join('')+'</div>' : '';
+    ? '<div class="tags">'+j.tags.map(t=>jTagHtml(t)).join('')+'</div>' : '';
+
+  // 标题和底部信息跟着"是不是在某个状态里抽"变
+  const total = rcPool().length;
+  const ti=document.getElementById('rc-title');
+  if(ti) ti.textContent = _rcState ? ('状态回溯 · '+_rcState) : '过去的自己说';
+  const pi=document.getElementById('rc-poolinfo');
+  if(pi) pi.textContent = _rcState ? ('这个状态下共 '+total+' 条') : ('共 '+total+' 条');
+  const ab=document.getElementById('rc-allbtn');
+  if(ab) ab.style.display = _rcState ? 'inline-flex' : 'none';
   const rt=document.getElementById('rc-rtoggle');
   if(rt) rt.textContent='▸ 回复与补充 ('+j.replies.length+')';
   // 点赞显示
@@ -9583,7 +9957,11 @@ function clearHighlight(){
 
 // ── 扩展功能管理 ──
 function extLoad(){
-  return JSON.parse(localStorage.getItem('mmm_extensions')||'[]');
+  const list = JSON.parse(localStorage.getItem('mmm_extensions')||'[]');
+  // 早期版本会把失效的内置扩展写进本地，这里一并清掉
+  const clean = list.filter(e=>e && !String(e.id||'').startsWith('builtin'));
+  if(clean.length!==list.length) localStorage.setItem('mmm_extensions', JSON.stringify(clean));
+  return clean;
 }
 function extSave(list){
   localStorage.setItem('mmm_extensions', JSON.stringify(list));
@@ -9612,11 +9990,10 @@ function openExtModal(){
 }
 
 function renderExtModal(){
-  const builtin=[{id:'builtin-task-paint',name:'Task Paint',url:'https://mmm-d6.github.io/mmm_test/task-paint.html',desc:'任务可视化画板'}];
-  const list=extLoad();
-  builtin.forEach(b=>{ if(!list.find(e=>e.id===b.id)) list.unshift(b); });
+  // 之前那个内置的 Task Paint 链接已经失效，直接去掉，只留自己添加的
+  const list=extLoad().filter(e=>!String(e.id||'').startsWith('builtin'));
   const el=document.getElementById('ext-modal-list'); if(!el) return;
-  if(!list.length){ el.innerHTML='<div style="color:#808080;font-size:13px;text-align:center;padding:12px;">暂无扩展</div>'; return; }
+  if(!list.length){ el.innerHTML='<div style="color:#808080;font-size:13px;text-align:center;padding:12px;">暂无扩展，在下面添加一个</div>'; return; }
   el.innerHTML=list.map(e=>`
     <div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--win-darker);background:var(--surface2);">
       <div style="flex:1;min-width:0;">
@@ -9624,7 +10001,7 @@ function renderExtModal(){
         ${e.desc?'<div style="font-size:11px;color:#808080;">'+e.desc+'</div>':''}
       </div>
       <button class="pxl-btn primary" onclick="window.open('${e.url}','_blank')">打开</button>
-      ${(!e.id||!String(e.id).startsWith('builtin'))?'<button class="icon-btn" onclick="extDelete('+e.id+');renderExtModal();" style="color:#cc0000;">✕</button>':''}
+      <button class="icon-btn" onclick="extDelete(${e.id});renderExtModal();" style="color:#cc0000;">✕</button>
     </div>
   `).join('');
 }

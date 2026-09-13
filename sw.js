@@ -1,4 +1,8 @@
-// MMM (ADHD RPG) — Service Worker v11
+// MMM (ADHD RPG) — Service Worker v12
+// v12: 任务的标签改成「状态地图」——任务卡上的色块点一下就抽一条同状态下写过的 Log；
+//      一个任务可挂多个状态、浮层里搜索/新建/取下，调色板扩到 16 色；
+//      状态与 Log 的绑定只读 Log 不写 Log，删除状态不影响 Log 的正文和标签；
+//      随机回溯的点赞和「再抽一条」挪到一起；扩展里失效的内置链接删掉
 // v11: 导入 Log 的条目改成跟手写 Log 一致的样式（无标签、来源信息淡化置底）；
 //      标记去掉勾选框改成一键导入；新增「复制记录」把整条任务导出到剪贴板
 // v10: 手动清空改成「勾选+打字确认」的清理弹窗，不好误触；
@@ -16,7 +20,7 @@
 //     修复：v4 中 STATIC_ASSETS 引用了不存在的 icons/ 文件，
 //     导致 cache.addAll 整体失败、Service Worker 无法安装；
 //     修复：index.html 离线回退之前从未真正入缓存，离线时无法打开
-const CACHE_NAME = 'adhd-rpg-v11';
+const CACHE_NAME = 'adhd-rpg-v12';
 
 // 只预缓存确定存在的静态资源（图标已内嵌在 manifest.json 的 data URL 中，仓库里没有 icons/ 目录）
 const STATIC_ASSETS = [
