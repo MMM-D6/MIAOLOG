@@ -1220,6 +1220,13 @@ body{
 .rc-like:hover{background:#ffeef4;}
 .rc-like.on{color:#cc0044;border-color:#cc0044;background:#fff0f5;}
 .rc-like .rc-heart{font-size:13px;}
+.rc-tagrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.rc-tool{font-size:11px;padding:1px 7px;}
+.rc-edit-ta{
+  width:100%;box-sizing:border-box;resize:vertical;outline:none;
+  font-family:var(--font-ui);font-size:15px;line-height:1.8;color:#111;padding:8px 10px;
+  background:#fffff8;border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
+}
 .rc-replies{padding:0 12px 10px;}
 .rc-rtoggle{
   font-family:var(--font-ui);font-size:12px;color:#4a1d6e;cursor:pointer;user-select:none;
@@ -5102,7 +5109,8 @@ function renderEnergyTagBar(){
       + '<span class="etag-n'+(n?'':' zero')+'">'+n+'</span>'
       + '</span>';
   });
-  html += '<button class="pxl-btn" onclick="openTagEditModal(null)" style="font-size:12px;padding:2px 8px;">＋ 新状态</button>';
+  html += '<button class="pxl-btn" onclick="openTagEditModal(null)" style="font-size:12px;padding:2px 8px;">＋ tag</button>';
+  html += '<button class="pxl-btn" onclick="openTagExportModal(null)" style="font-size:12px;padding:2px 8px;" title="导出全部 tag 和它们绑定的 Log">📤 导出</button>';
   bar.innerHTML = html;
 }
 
@@ -5136,6 +5144,7 @@ function renderTagCtxMenu(){
   if(!tg){ closeTagCtxMenu(); return; }
   let h = '<div class="ctx-title">'+escHtml(tg.name)+'</div>'
     + '<div class="ctx-item" onclick="closeTagCtxMenu();newLogWithTag('+jsStr(tg.name)+')">💭 写一条绑给它</div>'
+    + '<div class="ctx-item" onclick="openTagExportModal('+jsStr(tg.name)+')">📤 导出这个 tag</div>'
     + '<div class="ctx-sep"></div>'
     + '<div class="ctx-item" onclick="openTagEditModal('+_ctxTagIdx+')">✎ 编辑</div>'
     + '<div class="ctx-item danger" onclick="deleteEnergyTagFromMenu('+_ctxTagIdx+')">✕ 删除</div>';
@@ -7192,6 +7201,7 @@ function rcClearState(){
 
 function openRandomCard(jid){
   _rcJid=jid;
+  _rcEditing=false;
   const j=S.journal.find(x=>x.id==jid); if(!j) return;
   if(!j.replies) j.replies=[];
   if(!j.links)   j.links=[];
@@ -7214,7 +7224,20 @@ function openRandomCard(jid){
       <span class="rc-x" id="rc-closebtn" title="关闭">✕</span>
     </div>
     <div class="rc-body" id="rc-body"></div>
-    <div class="rc-meta" id="rc-tags"></div>
+    <div id="rc-editbox" style="display:none;padding:0 16px 10px;">
+      <textarea class="rc-edit-ta" id="rc-edit-ta" rows="7"></textarea>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="pxl-btn primary" id="rc-savebtn">保存</button>
+        <button class="pxl-btn" id="rc-cancelbtn">取消</button>
+      </div>
+    </div>
+    <div class="rc-meta">
+      <div class="rc-tagrow">
+        <span class="tags" id="rc-tags"></span>
+        <button class="pxl-btn rc-tool" id="rc-tagbtn" title="给这条加或去掉 tag">🏷️ tag</button>
+        <button class="pxl-btn rc-tool" id="rc-editbtn" title="直接改这条的内容">✎ 编辑</button>
+      </div>
+    </div>
     <div class="rc-replies">
       <div class="rc-rtoggle" id="rc-rtoggle">▸ 回复与补充 (0)</div>
       <div id="rc-rsection" style="display:none;">
@@ -7242,6 +7265,13 @@ function openRandomCard(jid){
   document.getElementById('rc-rbtn').onclick=rcAddReply;
   document.getElementById('rc-nextbtn').onclick=rcDraw;
   document.getElementById('rc-closebtn').onclick=rcCloseCard;
+  document.getElementById('rc-editbtn').onclick=rcToggleEdit;
+  document.getElementById('rc-savebtn').onclick=rcSaveEdit;
+  document.getElementById('rc-cancelbtn').onclick=rcCancelEdit;
+  document.getElementById('rc-tagbtn').onclick=function(e){
+    e.stopPropagation();
+    rcOpenTagPop(e.currentTarget);
+  };
 
   rcRefresh();
   if(card.scrollIntoView) card.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -7257,8 +7287,7 @@ function rcRefresh(){
   if(b) b.innerHTML='<span class="rc-quotemark">“</span>'+escHtml(j.text||'');
   const ts=document.getElementById('rc-ts');       if(ts) ts.textContent=fmtDT(j.createdAt);
   const tg=document.getElementById('rc-tags');
-  if(tg) tg.innerHTML=j.tags&&j.tags.length
-    ? '<div class="tags">'+j.tags.map(t=>jTagHtml(t)).join('')+'</div>' : '';
+  if(tg) tg.innerHTML=(j.tags&&j.tags.length) ? j.tags.map(t=>jTagHtml(t)).join('') : '';
 
   // 标题和底部信息跟着"是不是在某个状态里抽"变
   const total = rcPool().length;
@@ -7291,6 +7320,60 @@ function rcRefresh(){
     : '<div style="font-size:13px;color:#9a8aaa;margin-bottom:6px;">（还没有补充）</div>';
 }
 
+// ── 抽选卡片上的就地编辑 / 就地打 tag ──
+let _rcEditing = false;
+
+function rcToggleEdit(){
+  if(_rcEditing){ rcCancelEdit(); return; }
+  const j=S.journal.find(x=>x.id==_rcJid); if(!j) return;
+  const ta=document.getElementById('rc-edit-ta');
+  if(ta) ta.value=j.text||'';
+  const box=document.getElementById('rc-editbox'); if(box) box.style.display='block';
+  const body=document.getElementById('rc-body');   if(body) body.style.display='none';
+  const btn=document.getElementById('rc-editbtn'); if(btn) btn.textContent='✕ 取消编辑';
+  _rcEditing=true;
+  if(ta){ ta.focus(); ta.selectionStart=ta.value.length; }
+}
+
+function rcCancelEdit(){
+  const box=document.getElementById('rc-editbox'); if(box) box.style.display='none';
+  const body=document.getElementById('rc-body');   if(body) body.style.display='';
+  const btn=document.getElementById('rc-editbtn'); if(btn) btn.textContent='✎ 编辑';
+  _rcEditing=false;
+}
+
+function rcSaveEdit(){
+  const j=S.journal.find(x=>x.id==_rcJid); if(!j) return;
+  const ta=document.getElementById('rc-edit-ta');
+  const v=((ta&&ta.value)||'').trim();
+  if(!v){ showToast('内容不能为空'); return; }
+  j.text=v;
+  j.editedAt=new Date().toISOString();
+  saveState();
+  rcCancelEdit();
+  rcRefresh();
+  renderJournal();
+  showToast('已保存 ✓');
+}
+
+// 直接在抽选卡片上给这条 Log 加/去 tag，不用回列表里翻
+function rcOpenTagPop(anchor){
+  const j=S.journal.find(x=>x.id==_rcJid); if(!j) return;
+  if(!Array.isArray(j.tags)) j.tags=[];
+  openTagPop(anchor, {
+    title: '给这条 Log 打 tag',
+    selected: ()=>j.tags,
+    toggle: (nm)=>{
+      const i=j.tags.findIndex(x=>String(x).trim().toLowerCase()===String(nm).trim().toLowerCase());
+      if(i>=0) j.tags.splice(i,1); else j.tags.push(nm);
+      saveState();
+      rcRefresh();
+      renderJournal();
+      renderEnergyTagBar();
+    }
+  });
+}
+
 function rcAddReply(){
   const jid=_rcJid;
   const j=S.journal.find(x=>x.id==jid); if(!j) return;
@@ -7306,6 +7389,105 @@ function rcDelReply(idx){
   const j=S.journal.find(x=>x.id==_rcJid); if(!j||!j.replies) return;
   j.replies.splice(idx,1);
   saveState(); rcRefresh();
+}
+
+// ══════ 导出 tag 和它绑定的 Log ══════
+let _tagExportName = null;
+
+function tagExportSet(){
+  const all = (S.energyTags||[]);
+  if(!_tagExportName) return all.slice();
+  const lk = String(_tagExportName).trim().toLowerCase();
+  return all.filter(t=>String(t.name).trim().toLowerCase()===lk);
+}
+
+function openTagExportModal(name){
+  closeTagCtxMenu();
+  closeTagPop();
+  _tagExportName = name || null;
+  const list = tagExportSet();
+  const total = list.reduce((a,t)=>a+logsForTag(t.name).length, 0);
+  const info = document.getElementById('tagExportInfo');
+  if(info) info.textContent = (_tagExportName ? ('tag「'+_tagExportName+'」') : ('全部 '+list.length+' 个 tag'))
+    + ' · 共 ' + total + ' 条绑定的 Log';
+  openModal('tagExportModal');
+}
+
+function buildTagExportText(states, withReplies, withTime){
+  const out = [];
+  out.push('# tag 与绑定的 Log');
+  if(withTime) out.push('导出时间：'+fmtDT(new Date().toISOString()));
+  states.forEach(x=>{
+    out.push('');
+    out.push('## '+x.tg.name+'（'+x.logs.length+' 条）');
+    if(!x.logs.length){ out.push('（还没有绑定的 Log）'); return; }
+    x.logs.forEach(j=>{
+      out.push('');
+      const head = (withTime ? fmtDT(j.createdAt) : '') + (j.likes ? ('  ♥'+j.likes) : '');
+      out.push('- ' + (head.trim() || '（无时间）'));
+      out.push(String(j.text||'').split('\n').map(t=>'  '+t).join('\n'));
+      if((j.tags||[]).length) out.push('  tag：'+j.tags.join(', '));
+      if(j.src && j.src.task) out.push('  来源：'+j.src.task+(j.src.pct!=null?(' · '+j.src.pct+'%'):''));
+      if(withReplies) (j.replies||[]).forEach(r=>{
+        out.push('  ↳ '+(withTime && r.at ? ('['+r.at+'] ') : '')+String(r.text||'').replace(/\n/g,' '));
+      });
+    });
+  });
+  return out.join('\n');
+}
+
+function doTagExport(method){
+  const withReplies = document.getElementById('texpReplies').checked;
+  const withTime    = document.getElementById('texpTime').checked;
+  const keepEmpty   = document.getElementById('texpEmpty').checked;
+  let states = tagExportSet().map(tg=>({tg, logs: logsForTag(tg.name)}));
+  if(!keepEmpty) states = states.filter(x=>x.logs.length);
+  if(!states.length){ showToast('没有可导出的内容'); return; }
+
+  const stamp = new Date().toISOString().slice(0,10);
+  const safe  = String(_tagExportName||'all').replace(/[^\w\u4e00-\u9fa5]+/g,'_').slice(0,24) || 'all';
+  const base  = 'tags-'+safe+'-'+stamp;
+
+  if(method==='json'){
+    const payload = {
+      format: 'mmm-tag-log',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      tags: states.map(x=>({
+        name: x.tg.name, color: x.tg.color, size: x.tg.size, font: x.tg.font,
+        logs: x.logs.map(j=>{
+          const o = {text: j.text};
+          if(withTime){ o.createdAt = j.createdAt; if(j.editedAt) o.editedAt = j.editedAt; }
+          o.tags = (j.tags||[]).slice();
+          if(j.likes) o.likes = j.likes;
+          if(j.src) o.src = j.src;
+          if(withReplies && (j.replies||[]).length){
+            o.replies = j.replies.map(r=>({text:r.text, at:r.at}));
+          }
+          return o;
+        })
+      }))
+    };
+    dl(base+'.json', JSON.stringify(payload, null, 2));
+    closeModal('tagExportModal');
+    showToast('已导出 ✓');
+    return;
+  }
+
+  const txt = buildTagExportText(states, withReplies, withTime);
+  if(method==='copy'){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt)
+        .then(()=>showToast('已复制到剪贴板 ✓'))
+        .catch(()=>prompt('复制下面的内容：', txt));
+    } else {
+      prompt('复制下面的内容：', txt);
+    }
+  } else {
+    dl(base+'.txt', txt);
+    showToast('已导出 ✓');
+  }
+  closeModal('tagExportModal');
 }
 
 // ═══════════════════════════════════════
@@ -10007,6 +10189,26 @@ function renderExtensions(){
       <button class="pxl-btn primary" onclick="doCardExport('txt')">下载 .txt</button>
       <button class="pxl-btn" onclick="doCardExport('copy')">复制到剪切板</button>
       <button class="pxl-btn" onclick="closeModal('cardExportModal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAG + BOUND LOG EXPORT MODAL -->
+<div class="overlay" id="tagExportModal">
+  <div class="modal" style="max-width:400px;">
+    <button class="close-btn" onclick="closeModal('tagExportModal')">✕</button>
+    <div class="modal-title">📤 导出 tag 与绑定的 Log</div>
+    <div id="tagExportInfo" style="font-size:12px;color:#000080;margin-bottom:12px;"></div>
+    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="texpTime" checked/> 时间信息</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="texpReplies" checked/> 补充回复</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="texpEmpty"/> 没有绑定 Log 的 tag 也导出</label>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="pxl-btn primary" onclick="doTagExport('txt')">下载 .txt</button>
+      <button class="pxl-btn" onclick="doTagExport('json')">下载 .json</button>
+      <button class="pxl-btn" onclick="doTagExport('copy')">复制到剪贴板</button>
+      <button class="pxl-btn" onclick="closeModal('tagExportModal')">取消</button>
     </div>
   </div>
 </div>
