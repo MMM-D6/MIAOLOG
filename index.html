@@ -905,11 +905,16 @@ body{
 .task-note-editable:empty:before{content:attr(data-placeholder);color:#b4b4b4;font-style:italic;}
 .task-note-editable:focus{background:#fffff0;border-left-color:#000080;}
 #energyTagBar{
-  display:none;background:var(--win-gray);
+  display:flex;background:var(--win-gray);
   border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
   padding:5px 8px;margin-bottom:8px;align-items:center;gap:6px;flex-wrap:wrap;
 }
-#energyTagBar.open{display:flex;}
+#energyTagBar.collapsed{display:none;}
+/* 长按拖动排位 */
+.etag-chip{touch-action:manipulation;}
+.etag-chip.dragging{opacity:.55;outline:2px dashed #000;outline-offset:1px;}
+body.tag-dragging{cursor:grabbing;user-select:none;}
+body.tag-dragging .etag-chip{cursor:grabbing;}
 .etag-chip{
   display:inline-flex;align-items:center;gap:6px;padding:1px 6px;
   border:2px solid;border-color:var(--win-white) var(--win-darker) var(--win-darker) var(--win-white);
@@ -919,6 +924,12 @@ body{
 .etag-chip{cursor:pointer;}
 .etag-chip:active{border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);}
 .tagedit-colors{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+/* 字色里的「自动」格：底色是当前自动算出来的黑或白 */
+.etag-auto-sw{
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:9px;font-weight:bold;
+  color:#808080;mix-blend-mode:difference;
+}
 .tagedit-pv-box{
   padding:10px;background:var(--surface2);
   border:2px solid;border-color:var(--win-darker) var(--win-white) var(--win-white) var(--win-darker);
@@ -1727,7 +1738,7 @@ body{
             <input class="search-bar" id="quickAddProjectInput" placeholder="+ 新项目，回车创建..." style="width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddProject();}"/>
             <input class="search-bar" id="taskSearch" placeholder="搜索全部项目..." style="width:200px;" title="有关键词时跨所有项目查找，清空后回到当前选中的项目" oninput="renderTasks()"/>
             <button class="pxl-btn" id="hideDoneBtn" onclick="toggleHideDone()" title="隐藏已完成任务">☑</button>
-            <button class="pxl-btn" onclick="toggleEnergyTagBar()" title="管理状态标签">🏷️</button>
+            <button class="pxl-btn" onclick="toggleEnergyTagBar()" title="收起 / 展开 tag 栏">🏷️</button>
             <button class="pxl-btn" onclick="exportSelectedProject()" title="导出左侧目录中选中的那个项目（JSON，可以再导入回来）">📤 导出项目</button>
             <button class="pxl-btn" onclick="document.getElementById('projImportInput').click()" title="导入项目 JSON 文件">📥 导入项目</button>
             <input type="file" id="projImportInput" accept=".json,application/json" style="display:none;" onchange="onProjectImportSelected(event)"/>
@@ -5087,12 +5098,12 @@ function gotoTab(name){
   if(el) showTab(name, el);
 }
 
-// ── unified tag management bar (toolbar 🏷️ toggle) ──
+// ── 状态栏：默认展开，🏷️ 按钮用来收起 ──
 function toggleEnergyTagBar(){
   const bar = document.getElementById('energyTagBar');
   if(!bar) return;
-  bar.classList.toggle('open');
-  if(bar.classList.contains('open')) renderEnergyTagBar();
+  bar.classList.toggle('collapsed');
+  if(!bar.classList.contains('collapsed')) renderEnergyTagBar();
 }
 
 function renderEnergyTagBar(){
@@ -5102,8 +5113,8 @@ function renderEnergyTagBar(){
   (S.energyTags||[]).forEach((tg,i)=>{
     const col = tg.color||'#ffff00';
     const n = logsForTag(tg.name).length;
-    html += '<span class="etag-chip" style="'+tagChipStyle(tg)+'"'
-      + ' onclick="openStateRecall('+jsStr(tg.name)+',\'taskRecallCard\')"'
+    html += '<span class="etag-chip" data-ti="'+i+'" style="'+tagChipStyle(tg)+'"'
+      + ' onclick="tagChipClick('+jsStr(tg.name)+')"'
       + ' oncontextmenu="openTagCtxMenu(event,'+i+')">'
       + escHtml(tg.name)
       + '<span class="etag-n'+(n?'':' zero')+'">'+n+'</span>'
@@ -5113,6 +5124,101 @@ function renderEnergyTagBar(){
   html += '<button class="pxl-btn" onclick="openTagExportModal(null)" style="font-size:12px;padding:2px 8px;" title="导出全部 tag 和它们绑定的 Log">📤 导出</button>';
   bar.innerHTML = html;
 }
+
+// ══════ 长按拖动，调整 tag 在状态栏里的前后位置 ══════
+// 按住约 0.35 秒进入拖动；拖动结束后那一下点击不触发抽选
+let _tagDrag = null;
+let _tagDragJustEnded = false;
+
+function tagChipClick(name){
+  if(_tagDragJustEnded){ _tagDragJustEnded = false; return; }
+  openStateRecall(name, 'taskRecallCard');
+}
+
+function tagPt(e){
+  const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+  return {x: t.clientX, y: t.clientY};
+}
+
+function tagChipIndexAt(x, y){
+  const el = document.elementFromPoint(x, y);
+  const chip = el && el.closest ? el.closest('.etag-chip') : null;
+  if(!chip || !chip.parentElement || chip.parentElement.id!=='energyTagBar') return -1;
+  const v = Number(chip.getAttribute('data-ti'));
+  return isFinite(v) ? v : -1;
+}
+
+function tagDragBegin(e){
+  if(e.type==='mousedown' && e.button!==0) return;
+  const chip = (e.target && e.target.closest) ? e.target.closest('.etag-chip') : null;
+  if(!chip || !chip.parentElement || chip.parentElement.id!=='energyTagBar') return;
+  const i = Number(chip.getAttribute('data-ti'));
+  if(!isFinite(i)) return;
+  const pt = tagPt(e);
+  tagDragClearTimer();
+  _tagDrag = {idx:i, sx:pt.x, sy:pt.y, active:false, timer:null};
+  _tagDrag.timer = setTimeout(()=>{
+    if(!_tagDrag) return;
+    _tagDrag.active = true;
+    document.body.classList.add('tag-dragging');
+    const el = document.querySelector('#energyTagBar .etag-chip[data-ti="'+_tagDrag.idx+'"]');
+    if(el) el.classList.add('dragging');
+    if(navigator.vibrate){ try{ navigator.vibrate(12); }catch(err){} }
+  }, 350);
+}
+
+function tagDragMove(e){
+  if(!_tagDrag) return;
+  const pt = tagPt(e);
+  if(!_tagDrag.active){
+    // 还没进入拖动就先移开了：当成普通点击/滚动，取消长按
+    if(Math.abs(pt.x-_tagDrag.sx)>8 || Math.abs(pt.y-_tagDrag.sy)>8) tagDragCancel();
+    return;
+  }
+  e.preventDefault();
+  const over = tagChipIndexAt(pt.x, pt.y);
+  if(over<0 || over===_tagDrag.idx) return;
+  const arr = S.energyTags||[];
+  const moved = arr.splice(_tagDrag.idx, 1)[0];
+  arr.splice(over, 0, moved);
+  _tagDrag.idx = over;
+  renderEnergyTagBar();
+  const el = document.querySelector('#energyTagBar .etag-chip[data-ti="'+over+'"]');
+  if(el) el.classList.add('dragging');
+}
+
+function tagDragEnd(){
+  if(!_tagDrag) return;
+  const wasActive = _tagDrag.active;
+  tagDragClearTimer();
+  _tagDrag = null;
+  document.body.classList.remove('tag-dragging');
+  if(wasActive){
+    _tagDragJustEnded = true;
+    setTimeout(()=>{ _tagDragJustEnded = false; }, 400);
+    saveState();
+    renderEnergyTagBar();
+  }
+}
+
+function tagDragCancel(){
+  tagDragClearTimer();
+  _tagDrag = null;
+  document.body.classList.remove('tag-dragging');
+  renderEnergyTagBar();
+}
+
+function tagDragClearTimer(){
+  if(_tagDrag && _tagDrag.timer) clearTimeout(_tagDrag.timer);
+}
+
+document.addEventListener('mousedown', tagDragBegin);
+document.addEventListener('touchstart', tagDragBegin, {passive:true});
+document.addEventListener('mousemove', tagDragMove);
+document.addEventListener('touchmove', tagDragMove, {passive:false});
+document.addEventListener('mouseup', tagDragEnd);
+document.addEventListener('touchend', tagDragEnd);
+document.addEventListener('touchcancel', tagDragEnd);
 
 // ══════ 每个标签单独的颜色与字号，统一放进右键菜单 ══════
 function tagSize(tg){
@@ -5200,16 +5306,26 @@ function tagFontCss(tg){
   return (f||ETAG_FONTS[0]).css;
 }
 
+// 字色：没单独设过就按底色自动配黑白
+function tagTextColorOf(tg){
+  const c = tg && tg.textColor;
+  return (c && /^#[0-9a-fA-F]{6}$/.test(c)) ? c : tagTextColor((tg && tg.color) || '#ffff00');
+}
+
 // 一处生成 chip 的内联样式，管理栏和预览共用
 function tagChipStyle(tg){
   const col = (tg && tg.color) || '#ffff00';
-  return 'background:'+col+';color:'+tagTextColor(col)+';'
+  return 'background:'+col+';color:'+tagTextColorOf(tg)+';'
        + 'font-size:'+tagSize(tg||{})+'px;font-family:'+tagFontCss(tg)+';';
 }
+
+// 字色可选值：空字符串＝自动
+const ETAG_TEXT_PALETTE = ['#000000','#ffffff','#cc0000','#000080','#1a6b1a','#800080','#606060','#ffd400'];
 
 // ══════ 新建 / 编辑状态的弹窗 ══════
 let _tagEditIdx = null;     // null = 新建
 let _tagEditColor = '#ffff00';
+let _tagEditTextColor = '';   // '' = 跟着底色自动配黑白
 
 function openTagEditModal(i){
   closeTagPop();
@@ -5218,6 +5334,7 @@ function openTagEditModal(i){
   _tagEditIdx = tg ? i : null;
   _tagEditColor = tg ? (tg.color||'#ffff00')
                      : ETAG_PALETTE[(S.energyTags||[]).length % ETAG_PALETTE.length];
+  _tagEditTextColor = (tg && tg.textColor) || '';
   document.getElementById('tagEditTitle').textContent = tg ? '编辑状态' : '新建状态';
   document.getElementById('tagEditName').value = tg ? tg.name : '';
   document.getElementById('tagEditSize').value = tagSize(tg||{});
@@ -5226,6 +5343,7 @@ function openTagEditModal(i){
   fs.value = (tg && tg.font) || 'ui';
   document.getElementById('tagEditDel').style.display = tg ? '' : 'none';
   renderTagEditColors();
+  renderTagEditTextColors();
   tagEditPreview();
   openModal('tagEditModal');
   setTimeout(()=>{ const el=document.getElementById('tagEditName'); if(el){ el.focus(); el.select(); } }, 50);
@@ -5250,6 +5368,30 @@ function tagEditSetColor(c){
   if(el) el.querySelectorAll('.ctx-sw').forEach(sw=>{
     sw.classList.toggle('sel', hexOf((sw.style.background||'').trim())===c.toLowerCase());
   });
+  renderTagEditTextColors();   // 「自动」那一格要跟着底色变
+  tagEditPreview();
+}
+
+function renderTagEditTextColors(){
+  const el = document.getElementById('tagEditTextColors');
+  if(!el) return;
+  const auto = tagTextColor(_tagEditColor);
+  let h = '<span class="ctx-sw etag-auto-sw'+(_tagEditTextColor?'':' sel')+'"'
+        + ' style="background:'+auto+';" onclick="tagEditSetTextColor(\'\')" title="自动（跟着底色配黑白）">A</span>';
+  h += ETAG_TEXT_PALETTE.map(c=>
+      '<span class="ctx-sw'+(c.toLowerCase()===String(_tagEditTextColor).toLowerCase()?' sel':'')+'"'
+    + ' style="background:'+c+';" onclick="tagEditSetTextColor(\''+c+'\')"></span>'
+  ).join('');
+  h += '<span class="ctx-custom" title="自定义字色">'
+    +   '<input type="color" value="'+(_tagEditTextColor||auto)+'" oninput="tagEditSetTextColor(this.value)" onchange="tagEditSetTextColor(this.value)"/>'
+    + '</span>';
+  el.innerHTML = h;
+}
+
+function tagEditSetTextColor(c){
+  if(c && !/^#[0-9a-fA-F]{6}$/.test(c)) return;
+  _tagEditTextColor = c || '';
+  renderTagEditTextColors();
   tagEditPreview();
 }
 
@@ -5257,6 +5399,7 @@ function tagEditDraft(){
   return {
     name: (document.getElementById('tagEditName').value||'').trim(),
     color: _tagEditColor,
+    textColor: _tagEditTextColor,
     size: Number(document.getElementById('tagEditSize').value)||11,
     font: document.getElementById('tagEditFont').value || 'ui'
   };
@@ -5282,13 +5425,16 @@ function tagEditSave(){
   if(clash>=0){ showToast('已经有同名的状态了'); return; }
 
   if(_tagEditIdx==null){
-    S.energyTags.push({name:d.name, color:d.color, size:d.size, font:d.font});
+    const t = {name:d.name, color:d.color, size:d.size, font:d.font};
+    if(d.textColor) t.textColor = d.textColor;
+    S.energyTags.push(t);
   } else {
     const tg = S.energyTags[_tagEditIdx];
     if(!tg) return;
     const old = String(tg.name);
     if(old !== d.name) applyTagRename(old, d.name);
     tg.name = d.name; tg.color = d.color; tg.size = d.size; tg.font = d.font;
+    if(d.textColor) tg.textColor = d.textColor; else delete tg.textColor;
   }
   saveState();
   closeModal('tagEditModal');
@@ -7033,7 +7179,7 @@ function jTagHtml(t){
   const tg = findTagDef(name);
   if(!tg) return '<span class="tag">'+escHtml(name)+'</span>';
   const col = tg.color||'#ffff00';
-  return '<span class="tag state" style="background:'+col+';color:'+tagTextColor(col)+';border-color:'+col+';font-family:'+tagFontCss(tg)+';"'
+  return '<span class="tag state" style="background:'+col+';color:'+tagTextColorOf(tg)+';border-color:'+col+';font-family:'+tagFontCss(tg)+';"'
     + ' onclick="openStateRecall('+jsStr(tg.name)+')" title="抽一条同状态下的记录">'+escHtml(tg.name)+'</span>';
 }
 
@@ -7069,7 +7215,7 @@ function renderJournalTagChips(){
   el.innerHTML = tags.map(tg=>{
     const col = tg.color||'#ffff00';
     const on = cur.has(String(tg.name).trim().toLowerCase());
-    return '<span class="jtagchip'+(on?' on':'')+'" style="background:'+col+';color:'+tagTextColor(col)+';font-family:'+tagFontCss(tg)+';"'
+    return '<span class="jtagchip'+(on?' on':'')+'" style="background:'+col+';color:'+tagTextColorOf(tg)+';font-family:'+tagFontCss(tg)+';"'
       + ' onclick="toggleJournalTagChip('+jsStr(tg.name)+')">'+(on?'✔ ':'')+escHtml(tg.name)+'</span>';
   }).join('');
 }
@@ -9323,7 +9469,7 @@ function finRenderAll(){
 function renderAll(){
   document.getElementById('charName').value=S.charName;
   updateXPUI(); applyAvatar();
-  renderTasks(); renderJournal(); renderCards();
+  renderTasks(); renderEnergyTagBar(); renderJournal(); renderCards();
   // 云端合并后如果正停留在 BOX 栏，也要刷新，否则要切一次标签才看到新数据
   const boxSec=document.getElementById('sec-box');
   if(boxSec && boxSec.classList.contains('active')) renderBoxTab();
@@ -10221,8 +10367,10 @@ function renderExtensions(){
     <div class="form-row"><label class="form-label">名称</label>
       <input class="form-input" id="tagEditName" placeholder="比如：不得劲" oninput="tagEditPreview()"
              onkeydown="if(event.key==='Enter'){event.preventDefault();tagEditSave();}"/></div>
-    <div class="form-row"><label class="form-label">颜色</label>
+    <div class="form-row"><label class="form-label">底色</label>
       <div id="tagEditColors" class="tagedit-colors"></div></div>
+    <div class="form-row"><label class="form-label">字色</label>
+      <div id="tagEditTextColors" class="tagedit-colors"></div></div>
     <div class="form-row"><label class="form-label">字号</label>
       <div style="display:flex;align-items:center;gap:8px;">
         <input type="range" id="tagEditSize" min="9" max="24" step="1" style="flex:1;" oninput="tagEditPreview()"/>

@@ -1,4 +1,7 @@
-// MMM (ADHD RPG) — Service Worker v14
+// MMM (ADHD RPG) — Service Worker v15
+// v15: 任务页的 tag 栏默认展开（🏷️ 变成收起/展开）；
+//      tag 可以长按拖动调整前后位置，换行后上下排也能拖；
+//      新建/编辑 tag 时字体颜色也能单独设，默认仍是跟着底色自动配黑白
 // v14: 任务栏的「＋新状态」改叫「＋ tag」；
 //      抽选卡片上可以直接改这条 Log 的内容、直接加/去 tag，不用回列表里往下翻；
 //      新增导出：把 tag 和它绑定的 Log 一起导出成 .txt / .json 或复制到剪贴板
@@ -27,7 +30,7 @@
 //     修复：v4 中 STATIC_ASSETS 引用了不存在的 icons/ 文件，
 //     导致 cache.addAll 整体失败、Service Worker 无法安装；
 //     修复：index.html 离线回退之前从未真正入缓存，离线时无法打开
-const CACHE_NAME = 'adhd-rpg-v14';
+const CACHE_NAME = 'adhd-rpg-v15';
 
 // 只预缓存确定存在的静态资源（图标已内嵌在 manifest.json 的 data URL 中，仓库里没有 icons/ 目录）
 const STATIC_ASSETS = [
