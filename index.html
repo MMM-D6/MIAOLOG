@@ -5368,7 +5368,7 @@ function tagEditSetColor(c){
   if(el) el.querySelectorAll('.ctx-sw').forEach(sw=>{
     sw.classList.toggle('sel', hexOf((sw.style.background||'').trim())===c.toLowerCase());
   });
-  renderTagEditTextColors();   // 「自动」那一格要跟着底色变
+  updateTagEditTextSel();   // 「自动」那一格跟着底色变，但不重建 DOM
   tagEditPreview();
 }
 
@@ -5391,8 +5391,25 @@ function renderTagEditTextColors(){
 function tagEditSetTextColor(c){
   if(c && !/^#[0-9a-fA-F]{6}$/.test(c)) return;
   _tagEditTextColor = c || '';
-  renderTagEditTextColors();
+  updateTagEditTextSel();
   tagEditPreview();
+}
+
+// 只改选中状态和「自动」格的底色，绝不动 innerHTML：
+// 取色器是同一行里的元素，一旦重建就会被浏览器关掉，没法按住拖着调
+function updateTagEditTextSel(){
+  const el = document.getElementById('tagEditTextColors');
+  if(!el) return;
+  const auto = tagTextColor(_tagEditColor);
+  const cur = String(_tagEditTextColor||'').toLowerCase();
+  el.querySelectorAll('.ctx-sw').forEach(sw=>{
+    if(sw.classList.contains('etag-auto-sw')){
+      sw.style.background = auto;
+      sw.classList.toggle('sel', !cur);
+    } else {
+      sw.classList.toggle('sel', hexOf((sw.style.background||'').trim())===cur);
+    }
+  });
 }
 
 function tagEditDraft(){

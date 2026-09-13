@@ -1,4 +1,5 @@
-// MMM (ADHD RPG) — Service Worker v15
+// MMM (ADHD RPG) — Service Worker v16
+// v16: 修复调字色时取色器一动就关掉的问题（选色行不再整段重建，可以按住来回拖）
 // v15: 任务页的 tag 栏默认展开（🏷️ 变成收起/展开）；
 //      tag 可以长按拖动调整前后位置，换行后上下排也能拖；
 //      新建/编辑 tag 时字体颜色也能单独设，默认仍是跟着底色自动配黑白
@@ -30,7 +31,7 @@
 //     修复：v4 中 STATIC_ASSETS 引用了不存在的 icons/ 文件，
 //     导致 cache.addAll 整体失败、Service Worker 无法安装；
 //     修复：index.html 离线回退之前从未真正入缓存，离线时无法打开
-const CACHE_NAME = 'adhd-rpg-v15';
+const CACHE_NAME = 'adhd-rpg-v16';
 
 // 只预缓存确定存在的静态资源（图标已内嵌在 manifest.json 的 data URL 中，仓库里没有 icons/ 目录）
 const STATIC_ASSETS = [
