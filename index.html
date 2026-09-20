@@ -2403,9 +2403,97 @@ var S = {
   avatar:null,
   tasks:[], journal:[], cards:[],
   habits:[], checkins:{}, dayNotes:{}, ciEvents:[], ciLists:[], energyTags:[],
-  nextId:1,
+  nextId:1, tombs:{},
   finance:{rate:9.2, accounts:[], cart:[], records:[], recordsCollapsed:true}
 };
+
+// ═══════════════════════════════════════
+// 全局唯一 id
+// 旧写法 newId() 是每台设备各数各的，两台设备各自新建一条就会撞上同一个 id，
+// 同步合并时按 id 去重，其中一条会被悄悄吃掉（表现为「任务突然少了」）。
+// 改成「毫秒时间戳 × 1000 + 随机数」：仍然是数字、仍然递增，但跨设备几乎不可能重复。
+// ═══════════════════════════════════════
+function newId(){
+  const base = Math.max(Number(S.nextId)||1, Date.now()*1000);
+  const id = base + Math.floor(Math.random()*1000);
+  S.nextId = id + 1;
+  return id;
+}
+
+// ═══════════════════════════════════════
+// 删除墓碑
+// 删除以前只是从数组里 filter 掉，可云端那份还留着这条；
+// 下次同步「取并集」时它又被搬回本地，于是删掉的任务又出现了。
+// 每次删除留一个墓碑，合并时按墓碑把它挡在门外，并把对面设备的删除也落实到本地。
+// ═══════════════════════════════════════
+const TOMB_KEEP_MS = 120*24*3600*1000;   // 墓碑保留 120 天，过期清掉，避免无限膨胀
+const TOMB_COLLS = ['tasks','journal','cards','habits','ciEvents','ciLists','boxFiles',
+                    'fleeting','permanent','lit','ideas','drafts'];
+function tombsOf(){
+  if(!S.tombs || typeof S.tombs!=='object' || Array.isArray(S.tombs)) S.tombs = {};
+  return S.tombs;
+}
+function tombKey(coll, id){ return coll+':'+String(id); }
+// 同一个 id 反复「删除 → 撤销 → 再删除」时，每次都必须比上一次更新，
+// 否则同一毫秒内的两次操作会打平，合并时谁赢就看运气了。
+function bumpTomb(coll, id, deleted){
+  const tb = tombsOf(), k = tombKey(coll, id);
+  const t = Math.max(Date.now(), Math.abs(Number(tb[k])||0) + 1);
+  tb[k] = deleted ? t : -t;
+}
+function markDeleted(coll, ids){
+  (Array.isArray(ids)?ids:[ids]).forEach(id=>{ if(id!=null && id!=='') bumpTomb(coll, id, true); });
+}
+// 墓碑的值是时间戳：正数 = 那一刻删掉了，负数 = 那一刻又被撤销恢复了。
+// 合并时比「谁的时间更近」，所以「先删后撤销」能压过别的设备同步来的旧墓碑。
+function isDeleted(coll, id){
+  if(id==null) return false;
+  return (Number(tombsOf()[tombKey(coll,id)])||0) > 0;
+}
+function markRevived(coll, id){
+  if(tombKey(coll,id) in tombsOf()) bumpTomb(coll, id, false);
+}
+function mergeTombs(a, b){
+  const out = {};
+  [a,b].forEach(src=>{
+    if(!src || typeof src!=='object' || Array.isArray(src)) return;
+    Object.keys(src).forEach(k=>{
+      const t = Number(src[k])||0;
+      if(!(k in out) || Math.abs(t) > Math.abs(out[k])) out[k] = t;   // 时间更近的那次操作说了算
+    });
+  });
+  return out;
+}
+function pruneTombs(){
+  const tb = tombsOf(), cut = Date.now() - TOMB_KEEP_MS;
+  Object.keys(tb).forEach(k=>{ if(Math.abs(Number(tb[k])||0) < cut) delete tb[k]; });
+}
+// 按 key 存的表（打卡、当日文字、贴纸设置…）同样需要墓碑，
+// 否则「删掉某天的打卡」下次同步也会被云端那份并回来
+const TOMB_MAPS = ['checkins','dayNotes','shopMeta','stkNameOv','emojiMap','textMap','iconSize','pomoSkin','stkOff','stkVal','shopOwned'];
+// 把墓碑落实到数据上：对面设备删掉的条目，这边也跟着删
+function applyTombs(){
+  TOMB_COLLS.forEach(k=>{
+    if(Array.isArray(S[k])) S[k] = S[k].filter(x=>!(x && isDeleted(k, x.id)));
+  });
+  if(S.finance && typeof S.finance==='object'){
+    ['accounts','cart','records'].forEach(k=>{
+      if(Array.isArray(S.finance[k])) S.finance[k] = S.finance[k].filter(x=>!(x && isDeleted('finance.'+k, x.id)));
+    });
+  }
+  TOMB_MAPS.forEach(k=>{
+    const m = S[k];
+    if(!m || typeof m!=='object' || Array.isArray(m)) return;
+    Object.keys(m).forEach(dk=>{ if(isDeleted(k, dk)) delete m[dk]; });
+  });
+  // 状态标签按名字认人（同名重建就是同一个）
+  if(Array.isArray(S.energyTags)){
+    S.energyTags = S.energyTags.filter(tg=>{
+      const nm = typeof tg==='string' ? tg : (tg && tg.name);
+      return nm && !isDeleted('energyTags', nm);
+    });
+  }
+}
 
 let undoStack=[], undoTimer=null;
 const UNDO_LIMIT=20; // 每步存一份完整状态副本，必须限量否则内存无上限增长
@@ -2526,54 +2614,70 @@ async function fetchCloudState(){
 // written on another device are never lost when this device pushes
 function mergeCloudIntoLocal(cloud){
   if(!cloud || typeof cloud!=='object') return;
-  const unionById = (localArr, cloudArr) => {
+  // 先把两边的墓碑合起来：任何一边删过的东西，合并后都不会再冒出来
+  S.tombs = mergeTombs(tombsOf(), cloud.tombs);
+  const unionById = (coll, localArr, cloudArr) => {
     if(!Array.isArray(cloudArr)) return localArr;
-    if(!Array.isArray(localArr)) return cloudArr.slice();
+    if(!Array.isArray(localArr)) localArr = [];
     const ids = new Set(localArr.map(x => x && String(x.id)));
-    cloudArr.forEach(x => { if(x && !ids.has(String(x.id))) localArr.push(x); });
+    cloudArr.forEach(x => {
+      if(!x) return;
+      if(ids.has(String(x.id))) return;
+      if(isDeleted(coll, x.id)) return;   // 这条已经被删掉了，不要搬回来
+      localArr.push(x);
+      ids.add(String(x.id));
+    });
     return localArr;
   };
-  ['tasks','journal','cards','habits','ciEvents','ciLists','boxFiles',
-   'fleeting','permanent','lit','ideas','drafts'].forEach(k=>{
-    // 任务被「清空重新开始」过的话，不能再把云端那份旧任务并回来，
-    // 否则刚清干净的任务会被其它设备的旧数据复活。
-    // 只对 tasks 生效：journal（Log）永远走并集，只增不减，绝不会因为清空任务而丢。
+  TOMB_COLLS.forEach(k=>{
+    // 「清空任务、重新开始」现在会给每条任务留墓碑，跨设备靠墓碑传播即可。
+    // 这里只兜底处理「对面是旧版本、只写了 tasksClearedAt 没有墓碑」的情况：
+    // 云端清空更新时，把云端已经没有、且创建于那次清空之前的本地任务一并清掉；
+    // 清空之后新建的任务两边都保留，不会再整份覆盖把新任务连坐掉。
     if(k === 'tasks'){
       const localClr = Date.parse(S.tasksClearedAt||'') || 0;
       const cloudClr = Date.parse(cloud.tasksClearedAt||'') || 0;
-      if(localClr && localClr > cloudClr) return;          // 本地清空更新 → 保持清空，忽略云端旧任务
-      if(cloudClr && cloudClr > localClr){                 // 云端清空更新 → 采纳云端的清空结果
-        S.tasks = Array.isArray(cloud.tasks) ? cloud.tasks.slice() : [];
+      if(cloudClr > localClr){
+        const cloudIds = new Set((Array.isArray(cloud.tasks)?cloud.tasks:[]).map(t=>t && String(t.id)));
+        S.tasks = (S.tasks||[]).filter(t=>{
+          if(!t) return false;
+          if(cloudIds.has(String(t.id))) return true;
+          return (Date.parse(t.createdAt||'')||0) > cloudClr;   // 清空之后才建的，留着
+        });
         S.tasksClearedAt = cloud.tasksClearedAt;
-        return;
       }
     }
-    S[k] = unionById(S[k], cloud[k]);
+    S[k] = unionById(k, S[k], cloud[k]);
   });
   if(S.finance && cloud.finance){
-    S.finance.accounts = unionById(S.finance.accounts, cloud.finance.accounts);
-    S.finance.cart     = unionById(S.finance.cart, cloud.finance.cart);
-    S.finance.records  = unionById(S.finance.records, cloud.finance.records);
+    S.finance.accounts = unionById('finance.accounts', S.finance.accounts, cloud.finance.accounts);
+    S.finance.cart     = unionById('finance.cart', S.finance.cart, cloud.finance.cart);
+    S.finance.records  = unionById('finance.records', S.finance.records, cloud.finance.records);
   }
-  // energyTags: union by name
+  // energyTags: 按名字取并集，删掉过的名字不再并回来
   if(Array.isArray(cloud.energyTags)){
     if(!Array.isArray(S.energyTags)) S.energyTags=[];
     const names = new Set(S.energyTags.map(tg=>tg && tg.name));
     cloud.energyTags.forEach(tg=>{
       const nm = typeof tg==='string' ? tg : (tg && tg.name);
-      if(nm && !names.has(nm)) S.energyTags.push(typeof tg==='string' ? {name:tg,color:'#ffff00'} : tg);
+      if(!nm || names.has(nm) || isDeleted('energyTags', nm)) return;
+      S.energyTags.push(typeof tg==='string' ? {name:tg,color:'#ffff00'} : tg);
+      names.add(nm);
     });
   }
-  // checkins / dayNotes: keyed by date — merge keys, local wins per key
+  // checkins / dayNotes：按日期存。合并 key，但删掉过的那天不会被并回来；
+  // 两边都有同一天时，当日文字比 ts 取新的那份（打卡值没有时间戳，仍然本地优先）
   ['checkins','dayNotes'].forEach(k=>{
     if(cloud[k] && typeof cloud[k]==='object'){
       if(!S[k] || typeof S[k]!=='object') S[k]={};
       Object.keys(cloud[k]).forEach(dk=>{
-        if(!(dk in S[k])) S[k][dk] = cloud[k][dk];
-        else if(S[k][dk] && cloud[k][dk] && typeof S[k][dk]==='object' && typeof cloud[k][dk]==='object'
-                && !Array.isArray(S[k][dk]) && !Array.isArray(cloud[k][dk])){
-          S[k][dk] = Object.assign({}, cloud[k][dk], S[k][dk]);
-        }
+        if(isDeleted(k, dk)) return;               // 这一天被删过了，别搬回来
+        if(!(dk in S[k])){ S[k][dk] = cloud[k][dk]; return; }
+        const mine = S[k][dk], theirs = cloud[k][dk];
+        if(!mine || !theirs || typeof mine!=='object' || typeof theirs!=='object'
+           || Array.isArray(mine) || Array.isArray(theirs)) return;
+        const tm = Date.parse(mine.ts||'')||0, tt = Date.parse(theirs.ts||'')||0;
+        S[k][dk] = tt > tm ? Object.assign({}, mine, theirs) : Object.assign({}, theirs, mine);
       });
     }
   });
@@ -2586,45 +2690,80 @@ function mergeCloudIntoLocal(cloud){
   ['stkVal','shopMeta','shopOwned','emojiMap','textMap','iconSize','pomoSkin','stkOff','stkNameOv'].forEach(k=>{
     if(cloud[k] && typeof cloud[k]==='object'){
       if(!S[k] || typeof S[k]!=='object') S[k] = {};
-      Object.keys(cloud[k]).forEach(id=>{ if(S[k][id] == null) S[k][id] = cloud[k][id]; });
+      Object.keys(cloud[k]).forEach(id=>{
+        if(isDeleted(k, id)) return;
+        if(S[k][id] == null) S[k][id] = cloud[k][id];
+      });
     }
   });
+  applyTombs();   // 对面设备删掉的，本地也删掉
+  pruneTombs();
 }
 
 // 同一套并集逻辑，换个名字用：把另一份快照里「当前状态没有」的条目补进来
 function unionIntoState(snapshot){ mergeCloudIntoLocal(snapshot); }
 
+// 这台设备这次会话的身份码：写完回读时用它确认「最后落地的是我这一次写入」
+const WRITER_ID = Math.random().toString(36).slice(2,10);
+let _loadDone = false;    // 初次载入结束前不许往云端推，免得把空状态盖上去
+let _syncing = false, _syncAgain = false;
+
 async function syncToCloud() {
+  if (!_loadDone) return;              // 数据还没载完，什么都别推
+  if (_syncing) { _syncAgain = true; return; }   // 同一时间只允许一次写入在飞
+  _syncing = true;
   try {
     setSyncStatus('saving');
-    // 冲突检测：先看云端版本号，若其他设备在这期间写入过，
-    // 先把它的内容合并进来（按 id 取并集，不丢任何条目），再推送
     let merged = false;
-    try {
-      const cloud = await fetchCloudState();
-      const cloudRev = cloud && typeof cloud.rev==='number' ? cloud.rev : 0;
-      if (cloud && cloudRev > _cloudBaseRev) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      // 每次推送前都先把云端那份合并进来（并集 + 墓碑，既不丢也不复活），
+      // 而不是只在版本号变大时才合并：两台设备撞上同一个版本号时，
+      // 旧写法会跳过合并、整份覆盖，另一台刚写的东西就凭空消失了。
+      let cloud = null;
+      try { cloud = await fetchCloudState(); } catch(e) { cloud = null; }
+      if (cloud) {
+        const cloudRev = typeof cloud.rev==='number' ? cloud.rev : 0;
+        if (cloudRev > _cloudBaseRev) merged = true;
         mergeCloudIntoLocal(cloud);
-        _cloudBaseRev = cloudRev;
-        merged = true;
+        _cloudBaseRev = Math.max(_cloudBaseRev, cloudRev);
       }
-    } catch(e) { /* 云端读取失败时按原样推送（例如离线瞬间），不阻塞保存 */ }
-
-    S.rev = Math.max(S.rev||0, _cloudBaseRev) + 1;
-    const payload = JSON.stringify(S);
-    const res = await fetch(SB_URL + '/rest/v1/' + SB_TABLE, {
-      method: 'POST',
-      headers: SB_HEADERS,
-      body: JSON.stringify({ key: SB_ROW_KEY, value: payload })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    _cloudBaseRev = S.rev;
-    clearDirty();
-    try { localStorage.setItem('adhd-rpg-v2', payload); } catch(e) {}
-    setSyncStatus('saved');
-    if (merged) { renderAll(); showToast('已合并其他设备的改动'); }
+      const nextRev = Math.max(Number(S.rev)||0, _cloudBaseRev) + 1;
+      // rev 先只放进这次的 payload，等真的写成功了再回写到 S，
+      // 免得推送失败时本地 rev 白白涨上去，下次开机被当成「本地比云端新」。
+      const payload = JSON.stringify(Object.assign({}, S, {rev: nextRev, writer: WRITER_ID}));
+      const res = await fetch(SB_URL + '/rest/v1/' + SB_TABLE, {
+        method: 'POST',
+        headers: SB_HEADERS,
+        body: JSON.stringify({ key: SB_ROW_KEY, value: payload })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      // 写完回读确认：如果这几百毫秒里别的设备也写了，就把它的内容合进来重推一次
+      let landed = true;
+      try {
+        const after = await fetchCloudState();
+        landed = !!after && after.writer === WRITER_ID && (Number(after.rev)||0) === nextRev;
+        if (!landed && after) {
+          mergeCloudIntoLocal(after);
+          _cloudBaseRev = Math.max(_cloudBaseRev, Number(after.rev)||0);
+          merged = true;
+        }
+      } catch(e) { landed = true; }   // 回读失败就不纠结，下一次同步会补上
+      if (landed) {
+        S.rev = nextRev;
+        _cloudBaseRev = nextRev;
+        clearDirty();
+        try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
+        setSyncStatus('saved');
+        if (merged) { renderAll(); showToast('已合并其他设备的改动'); }
+        return;
+      }
+    }
+    throw new Error('conflict');   // 连撞三次，留着脏标记等下次
   } catch(e) {
     setSyncStatus(navigator.onLine ? 'error' : 'offline');
+  } finally {
+    _syncing = false;
+    if (_syncAgain) { _syncAgain = false; setTimeout(syncToCloud, 400); }
   }
 }
 
@@ -2660,12 +2799,16 @@ document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState==='visible') refreshFromCloudIfNewer();
 });
 window.addEventListener('focus', ()=>{ refreshFromCloudIfNewer(); });
-window.addEventListener('online', ()=>{ if(_dirtySinceSync) syncToCloud(); });
+window.addEventListener('online', ()=>{ if(hasPendingLocalEdits()) syncToCloud(); });
 
 // Safely merge loaded data into S — never discard existing arrays
 function migrateState(loaded) {
+  // 墓碑必须取并集：这里是「整份覆盖」，直接盖掉的话本地刚删的东西会被云端旧数据复活
+  const prevTombs = (S.tombs && typeof S.tombs==='object' && !Array.isArray(S.tombs)) ? S.tombs : null;
   // Copy every field from loaded into S
   Object.keys(loaded).forEach(k => { S[k] = loaded[k]; });
+  S.tombs = mergeTombs(prevTombs, loaded.tombs);
+  delete S.writer;   // 只是写入方的身份码，不属于数据本身
   // 已完整移除的功能：英语卡片 / Toolkit（Projects+Skills）
   // 清除遗留数据字段，避免继续同步到 Supabase
   delete S.engCards;
@@ -2718,7 +2861,7 @@ function migrateState(loaded) {
           let pct = Math.round(Number(r.pct));
           if(!isFinite(pct)) pct = 0;
           pct = Math.min(100, Math.max(0, pct));
-          return {id:r.id||(S.nextId=(S.nextId||1)+1), pct:pct, min:min, ts:r.ts||new Date().toISOString(), text:String(r.text||''), imported:!!r.imported};
+          return {id:r.id||newId(), pct:pct, min:min, ts:r.ts||new Date().toISOString(), text:String(r.text||''), imported:!!r.imported};
         })
         .filter(Boolean);
       if(!t.tlMarks.length) delete t.tlMarks;
@@ -2767,7 +2910,7 @@ function migrateState(loaded) {
   // 事件/计划 与 清单：补全结构，坏数据直接丢掉，避免渲染时炸掉
   if(!Array.isArray(S.ciEvents)) S.ciEvents=[];
   S.ciEvents = S.ciEvents.filter(e=>e && e.ds).map(e=>({
-    id: e.id!=null ? e.id : S.nextId++,
+    id: e.id!=null ? e.id : newId(),
     ds: String(e.ds),
     title: String(e.title||'未命名事件'),
     time: String(e.time||''),
@@ -2777,11 +2920,11 @@ function migrateState(loaded) {
   }));
   if(!Array.isArray(S.ciLists)) S.ciLists=[];
   S.ciLists = S.ciLists.filter(l=>l && typeof l==='object').map(l=>({
-    id: l.id!=null ? l.id : S.nextId++,
+    id: l.id!=null ? l.id : newId(),
     name: String(l.name||'未命名清单'),
     ds: l.ds ? String(l.ds) : null,
     items: (Array.isArray(l.items)?l.items:[]).filter(it=>it && typeof it==='object').map(it=>({
-      id: it.id!=null ? it.id : S.nextId++,
+      id: it.id!=null ? it.id : newId(),
       text: String(it.text||''),
       done: !!it.done
     })).filter(it=>it.text),
@@ -2859,6 +3002,8 @@ function migrateState(loaded) {
   if (!Array.isArray(S.finance.records)) S.finance.records = [];
   if (typeof S.finance.rate !== 'number') S.finance.rate = 9.2;
   if (typeof S.finance.recordsCollapsed !== 'boolean') S.finance.recordsCollapsed = true;
+  pruneTombs();
+  applyTombs();   // 已删除的条目不会因为载入了另一份快照而复活
 }
 
 // Load: try cloud first, fall back to localStorage
@@ -2891,6 +3036,7 @@ async function loadState() {
         markDirty();
         try { localStorage.setItem('adhd-rpg-v2', JSON.stringify(S)); } catch(e) {}
         renderAll();
+        _loadDone = true;
         syncToCloud();         // 把合并结果补推回云端
         showToast('已找回本地未同步的记录');
       } else {
@@ -2903,11 +3049,13 @@ async function loadState() {
     } else {
       // No cloud data yet — push local data up
       setSyncStatus('offline');
+      _loadDone = true;
       syncToCloud();
     }
   } catch(e) {
     setSyncStatus('offline');
   }
+  _loadDone = true;
 }
 
 // ═══════════════════════════════════════
@@ -3077,9 +3225,36 @@ function showUndoBar(msg){
 
 function doUndo(){
   if(!undoStack.length) return;
+  const tombsNow = tombsOf();   // 撤销前的墓碑（含刚刚那次删除），快照里是没有的
   Object.assign(S, JSON.parse(undoStack.pop()));
+  S.tombs = mergeTombs(tombsNow, S.tombs);
+  // 撤销的是一次删除的话，墓碑也要一起撤掉，
+  // 否则这条数据在下一次同步时会被云端的墓碑再删一遍，撤销等于白按。
+  reviveFromTombs();
   saveState(); updateXPUI(); renderAll();
   document.getElementById('undoBar').classList.remove('show');
+}
+// 凡是当前还存在于数据里的条目，就把它的墓碑抹掉（撤销 / 导入 恢复出来的数据靠这个保命）
+function reviveFromTombs(){
+  TOMB_COLLS.forEach(k=>{
+    if(!Array.isArray(S[k])) return;
+    S[k].forEach(x=>{ if(x && x.id!=null) markRevived(k, x.id); });
+  });
+  if(S.finance && typeof S.finance==='object'){
+    ['accounts','cart','records'].forEach(k=>{
+      if(!Array.isArray(S.finance[k])) return;
+      S.finance[k].forEach(x=>{ if(x && x.id!=null) markRevived('finance.'+k, x.id); });
+    });
+  }
+  TOMB_MAPS.forEach(k=>{
+    const m = S[k];
+    if(!m || typeof m!=='object' || Array.isArray(m)) return;
+    Object.keys(m).forEach(dk=>markRevived(k, dk));
+  });
+  (Array.isArray(S.energyTags)?S.energyTags:[]).forEach(tg=>{
+    const nm = typeof tg==='string' ? tg : (tg && tg.name);
+    if(nm) markRevived('energyTags', nm);
+  });
 }
 
 // ═══════════════════════════════════════
@@ -3109,7 +3284,7 @@ function quickAddProject(){
   const inp = document.getElementById('quickAddProjectInput');
   const name = (inp.value||'').trim();
   if(!name) return;
-  const id = S.nextId++;
+  const id = newId();
   S.tasks.unshift({
     id: id, name, type:'project', desc:'', tags:[], projectId:null, note:'', energyTags:[],
     done:false, createdAt:new Date().toISOString(), pomoMin:0
@@ -3150,7 +3325,7 @@ function quickAddChildTask(projectId, sectionId){
   const arr = S.tasks;
   const anchorIdx = arr.findIndex(t=>t.id==anchorId);
   const newTask = {
-    id: S.nextId++, name, type:'todo', desc:'', tags:[], projectId, note:'', energyTags:[],
+    id: newId(), name, type:'todo', desc:'', tags:[], projectId, note:'', energyTags:[],
     done:false, createdAt:new Date().toISOString(), pomoMin:0
   };
   arr.splice(anchorIdx<0?arr.length:anchorIdx+1, 0, newTask);
@@ -3164,7 +3339,7 @@ function quickAddChildTask(projectId, sectionId){
 
 function addSectionToProject(projectId){
   const sec = {
-    id: S.nextId++, type:'section', projectId, name:'新分栏', color:'#000080',
+    id: newId(), type:'section', projectId, name:'新分栏', color:'#000080',
     collapsed:false, createdAt:new Date().toISOString()
   };
   S.tasks.push(sec);
@@ -3185,6 +3360,7 @@ function toggleSectionCollapse(id){
 
 function deleteSection(id){
   if(!confirm('删除这个分栏？分栏内的任务会保留，并归并到上一分组。')) return;
+  markDeleted('tasks', [id]);
   S.tasks = S.tasks.filter(t=>t.id!=id);
   saveState();
   renderTasks();
@@ -3192,6 +3368,10 @@ function deleteSection(id){
 
 function deleteTask(id){
   pushUndo();
+  // 删掉的 id 要留墓碑，否则下次同步会从云端把它并回来
+  markDeleted('tasks', (S.tasks||[])
+    .filter(t => t && (t.id == id || (t.type==='section' && t.projectId==id)))
+    .map(t => t.id));
   // also remove association from child tasks (sections have no meaning without a parent project, so drop them)
   S.tasks.forEach(t=>{ if(t.projectId==id && t.type!=='section') t.projectId=null; });
   S.tasks = S.tasks.filter(t => t.id != id && !(t.type==='section' && t.projectId==id));
@@ -3558,7 +3738,7 @@ function cancelTlDraft(){
 function saveTlDraft(id){
   if(!_tlDraft || _tlDraft.taskId!=id) return;
   const t = (S.tasks||[]).find(x=>x.id==id); if(!t) return;
-  tlMarksOf(t).push({id:S.nextId++, pct:_tlDraft.pct, min:_tlDraft.min, ts:new Date().toISOString(), text:(_tlDraft.text||'').trim()});
+  tlMarksOf(t).push({id:newId(), pct:_tlDraft.pct, min:_tlDraft.min, ts:new Date().toISOString(), text:(_tlDraft.text||'').trim()});
   _tlDraft = null;
   saveState();
   renderTasks();
@@ -3587,7 +3767,7 @@ function deleteTlMark(tid, mid){
 // 任务名和进度不进正文、也不进标签，而是存在 src 里，渲染时以很淡的一行放在下面
 function makeTlJournalEntry(t, m){
   return {
-    id: S.nextId++,
+    id: newId(),
     text: (m.text||'').trim(),
     tags: [],
     src: {task: t.name||'', pct: m.pct||0},
@@ -3712,6 +3892,7 @@ function performTasksReset(opts){
   if(pomoTimer) stopPomo(true);
   pomoTaskId = null;
   const nameEl = document.getElementById('pomoTaskName'); if(nameEl) nameEl.textContent = '无绑定任务';
+  markDeleted('tasks', (S.tasks||[]).map(t=>t && t.id));   // 逐条留墓碑，清空才能真的传到其它设备
   S.tasks = [];
   // 清空的时间戳：跨设备同步时靠它判断「这是一次真的清空」，
   // 免得其它设备上的旧任务又被并集合并回来（Log 不受这套逻辑影响，永远只增不减）
@@ -4175,8 +4356,9 @@ function stkShrink(file, max){
   });
 }
 
-// 新导入的贴纸一律先落进「总库」，不预设归属，之后自己拖/分配到需要的柜子
-async function stkImportFiles(files){
+// 默认先落进「总库」，不预设归属；从某个柜子（比如商店）直接导入时，
+// 传 cat 就会当场分配好，省得还要再去总库里手动分一次
+async function stkImportFiles(files, cat){
   const arr = Array.from(files||[]).filter(f=>/^image\//.test(f.type||''));
   if(!arr.length){ showToast('没挑到图片文件'); return; }
   let ok = 0, bad = 0;
@@ -4185,7 +4367,7 @@ async function stkImportFiles(files){
       const src = await stkShrink(f, STK.MAX);
       const rec = {
         id: 'sk'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
-        cats: [],
+        cats: cat ? [cat] : [],
         name: (f.name||'贴纸').replace(/\.[a-z0-9]+$/i,'').slice(0,24),
         src: src,
         ts: Date.now()
@@ -4197,7 +4379,9 @@ async function stkImportFiles(files){
   }
   renderStickerLib();
   renderTasks();
-  showToast('已导入 '+ok+' 张到总库'+(bad?('，'+bad+' 张失败'):'')+(ok?'，记得去分配到需要的柜子':''));
+  const where = cat ? stkCatName(cat) : '总库';
+  showToast('已导入 '+ok+' 张到'+where+(bad?('，'+bad+' 张失败'):'')
+    + (ok && !cat ? '，记得去分配到需要的柜子' : ''));
 }
 
 function openStickerLib(cat){
@@ -5047,6 +5231,7 @@ function tagPopCreate(){
   if(!name || !_tagPopCtx) return;
   if(!Array.isArray(S.energyTags)) S.energyTags=[];
   if(!findTagDef(name)){
+    markRevived('energyTags', name);
     S.energyTags.push({name, color: ETAG_PALETTE[S.energyTags.length % ETAG_PALETTE.length]});
     saveState();
     renderEnergyTagBar();
@@ -5279,6 +5464,7 @@ function removeEnergyTagAt(i){
       delete t.energyTag;
     }
   });
+  markDeleted('energyTags', tg.name);   // 同名标签以后重建时会自动撤销这条墓碑
   S.energyTags.splice(i,1);
   if(_rcState && String(_rcState).trim().toLowerCase()===lk) rcCloseCard();
   saveState();
@@ -5444,6 +5630,7 @@ function tagEditSave(){
   if(_tagEditIdx==null){
     const t = {name:d.name, color:d.color, size:d.size, font:d.font};
     if(d.textColor) t.textColor = d.textColor;
+    markRevived('energyTags', t && t.name);
     S.energyTags.push(t);
   } else {
     const tg = S.energyTags[_tagEditIdx];
@@ -5680,7 +5867,7 @@ function boxUid(){
   // 撤销会把 nextId 回退，多设备合并也可能带来同号条目；
   // 这里确保新 id 一定没被占用，否则条目可能变成自己的父级导致死循环
   let id;
-  do { id = 'bx' + (S.nextId++); } while((S.boxFiles||[]).some(x=>x && x.id===id));
+  do { id = 'bx' + (newId()); } while((S.boxFiles||[]).some(x=>x && x.id===id));
   return id;
 }
 
@@ -6085,6 +6272,7 @@ function boxDeleteEntry(id){
   }
   pushUndo();
   const doomed = new Set([id, ...boxDescendantIds(id)]);
+  markDeleted('boxFiles', [...doomed]);
   S.boxFiles = S.boxFiles.filter(x=>!doomed.has(x.id));
   if(doomed.has(_boxOpenId)) _boxOpenId=null;
   saveState();
@@ -7040,7 +7228,7 @@ function importProjectPayload(data){
   const now = new Date().toISOString();
 
   const p = projStripIds(data.project);
-  p.id = S.nextId++;
+  p.id = newId();
   p.type = 'project';
   p.projectId = null;
   if(!p.name) p.name = '（未命名项目）';
@@ -7057,7 +7245,7 @@ function importProjectPayload(data){
 
   const kids = data.items.map(it=>{
     const c = projStripIds(it);
-    c.id = S.nextId++;
+    c.id = newId();
     c.projectId = p.id;
     if(c.type!=='section') c.type = c.type || 'todo';
     if(!c.createdAt) c.createdAt = now;
@@ -7076,6 +7264,7 @@ function importProjectPayload(data){
     const have = new Set(S.energyTags.map(tg=>tg && tg.name));
     data.energyTags.forEach(tg=>{
       if(tg && tg.name && !have.has(tg.name)){
+        markRevived('energyTags', tg.name);
         S.energyTags.push({name:tg.name, color:tg.color||'#ffff00', size:tg.size});
         have.add(tg.name);
       }
@@ -7154,7 +7343,7 @@ function saveJournal(){
   const text=document.getElementById('journalText').value.trim();
   if(!text) return;
   const tags=document.getElementById('journalTags').value.split(',').map(s=>s.trim()).filter(Boolean);
-  S.journal.unshift({id:S.nextId++,text,tags,createdAt:new Date().toISOString()});
+  S.journal.unshift({id:newId(),text,tags,createdAt:new Date().toISOString()});
   addXP(5,'日记'); saveState(); closeModal('journalModal');
   document.getElementById('journalText').value='';
   document.getElementById('journalTags').value='';
@@ -7166,6 +7355,7 @@ function saveJournal(){
 
 function deleteJournal(id){
   pushUndo();
+  markDeleted('journal', [id]);
   S.journal=S.journal.filter(j=>j.id!=id);
   saveState(); renderJournal(); showUndoBar('日记已删除');
 }
@@ -7887,7 +8077,7 @@ function saveCard(){
     const c=S.cards.find(x=>x.id==editId);
     if(c){ c.body=body; c.tags=tags; c.editedAt=new Date().toISOString(); }
   } else {
-    S.cards.unshift({id:S.nextId++, body, tags, createdAt:new Date().toISOString()});
+    S.cards.unshift({id:newId(), body, tags, createdAt:new Date().toISOString()});
     addXP(5,'卡片笔记');
   }
   saveState(); closeModal('cardModal'); renderCards();
@@ -7906,6 +8096,7 @@ function editCard(id){
 
 function deleteCard(id){
   pushUndo();
+  markDeleted('cards', [id]);
   S.cards=S.cards.filter(x=>x.id!=id);
   saveState(); renderCards(); showUndoBar('卡片已删除');
 }
@@ -8213,13 +8404,14 @@ function saveHabit(){
     const h=S.habits.find(x=>x.id==editId);
     if(h){ h.name=name; h.emoji=emoji; h.goal=goal; h.unit=unit; h.step=step; }
   } else {
-    S.habits.push({id:S.nextId++, name, emoji, goal, unit, step, createdAt:new Date().toISOString()});
+    S.habits.push({id:newId(), name, emoji, goal, unit, step, createdAt:new Date().toISOString()});
   }
   saveState(); closeModal('habitModal'); renderCheckin();
 }
 
 function deleteHabit(id){
   if(!confirm('删除此习惯？打卡记录会保留。')) return;
+  markDeleted('habits', [id]);
   S.habits=(S.habits||[]).filter(h=>h.id!=id);
   saveState(); renderCheckin();
 }
@@ -8241,9 +8433,13 @@ function ciSetVal(dateStr, habitId, v, isGoal){
   if(!S.checkins) S.checkins={};
   const k = ciKey(dateStr, habitId);
   v = Number(v)||0;
-  if(v<=0) delete S.checkins[k];
-  else if(isGoal) S.checkins[k] = {v:v};
-  else S.checkins[k] = true;
+  if(v<=0){
+    // 只有本来就有记录时才写墓碑，否则每次保存都会给没打卡的日子堆一堆垃圾
+    if(k in S.checkins){ delete S.checkins[k]; markDeleted('checkins', k); }
+  } else {
+    S.checkins[k] = isGoal ? {v:v} : true;
+    markRevived('checkins', k);        // 重新打上就撤销那条墓碑
+  }
 }
 function ciToggle(dateStr, habitId){
   const h=(S.habits||[]).find(x=>x.id==habitId);
@@ -8475,13 +8671,14 @@ function ciSaveEvent(){
     const e=S.ciEvents.find(x=>x.id==id);
     if(e){ e.ds=ds; e.title=title; e.time=time; e.note=note; }
   } else {
-    S.ciEvents.push({id:S.nextId++, ds:ds, title:title, time:time, note:note, done:false, createdAt:new Date().toISOString()});
+    S.ciEvents.push({id:newId(), ds:ds, title:title, time:time, note:note, done:false, createdAt:new Date().toISOString()});
   }
   saveState(); closeModal('ciEventModal'); renderCheckin(); ciRefreshDayPlans();
 }
 
 function ciDelEvent(id){
   if(!confirm('删除这个事件？')) return;
+  markDeleted('ciEvents', [id]);
   S.ciEvents=(S.ciEvents||[]).filter(e=>e.id!=id);
   saveState(); renderCheckin(); ciRefreshDayPlans();
 }
@@ -8623,7 +8820,7 @@ function ciSaveList(){
     const l=S.ciLists.find(x=>x.id==id);
     if(l){ l.name=name; l.ds=ds; }
   } else {
-    S.ciLists.push({id:S.nextId++, name:name, ds:ds, items:[], createdAt:new Date().toISOString()});
+    S.ciLists.push({id:newId(), name:name, ds:ds, items:[], createdAt:new Date().toISOString()});
   }
   saveState(); closeModal('ciListModal');
   if(_ciPanel!=='lists') _ciPanel='lists';
@@ -8633,6 +8830,7 @@ function ciSaveList(){
 function ciDelList(id){
   const l=(S.ciLists||[]).find(x=>x.id==id); if(!l) return;
   if(!confirm('删除清单「'+l.name+'」？里面的条目会一起删掉。')) return;
+  markDeleted('ciLists', [id]);
   S.ciLists=(S.ciLists||[]).filter(x=>x.id!=id);
   saveState(); renderCheckin(); ciRefreshDayPlans();
 }
@@ -8641,7 +8839,7 @@ function ciAddItem(listId, inp){
   const text=(inp.value||'').trim(); if(!text) return;
   const l=(S.ciLists||[]).find(x=>x.id==listId); if(!l) return;
   if(!Array.isArray(l.items)) l.items=[];
-  l.items.push({id:S.nextId++, text:text, done:false});
+  l.items.push({id:newId(), text:text, done:false});
   const inpId=inp.id;   // 重渲染会换掉这个输入框，用 id 把光标接回去
   inp.value='';
   saveState(); renderCheckin(); ciRefreshDayPlans();
@@ -9069,8 +9267,13 @@ function ciSaveDay(){
   if(!S.dayNotes) S.dayNotes={};
   (S.habits||[]).forEach(h=>{ ciSetVal(ds, h.id, ciDraftValue(h), ciIsGoal(h)); });
   const text=(document.getElementById('ciDayText').value||'').trim();
-  if(text) S.dayNotes[ds]={text:text, ts:new Date().toISOString()};
-  else delete S.dayNotes[ds];
+  if(text){
+    S.dayNotes[ds]={text:text, ts:new Date().toISOString()};
+    markRevived('dayNotes', ds);
+  } else if(ds in S.dayNotes){
+    delete S.dayNotes[ds];
+    markDeleted('dayNotes', ds);
+  }
   saveState(); closeModal('ciDayModal'); renderCheckin();
   showToast('已保存 '+ds+' 的记录');
 }
@@ -9078,8 +9281,11 @@ function ciSaveDay(){
 function ciClearDay(){
   const ds=document.getElementById('ciDayDate').value; if(!ds) return;
   if(!confirm('清空 '+ds+' 的全部打卡和文字记录？')) return;
-  (S.habits||[]).forEach(h=>{ if(S.checkins) delete S.checkins[ciKey(ds,h.id)]; });
-  if(S.dayNotes) delete S.dayNotes[ds];
+  (S.habits||[]).forEach(h=>{
+    const k = ciKey(ds,h.id);
+    if(S.checkins && (k in S.checkins)){ delete S.checkins[k]; markDeleted('checkins', k); }
+  });
+  if(S.dayNotes && (ds in S.dayNotes)){ delete S.dayNotes[ds]; markDeleted('dayNotes', ds); }
   saveState(); closeModal('ciDayModal'); renderCheckin();
   showToast('已清空 '+ds);
 }
@@ -9139,7 +9345,7 @@ function finSaveAccount(){
     var a = S.finance.accounts.find(function(x){ return x.id==id; });
     if(a){ Object.assign(a, {name:name, currency:currency, balance:balance, tags:tags, note:note}); }
   } else {
-    S.finance.accounts.push({id: S.nextId++, name:name, currency:currency, balance:balance, tags:tags, note:note});
+    S.finance.accounts.push({id: newId(), name:name, currency:currency, balance:balance, tags:tags, note:note});
   }
   saveState(); closeModal('finAccountModal'); finRenderAll();
   showToast('账户已保存');
@@ -9148,6 +9354,7 @@ function finDeleteAccount(id){
   var used = S.finance.cart.some(function(c){ return c.accountId==id; });
   if(used){ showToast('该账户还有购物车条目在用，请先处理'); return; }
   if(!confirm('删除该账户？')) return;
+  markDeleted('finance.accounts', [id]);
   S.finance.accounts = S.finance.accounts.filter(function(a){ return a.id!=id; });
   saveState(); finRenderAll();
 }
@@ -9230,13 +9437,14 @@ function finSaveCartItem(){
     var c = S.finance.cart.find(function(x){ return x.id==id; });
     if(c){ Object.assign(c, {name:name, amount:amount, currency:currency, accountId:accountId, tags:tags, note:note}); }
   } else {
-    S.finance.cart.push({id: S.nextId++, name:name, amount:amount, currency:currency, accountId:accountId, tags:tags, note:note, checked:false});
+    S.finance.cart.push({id: newId(), name:name, amount:amount, currency:currency, accountId:accountId, tags:tags, note:note, checked:false});
   }
   saveState(); closeModal('finCartModal'); finRenderAll();
   showToast('条目已保存');
 }
 function finDeleteCartItem(id){
   if(!confirm('删除该购物车条目？')) return;
+  markDeleted('finance.cart', [id]);
   S.finance.cart = S.finance.cart.filter(function(c){ return c.id!=id; });
   saveState(); finRenderAll();
 }
@@ -9330,13 +9538,14 @@ function finDoCompleteCartItems(items){
     var deduct = acc ? finConvert(c.amount, c.currency, acc.currency, S.finance.rate) : 0;
     if(acc) acc.balance -= deduct;
     S.finance.records.unshift({
-      id: S.nextId++, type: 'expense', name: c.name, amount: c.amount, currency: c.currency,
+      id: newId(), type: 'expense', name: c.name, amount: c.amount, currency: c.currency,
       cnyAmount: finToCNY(c.amount, c.currency), accountId: c.accountId,
       accountName: acc ? acc.name : '（账户已删除）', tags: c.tags||[], note: c.note||'',
       createdAt: new Date().toISOString(), fromCart: true
     });
   });
   var ids = items.map(function(c){ return c.id; });
+  markDeleted('finance.cart', ids);
   S.finance.cart = S.finance.cart.filter(function(c){ return ids.indexOf(c.id) === -1; });
   saveState(); finRenderAll();
   showToast('已完成 '+items.length+' 项，余额已更新');
@@ -9365,7 +9574,7 @@ function finSaveIncome(){
   var add = acc ? finConvert(amount, currency, acc.currency, S.finance.rate) : 0;
   if(acc) acc.balance += add;
   S.finance.records.unshift({
-    id: S.nextId++, type: 'income', name: name, amount: amount, currency: currency,
+    id: newId(), type: 'income', name: name, amount: amount, currency: currency,
     cnyAmount: finToCNY(amount, currency), accountId: accountId,
     accountName: acc ? acc.name : '（账户已删除）', tags: tags, note: note,
     createdAt: new Date().toISOString(), fromCart: false
@@ -9418,14 +9627,16 @@ function finUndoRecord(id){
     if(r.type === 'expense') acc.balance += reverted; else acc.balance -= reverted;
   }
   if(r.type === 'expense' && r.fromCart){
-    S.finance.cart.push({id: S.nextId++, name:r.name, amount:r.amount, currency:r.currency, accountId:r.accountId, tags:r.tags||[], note:r.note||'', checked:false});
+    S.finance.cart.push({id: newId(), name:r.name, amount:r.amount, currency:r.currency, accountId:r.accountId, tags:r.tags||[], note:r.note||'', checked:false});
   }
+  markDeleted('finance.records', [id]);
   S.finance.records = S.finance.records.filter(function(x){ return x.id!=id; });
   saveState(); finRenderAll();
   showToast('已撤销');
 }
 function finHardDeleteRecord(id){
   if(!confirm('仅删除该记录，不改变账户余额，确定吗？')) return;
+  markDeleted('finance.records', [id]);
   S.finance.records = S.finance.records.filter(function(x){ return x.id!=id; });
   saveState(); finRenderRecords();
   showToast('已删除记录');
@@ -9522,7 +9733,8 @@ function shopOwnedOf(id){
 
 function shopImportFiles(files){
   STK.cat = 'shop';
-  stkImportFiles(files).then(()=>{ STK.cat = 'shop'; renderShop(); });
+  // 必须带上 'shop'：不带的话图只会落进总库，货架上看不到，打包时也会被当成番茄贴纸
+  stkImportFiles(files, 'shop').then(()=>{ STK.cat = 'shop'; renderShop(); });
 }
 
 function renderShop(){
@@ -9638,6 +9850,7 @@ function shopDeleteItem(){
     stkDel(id).then(()=>{ STK.list = STK.list.filter(x=>x.id!==id); renderShop(); });
   }
   if(S.shopMeta) delete S.shopMeta[id];
+  markDeleted('shopMeta', id);
   saveState();
   closeModal('shopItemModal');
   renderShop();
@@ -10006,16 +10219,27 @@ function dataUrlBytes(src){
   return out;
 }
 // 只用「存储」方式打包（png 本来就压过了，再压没意义）
+// DOS 时间格式：年份从 1980 起算。全写 0 的话是「1980-00-00」这种不存在的日期，
+// Windows 自带的解压和一些严格的工具会直接判定文件损坏，打不开。
+function dosDateTime(d){
+  const y = Math.max(1980, d.getFullYear());
+  return {
+    time: (d.getHours()<<11) | (d.getMinutes()<<5) | (Math.floor(d.getSeconds()/2)),
+    date: ((y-1980)<<9) | ((d.getMonth()+1)<<5) | d.getDate()
+  };
+}
 function makeZip(files){
   const chunks = [], central = [];
+  const dt = dosDateTime(new Date());
+  const FLAG_UTF8 = 0x800;   // 文件名按 UTF-8 解释，中文名才不会乱码
   let offset = 0;
   files.forEach(f=>{
     const nameB = strBytes(f.name);
     const crc = crc32(f.data);
     const lh = new DataView(new ArrayBuffer(30));
     lh.setUint32(0, 0x04034b50, true);
-    lh.setUint16(4, 20, true); lh.setUint16(6, 0, true); lh.setUint16(8, 0, true);
-    lh.setUint16(10, 0, true); lh.setUint16(12, 0, true);
+    lh.setUint16(4, 20, true); lh.setUint16(6, FLAG_UTF8, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, dt.time, true); lh.setUint16(12, dt.date, true);
     lh.setUint32(14, crc, true);
     lh.setUint32(18, f.data.length, true);
     lh.setUint32(22, f.data.length, true);
@@ -10024,8 +10248,8 @@ function makeZip(files){
     const ch = new DataView(new ArrayBuffer(46));
     ch.setUint32(0, 0x02014b50, true);
     ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
-    ch.setUint16(8, 0, true); ch.setUint16(10, 0, true);
-    ch.setUint16(12, 0, true); ch.setUint16(14, 0, true);
+    ch.setUint16(8, FLAG_UTF8, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, dt.time, true); ch.setUint16(14, dt.date, true);
     ch.setUint32(16, crc, true);
     ch.setUint32(20, f.data.length, true);
     ch.setUint32(24, f.data.length, true);
@@ -10056,18 +10280,32 @@ function makeZip(files){
 
 function stkExportZip(){
   const go = ()=>{
+   try{
     const local = STK.list.slice();
     if(!local.length){ showToast('本机还没有导入的贴纸'); return; }
     const files = [];
+    const used = new Set();          // 防重名：同名文件会在解压时互相覆盖
     const manifest = {};
     const counter = {};
+    let loose = 0, badSrc = 0;
     local.forEach(sk=>{
-      const cats = stkCatsOf(sk).length ? stkCatsOf(sk) : ['pomo'];
-      const primary = cats[0];
+      if(typeof sk.src !== 'string' || sk.src.slice(0,5) !== 'data:'){ badSrc++; return; }
+      const cats = stkCatsOf(sk);
+      // 还没分配柜子的图单独放一个目录，也不写进清单：
+      // 以前这里会默认算成 'pomo'，于是没分配的图（包括商店里刚导入的）
+      // 一打包就全变成番茄贴纸，商店那份反而找不到了。
+      const primary = cats.length ? cats[0] : '_inbox';
+      if(!cats.length) loose++;
       counter[primary] = (counter[primary]||0) + 1;
-      const num = String(counter[primary]).padStart(3, '0');
+      let num = String(counter[primary]).padStart(3, '0');
       const ext = /^data:image\/gif/i.test(sk.src) ? 'gif' : 'png';
-      const path = 'stickers/'+primary+'/'+primary+'-'+num+'.'+ext;
+      let path = 'stickers/'+primary+'/'+primary+'-'+num+'.'+ext;
+      while(used.has(path)){
+        counter[primary]++;
+        num = String(counter[primary]).padStart(3, '0');
+        path = 'stickers/'+primary+'/'+primary+'-'+num+'.'+ext;
+      }
+      used.add(path);
       files.push({name: path, data: dataUrlBytes(sk.src)});
       // 一张图分给了好几个柜子的话，清单里每个柜子都会登记这同一个文件
       cats.forEach(cat=>{
@@ -10100,9 +10338,15 @@ function stkExportZip(){
     document.body.appendChild(a);
     a.click();
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-    showToast('已打包 '+local.length+' 张贴纸');
+    const n = local.length - badSrc;
+    showToast('已打包 '+n+' 张贴纸'
+      + (loose ? ('，其中 '+loose+' 张还没分配柜子，放在 stickers/_inbox/，清单里没登记') : '')
+      + (badSrc ? ('，'+badSrc+' 张图片数据读不出来，已跳过') : ''));
+   }catch(e){
+    showToast('打包失败：'+(e && e.message ? e.message : e));
+   }
   };
-  if(STK.ready) go(); else stkLoadEverything().then(go);
+  if(STK.ready) go(); else stkLoadEverything().then(go).catch(()=>showToast('贴纸库还没读出来，稍后再试'));
 }
 
 // Register Service Worker
