@@ -48,8 +48,8 @@
   --bg:#ffffff; --fg:#101010; --mut:#8e8e8e; --faint:#c9c9c9; --line:#ededed;
   --fill:#f2f2f2; --fill2:#e6e6e6; --sel:#101010; --selfg:#ffffff;
   --sheet:#ffffff; --group:#f5f5f5; --backdrop:rgba(0,0,0,.32); --danger:#e5484d;
-  --tile:#f4f5f6; --blk1:#eef0f2; --blk2:#e5e7ea; --pop1:#ffffff; --pop2:#fbfbfb; --popsh:rgba(0,0,0,.25);
-  --kb:0px; --tabh:64px;
+  --tile:#f4f5f6; --blk1:#eef0f2; --blk2:#e5e7ea; --popbg:rgba(255,255,255,.5); --popsh:rgba(0,0,0,.22);
+  --kb:0px; --tabh:52px;
   --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
   color-scheme: light;
 }
@@ -58,7 +58,7 @@
     --bg:#0b0b0b; --fg:#f2f2f2; --mut:#8a8a8a; --faint:#4b4b4b; --line:#1f1f1f;
     --fill:#1a1a1a; --fill2:#262626; --sel:#f2f2f2; --selfg:#0b0b0b;
     --sheet:#171717; --group:#141414; --backdrop:rgba(0,0,0,.55);
-    --tile:#151515; --blk1:#242424; --blk2:#1e1e1e; --pop1:#2e2e2e; --pop2:#282828; --popsh:rgba(0,0,0,.7);
+    --tile:#151515; --blk1:#242424; --blk2:#1e1e1e; --popbg:rgba(70,70,70,.5); --popsh:rgba(0,0,0,.7);
     color-scheme: dark;
   }
 }
@@ -66,7 +66,7 @@
   --bg:#0b0b0b; --fg:#f2f2f2; --mut:#8a8a8a; --faint:#4b4b4b; --line:#1f1f1f;
   --fill:#1a1a1a; --fill2:#262626; --sel:#f2f2f2; --selfg:#0b0b0b;
   --sheet:#171717; --group:#141414; --backdrop:rgba(0,0,0,.55);
-  --tile:#151515; --blk1:#242424; --blk2:#1e1e1e; --pop1:#2e2e2e; --pop2:#282828; --popsh:rgba(0,0,0,.7);
+  --tile:#151515; --blk1:#242424; --blk2:#1e1e1e; --popbg:rgba(70,70,70,.5); --popsh:rgba(0,0,0,.7);
   color-scheme: dark;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -93,14 +93,15 @@ html.locked #app{visibility:hidden;}
 body.mac #main{max-width:1180px;}
 
 /* tab bar：悬浮、滑动时收起 */
-#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:22px 0 calc(var(--safe-b) + 4px);pointer-events:none;
-  background:linear-gradient(to bottom, transparent, var(--bg) 62%);transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .25s;}
+#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:16px 0 max(4px, calc(var(--safe-b) - 20px));pointer-events:none;
+  background:linear-gradient(to bottom, transparent, var(--bg) 58%);transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .25s;}
 #tabbar.hide{transform:translateY(110%);opacity:0;}
 .tabs{display:flex;justify-content:center;align-items:center;gap:38px;}
-.tab{pointer-events:auto;width:46px;height:46px;display:flex;align-items:center;justify-content:center;color:var(--faint);}
+.tab{pointer-events:auto;width:46px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--faint);}
 .tab svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;}
 .tab.on{color:var(--fg);}
 .tab.on svg{transform:scale(1.18);stroke-width:1.9;}
+.tab[data-tab="plus"] svg{stroke-width:2.3;}
 .tab:active svg{transform:scale(.88);}
 
 /* timeline */
@@ -188,9 +189,15 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .note-ed textarea{flex:1;padding:6px 20px 40vh;font-size:16px;line-height:1.6;}
 .notes-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .mac-notes{display:flex;height:100%;}
-.mac-notes .nl{width:320px;flex-shrink:0;border-right:1px solid var(--line);display:flex;flex-direction:column;height:100%;}
+.mac-notes .nl{width:320px;flex-shrink:0;border-right:1px solid var(--line);display:flex;flex-direction:column;height:100%;overflow:hidden;transition:width .22s cubic-bezier(.2,.8,.2,1),border-color .22s;}
+.mac-notes.folded .nl{width:0;border-right-color:transparent;}
+.mac-notes .nl-in{width:320px;display:flex;flex-direction:column;height:100%;flex-shrink:0;}
+.ne-head{display:flex;align-items:center;justify-content:space-between;height:48px;padding:0 10px;flex-shrink:0;}
+.ne-head button{padding:6px 8px;color:var(--mut);}
+.ne-head svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;display:block;}
+.ne-head button:hover{color:var(--fg);}
 .mac-notes .ne{flex:1;display:flex;flex-direction:column;height:100%;min-width:0;}
-.mac-notes .ne textarea{flex:1;padding:28px 40px 40vh;font-size:16px;line-height:1.7;}
+.mac-notes .ne textarea{flex:1;padding:8px 40px 40vh;font-size:16px;line-height:1.7;width:100%;max-width:820px;margin:0 auto;}
 .mac-notes .ne .empty{margin:auto;}
 .mac-notes .phead{margin-top:0;}
 .notes-root .phead{margin-top:0;}
@@ -200,6 +207,12 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .backdrop.show{opacity:1;}
 .sheet{position:fixed;left:0;right:0;bottom:var(--kb);z-index:41;background:var(--sheet);border-radius:18px 18px 0 0;transform:translateY(105%);transition:transform .26s cubic-bezier(.2,.8,.2,1);max-width:640px;margin:0 auto;}
 .sheet.show{transform:none;}
+.sheet.center{left:50%;right:auto;top:50%;bottom:auto;width:min(580px,90vw);max-width:none;margin:0;border-radius:18px;padding-bottom:0 !important;
+  transform:translate(-50%,-46%) scale(.97);opacity:0;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .18s;box-shadow:0 30px 80px -20px rgba(0,0,0,.35);}
+.sheet.center.show{transform:translate(-50%,-50%);opacity:1;}
+.sheet.center .grab{display:none;}
+.sheet.center .compose-head{padding:16px 16px 4px 22px;}
+.sheet.center .compose-ta{min-height:150px;padding:10px 22px 22px;}
 .sheet.kb{padding-bottom:0;}
 .sheet:not(.kb){padding-bottom:var(--safe-b);}
 .grab{height:22px;display:flex;align-items:center;justify-content:center;touch-action:none;}
@@ -231,7 +244,9 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .pday{position:absolute;left:54px;font-size:12px;font-weight:600;color:var(--mut);}
 .ptile{position:absolute;left:54px;right:0;border-radius:12px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(0,0,0,.025);padding:11px 14px;font-size:14px;cursor:pointer;-webkit-user-select:none;user-select:none;transition:transform .16s,box-shadow .16s;}
 .ptile.pblk{background:linear-gradient(180deg,var(--blk1),var(--blk2));box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(0,0,0,.045);font-weight:600;}
-.ptile.sel{background:linear-gradient(180deg,var(--pop1),var(--pop2));box-shadow:0 12px 24px -10px var(--popsh),0 3px 7px -2px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.9),inset 0 0 0 1px rgba(0,0,0,.06);transform:translateY(-2px);z-index:2;font-size:13px;color:var(--mut);font-variant-numeric:tabular-nums;}
+.psel{position:absolute;left:54px;right:0;border-radius:12px;background:var(--popbg);-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px);
+  box-shadow:0 12px 24px -10px var(--popsh),0 3px 7px -2px rgba(0,0,0,.07),inset 0 1px 0 rgba(255,255,255,.85),inset 0 0 0 1px rgba(0,0,0,.06);
+  transform:translateY(-2px);z-index:2;padding:11px 14px;font-size:13px;color:var(--mut);font-variant-numeric:tabular-nums;cursor:pointer;}
 .pmore{position:absolute;left:54px;right:0;margin:0 auto;width:max-content;font-size:14px;color:var(--mut);padding:10px 18px;border-radius:999px;background:var(--fill);}
 .pbar{position:fixed;left:0;right:0;bottom:var(--kb);z-index:46;background:var(--sheet);border-top:1px solid var(--line);padding:10px 16px calc(10px + var(--safe-b));max-width:640px;margin:0 auto;transform:translateY(110%);transition:transform .2s;}
 .pbar.kb{padding-bottom:10px;}
@@ -269,9 +284,10 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 </div>
 <button id="toNow">回到现在</button>
 <nav id="tabbar"><div class="tabs">
-  <button class="tab on" data-tab="timeline" aria-label="时间轴"><svg viewBox="0 0 24 24"><path d="M12 12c-1.6-2.4-3.4-4.1-5.6-4.1A4.1 4.1 0 0 0 2.3 12a4.1 4.1 0 0 0 4.1 4.1c2.2 0 4-1.7 5.6-4.1s3.4-4.1 5.6-4.1A4.1 4.1 0 0 1 21.7 12a4.1 4.1 0 0 1-4.1 4.1c-2.2 0-4-1.7-5.6-4.1"/><path d="M4.6 11.2c.6-1.1 1.6-1.6 2.6-1.4" opacity=".55"/><path d="M19.4 12.8c-.6 1.1-1.6 1.6-2.6 1.4" opacity=".55"/></svg></button>
+  <button class="tab on" data-tab="timeline" aria-label="时间轴"><svg viewBox="0 0 24 24"><path d="M12 12c-1.6-2.4-3.4-4.1-5.6-4.1A4.1 4.1 0 0 0 2.3 12a4.1 4.1 0 0 0 4.1 4.1c2.2 0 4-1.7 5.6-4.1s3.4-4.1 5.6-4.1A4.1 4.1 0 0 1 21.7 12a4.1 4.1 0 0 1-4.1 4.1c-2.2 0-4-1.7-5.6-4.1"/></svg></button>
   <button class="tab" data-tab="draw" aria-label="抽一条"><svg viewBox="0 0 24 24"><path d="M12 3.4l7.6 4.3v8.6L12 20.6l-7.6-4.3V7.7z"/><path d="M4.4 7.7L12 12l7.6-4.3M12 12v8.6"/></svg></button>
   <button class="tab" data-tab="plus" aria-label="打点"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="tab only-wide" data-tab="notes" aria-label="备忘录"><svg viewBox="0 0 24 24"><path d="M6.5 3.8h8.2l3.8 3.8v12.6H6.5z"/><path d="M14.7 3.8v3.8h3.8M9.5 12h6M9.5 15.5h4"/></svg></button>
   <button class="tab only-wide" data-tab="me" aria-label="我"><svg viewBox="0 0 24 24"><circle cx="12" cy="7.8" r="3.6"/><path d="M4.6 20c0-4.4 3.3-7.2 7.4-7.2s7.4 2.8 7.4 7.2z"/></svg></button>
 </div></nav>
 
@@ -552,7 +568,8 @@ function showView(v){
   document.body.classList.toggle('mac', v === 'sub' && subName === 'notes' && isWide());
   showNav();
   document.querySelectorAll('.view').forEach(el => el.classList.toggle('active', el.id === 'v-'+v));
-  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === v || (v === 'sub' && b.dataset.tab === 'me')));
+  const onTab = v === 'sub' ? (subName === 'notes' && isWide() ? 'notes' : 'me') : v;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === onTab));
   $('#toNow').classList.remove('show');
   if(v === 'timeline') updateToNow();
 }
@@ -562,7 +579,8 @@ $('#tabbar').addEventListener('click', e => {
   if(t === 'plus') return openCompose();
   if(t === 'timeline'){ if(curView === 'timeline') scrollToNow(true); else { showView('timeline'); } return; }
   if(t === 'draw'){ if(curView !== 'draw'){ showView('draw'); drawHist = []; drawIdx = -1; recentDraws = []; curDraw = null; stage.innerHTML = ''; drawNext(); } else drawNext(); return; }
-  if(t === 'me'){ subName = null; renderMe(); showView('me'); }
+  if(t === 'notes'){ if(!(curView === 'sub' && subName === 'notes')) openSub('notes'); return; }
+  if(t === 'me'){ if(curView === 'sub' && subName === 'notes' && NS.open) closeNote(); subName = null; renderMe(); showView('me'); }
 });
 
 // 导航栏：滑动时收起，停下来再出现
@@ -741,7 +759,7 @@ function openEditor(text, onDone, title){
 // ── 打点 ──
 function openCompose(){
   const now = Date.now(), cur = finalNameAt(now);
-  const {sh, close} = openLayer('sheet', '<div class="grab"></div><div class="compose-head"><span class="where">'+hm(now)+(cur ? ' · '+esc(cur) : '')+'</span><button class="send" disabled>发送</button></div><textarea class="compose-ta" rows="3"></textarea>');
+  const {sh, close} = openLayer(isWide() ? 'sheet center' : 'sheet', '<div class="grab"></div><div class="compose-head"><span class="where">'+hm(now)+(cur ? ' · '+esc(cur) : '')+'</span><button class="send" disabled>发送</button></div><textarea class="compose-ta" rows="3"></textarea>');
   const ta = $('textarea', sh), send = $('.send', sh);
   let draft = ''; try { draft = localStorage.getItem(LS_DRAFT) || ''; } catch(e) {}
   ta.value = draft;
@@ -750,6 +768,10 @@ function openCompose(){
   ta.addEventListener('input', () => { grow(); try { localStorage.setItem(LS_DRAFT, ta.value); } catch(e) {} });
   swipeToClose($('.grab', sh), sh, close);
   swipeToClose($('.compose-head', sh), sh, close);
+  ta.addEventListener('keydown', e => {
+    if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)){ e.preventDefault(); send.click(); }
+    if(e.key === 'Escape'){ e.preventDefault(); close(); }
+  });
   send.addEventListener('click', () => {
     const x = ta.value.replace(/\s+$/,''); if(!x.trim()) return;
     const t = Date.now();
@@ -770,7 +792,7 @@ function openPlanner(){
   const s0 = slotStart(Date.now());
   P = {a:null, b:null, from:s0, until:addDays(dayStart(Date.now()), 2)};
   const el = document.createElement('div'); el.className = 'full'; el.id = 'planner';
-  el.innerHTML = '<div class="full-head"><span style="width:60px"></span><span class="ttl">排一下</span><button class="done">完成</button></div><div class="plan-body"></div>';
+  el.innerHTML = '<div class="full-head"><span style="width:60px"></span><span class="ttl"></span><button class="done">完成</button></div><div class="plan-body"></div>';
   const bar = document.createElement('div'); bar.className = 'pbar';
   bar.innerHTML = '<div class="pr"></div><div class="pin"><input enterkeyhint="done" autocomplete="off" placeholder="这段时间做什么"/><button class="ok">好</button></div>';
   document.body.append(el, bar);
@@ -778,7 +800,7 @@ function openPlanner(){
   $('.done', el).onclick = closePlanner;
   $('.plan-body', el).addEventListener('click', e => {
     if(e.target.closest('.pmore')){ P.until = addDays(P.until, 1); renderPlanner(); return; }
-    const g = e.target.closest('.pgrid'); if(!g || !e.target.closest('.ptile')) return;
+    const g = e.target.closest('.pgrid'); if(!g || !e.target.closest('.ptile,.psel')) return;
     const y = e.clientY - g.getBoundingClientRect().top;
     const hit = P.ys.find(([t, ty]) => y >= ty - 3 && y < ty + PROW - 3);
     if(hit) tapSlot(hit[0]);
@@ -825,7 +847,7 @@ function renderPlanner(){
   const hi = P.a == null ? null : (P.b == null ? P.a : Math.max(P.a, P.b));
   const slots = [];
   for(let t = P.from; t < P.until; ){ slots.push(t); t = slotStart(t + HALF + 60e3); }
-  const key = t => (lo != null && t >= lo && t <= hi) ? 'sel' : (finalNameAt(t) != null ? 'n:' + finalNameAt(t) : 'e' + t);
+  const key = t => finalNameAt(t) != null ? 'n:' + finalNameAt(t) : 'e' + t;
   let h = '', y = 0, lastDay = null, i = 0;
   P.ys = [];
   while(i < slots.length){
@@ -838,10 +860,21 @@ function renderPlanner(){
       h += '<div class="pt'+(new Date(slots[m]).getMinutes() === 30 ? ' half' : '')+'" style="top:'+(ty + 11)+'px">'+hm(slots[m])+'</div>';
     }
     let cls = 'ptile', label = '';
-    if(k === 'sel'){ cls += ' sel'; if(P.b != null && slots[i] === lo) label = hm(lo)+' 到 '+endLabel(lo, hi + HALF)+' · '+durText(hi + HALF - lo); }
-    else if(k[0] === 'n'){ cls += ' pblk'; label = esc(k.slice(2)); }
+    if(k[0] === 'n'){ cls += ' pblk'; label = esc(k.slice(2)); }
     h += '<div class="'+cls+'" style="top:'+y+'px;height:'+((j - i) * PROW - (PROW - PTILE))+'px">'+label+'</div>';
     y += (j - i) * PROW; i = j;
+  }
+  if(lo != null){                                  // 选中的那段：半透明地浮在块上面，按天分开
+    let run = null; const runs = [];
+    P.ys.forEach(([t, ty]) => {
+      if(t < lo || t > hi){ run = null; return; }
+      if(!run || dayStart(t) !== run.d){ run = {d: dayStart(t), t0: t, y0: ty, y1: ty}; runs.push(run); }
+      run.y1 = ty;
+    });
+    runs.forEach((r, n) => {
+      const label = n === 0 && P.b != null ? hm(lo)+' 到 '+endLabel(lo, hi + HALF)+' · '+durText(hi + HALF - lo) : '';
+      h += '<div class="psel" style="top:'+r.y0+'px;height:'+(r.y1 - r.y0 + PTILE)+'px">'+label+'</div>';
+    });
   }
   h += '<button class="pmore" style="top:'+(y + 14)+'px">再往后一天</button>';
   body.innerHTML = '<div class="pgrid" style="height:'+(y + 70)+'px">'+h+'</div>';
@@ -967,7 +1000,7 @@ function renderMe(){
   const th = (localStorage.getItem('mmm-theme') || 'auto');
   const sync = lastSyncAt ? (syncOk ? '已同步 · '+hm(lastSyncAt) : '暂时没连上云端，改动先存在这台设备上') : (syncOk ? '' : '暂时没连上云端，改动先存在这台设备上');
   meEl.innerHTML = '<div class="page"><div class="bigt">我</div>'
-    + '<div class="grp"><button class="row" data-go="notes"><span class="rt">备忘录</span>'+chev()+'</button>'
+    + '<div class="grp"><button class="row only-narrow" data-go="notes"><span class="rt">备忘录</span>'+chev()+'</button>'
     + '<button class="row" data-go="search"><span class="rt">搜索</span>'+chev()+'</button></div>'
     + '<div class="grp"><button class="row" data-go="trash"><span class="rt">最近删除</span>'+chev()+'</button></div>'
     + '<div class="grp only-wide" style="flex-direction:column"><button class="row" data-go="export"><span class="rt">导出</span>'+chev()+'</button></div>'
@@ -1118,7 +1151,7 @@ function bindNoteEditor(host, n){
     const li = host.querySelector('.li[data-nid="'+(window.CSS && CSS.escape ? CSS.escape(n.id) : n.id)+'"]');
     if(li){ $('.l1', li).textContent = noteTitle(n.x); $('.l2', li).innerHTML = '<b>'+shortDate(n.m)+'</b>'+esc(notePreview(n.x)); }
   });
-  if(n._fresh) setTimeout(() => ta.focus(), 30);
+  if(n._fresh){ ta.focus(); setTimeout(() => ta.focus(), 30); }
 }
 function renderNotes(){
   const host = notesHost; if(!host) return;
@@ -1126,11 +1159,13 @@ function renderNotes(){
   const list = liveNotes().filter(n => (n.x||'').trim() || n.id === NS.open).filter(n => !ts.length || matches(n.x, ts) || n.id === NS.open);
   if(isWide()){
     const n = NS.open && D.notes.find(x => x.id === NS.open);
-    host.innerHTML = '<div class="notes-root mac-notes">'
-      + '<div class="nl"><div class="phead"><button class="back" data-back>‹</button><span class="ttl">备忘录</span>'+NEW_BTN+'</div>'
+    let folded = false; try { folded = localStorage.getItem('mmm-notes-fold') === '1'; } catch(e) {}
+    const SIDE_SVG = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M9.5 5v14"/></svg>';
+    host.innerHTML = '<div class="notes-root mac-notes'+(folded ? ' folded' : '')+'">'
+      + '<div class="nl"><div class="nl-in"><div class="phead"><button class="back" data-back>‹</button><span class="ttl">备忘录</span></div>'
       + '<div class="search">'+SEARCH_SVG+'<input id="nq" type="search" placeholder="搜索" autocomplete="off"/></div>'
-      + '<div class="notes-scroll" id="nlist">'+noteListHtml(ts, list, NS.open)+'</div></div>'
-      + '<div class="ne">'+(n ? '<textarea id="noteTa" placeholder="第一行会成为标题"></textarea>' : '<div class="empty">没有打开的备忘录</div>')+'</div></div>';
+      + '<div class="notes-scroll" id="nlist">'+noteListHtml(ts, list, NS.open)+'</div></div></div>'
+      + '<div class="ne"><div class="ne-head"><button data-nfold aria-label="收起或展开列表">'+SIDE_SVG+'</button>'+NEW_BTN.replace('class="act"','')+'</div>'+(n ? '<textarea id="noteTa" placeholder="第一行会成为标题"></textarea>' : '<div class="empty">没有打开的备忘录</div>')+'</div></div>';
     bindNoteSearch(host);
     if(n) bindNoteEditor(host, n);
     return;
@@ -1162,6 +1197,12 @@ function closeNote(){
 }
 function hostClick(e){
   const host = e.currentTarget;
+  if(e.target.closest('[data-nfold]')){
+    const m = $('.mac-notes', host); if(!m) return;
+    const f = m.classList.toggle('folded');
+    try { localStorage.setItem('mmm-notes-fold', f ? '1' : '0'); } catch(e) {}
+    return;
+  }
   if(e.target.closest('[data-nnew]')){
     if(NS.open) closeNote();
     const t = Date.now(), n = {id: uid(), x: '', c: t, m: t, u: t, _fresh: 1};
