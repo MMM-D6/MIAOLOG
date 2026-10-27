@@ -233,6 +233,14 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .send:disabled{opacity:.25;}
 .compose-ta{display:block;width:100%;padding:8px 20px 18px;font-size:17px;line-height:1.55;min-height:96px;max-height:50vh;}
 .acts{padding:8px 10px 10px;}
+.lkx{padding:4px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.lkt{font-size:13px;color:var(--mut);}
+.lkr{display:flex;align-items:center;gap:18px;}
+.lkb{width:48px;height:48px;border-radius:50%;background:var(--fill);font-size:24px;line-height:1;color:var(--fg);}
+.lkb:active{background:var(--fill2);}
+.lkn{width:90px;text-align:center;font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;-moz-appearance:textfield;}
+.lkn::-webkit-outer-spin-button,.lkn::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.lkok{align-self:stretch;padding:12px;border-radius:12px;font-size:16px;}
 .acts .ag{background:var(--group);border-radius:14px;overflow:hidden;margin-bottom:8px;}
 .acts button{display:block;width:100%;padding:15px;font-size:17px;text-align:center;}
 .acts .ag button + button{border-top:1px solid var(--line);}
@@ -809,10 +817,11 @@ function longPress(root, selector, cb){
     e.preventDefault(); if(!fired) cb(el); fired = false;
   });
 }
-function dotMenu(id, after){
+function dotMenu(id, after, withLikes){
   const d = D.dots.find(x => x.id === id); if(!d) return;
   actionSheet([
     {label:'编辑', fn: () => openEditor(d.x, txt => { d.x = txt; d.u = Date.now(); save(); rerenderAll(); })},
+    ...(withLikes ? [{label:'修改点赞数', fn: () => editLikes(d)}] : []),
     {label:'删除', red:true, fn: () => { d.d = Date.now(); d.u = d.d; save(); if(after) after(); else rerenderAll(); }}
   ]);
 }
@@ -1077,6 +1086,24 @@ function renderDraw(dir){
   if(from) requestAnimationFrame(() => requestAnimationFrame(() => { const c = $('.card', stage); if(c){ c.style.transition = ''; c.classList.remove('from-below','from-above'); } }));
   $('.cwhen', stage).onclick = () => jumpToDot(d.id);
 }
+// 点赞数：减、加，或者直接输入
+function editLikes(d){
+  let n = d.lk || 0;
+  const {sh, close} = openLayer(isWide() ? 'sheet center' : 'sheet', '<div class="grab"></div><div class="lkx"><div class="lkt">点赞数</div>'
+    + '<div class="lkr"><button class="lkb" data-k="-1">−</button><input class="lkn" type="number" inputmode="numeric" min="0"/><button class="lkb" data-k="1">＋</button></div>'
+    + '<button class="send lkok">完成</button></div>');
+  const inp = $('.lkn', sh); inp.value = n;
+  sh.addEventListener('click', e => {
+    const b = e.target.closest('.lkb'); if(b){ n = Math.max(0, (parseInt(inp.value, 10) || 0) + (+b.dataset.k)); inp.value = n; return; }
+    if(e.target.closest('.lkok')){
+      n = Math.max(0, parseInt(inp.value, 10) || 0);
+      if(n) d.lk = n; else delete d.lk;
+      d.u = Date.now(); save(); close();
+      if(curDraw && curDraw.id === d.id){ const l = $('.clike', stage); if(l) l.textContent = n ? '♥ '+n : ''; }
+    }
+  });
+  swipeToClose($('.grab', sh), sh, close);
+}
 function likeCur(){
   if(!curDraw || Date.now() - _lastLike < 350) return;
   _lastLike = Date.now();
@@ -1118,7 +1145,7 @@ function likeCur(){
     wheelLock = Date.now() + 700;
     if(e.deltaY > 0) drawNext(); else drawPrev();
   }, {passive:true});
-  longPress(view, '.card', () => { if(curDraw) dotMenu(curDraw.id, () => { drawHist.splice(drawIdx, 1); drawIdx--; drawNext(); }); });
+  longPress(view, '.card', () => { if(curDraw) dotMenu(curDraw.id, () => { drawHist.splice(drawIdx, 1); drawIdx--; drawNext(); }, true); });
 })();
 document.addEventListener('keydown', e => {
   if(curView !== 'draw' || document.querySelector('.full,.sheet')) return;
