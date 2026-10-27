@@ -231,6 +231,8 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .acts .cancel{font-weight:600;background:var(--group);border-radius:14px;}
 .full{position:fixed;inset:0;z-index:45;background:var(--bg);display:flex;flex-direction:column;transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);}
 .full.show{transform:none;}
+.full.fade{transform:none;opacity:0;transition:opacity .16s;}
+.full.fade.show{opacity:1;}
 .full.side{transform:translateX(-100%);}
 .full.side.show{transform:none;}
 .full-head{display:flex;align-items:center;justify-content:space-between;height:52px;padding:var(--safe-t) 8px 0;box-sizing:content-box;border-bottom:1px solid var(--line);flex-shrink:0;}
@@ -728,6 +730,10 @@ function fitKeyboard(){
 }
 if(window.visualViewport){ visualViewport.addEventListener('resize', fitKeyboard); visualViewport.addEventListener('scroll', fitKeyboard); }
 
+function pinViewport(){
+  const fix = () => { if(window.scrollY || document.documentElement.scrollTop) window.scrollTo(0, 0); fitKeyboard(); };
+  fix(); requestAnimationFrame(fix); setTimeout(fix, 120); setTimeout(fix, 350);
+}
 function openLayer(cls, html){
   const bd = document.createElement('div'); bd.className = 'backdrop';
   const sh = document.createElement('div'); sh.className = cls; sh.innerHTML = html;
@@ -762,12 +768,13 @@ function actionSheet(opts){
   });
 }
 function openEditor(text, onDone, title){
-  const el = document.createElement('div'); el.className = 'full';
+  const el = document.createElement('div'); el.className = 'full fade';
   el.innerHTML = '<div class="full-head"><button class="cx">取消</button><span class="ttl">'+esc(title||'编辑')+'</span><button class="done">完成</button></div><textarea class="ed"></textarea>';
   document.body.appendChild(el);
   const ta = $('textarea', el); ta.value = text;
-  requestAnimationFrame(() => el.classList.add('show'));
-  ta.focus(); try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch(e) {}
+  el.classList.add('show');
+  ta.focus({preventScroll: true}); try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch(e) {}
+  pinViewport();
   const close = () => { ta.blur(); el.classList.remove('show'); setTimeout(() => el.remove(), 280); };
   $('.cx', el).onclick = close;
   $('.done', el).onclick = () => { const v = ta.value.replace(/\s+$/,''); close(); if(v.trim() && v !== text) onDone(v); };
@@ -790,14 +797,15 @@ function sendDot(text){
 }
 function openComposeFull(){
   const now = Date.now(), cur = finalNameAt(now);
-  const el = document.createElement('div'); el.className = 'full compose-full';
+  const el = document.createElement('div'); el.className = 'full fade compose-full';
   el.innerHTML = '<div class="full-head"><button class="cx">取消</button><span class="where">'+hm(now)+(cur ? ' · '+esc(cur) : '')+'</span><button class="send" disabled>发送</button></div><textarea class="ed"></textarea>';
   document.body.appendChild(el);
   const ta = $('textarea', el), send = $('.send', el);
   let draft = ''; try { draft = localStorage.getItem(LS_DRAFT) || ''; } catch(e) {}
   ta.value = draft; send.disabled = !ta.value.trim();
-  requestAnimationFrame(() => el.classList.add('show'));
-  ta.focus();
+  el.classList.add('show');
+  ta.focus({preventScroll: true});
+  pinViewport();
   const close = () => { ta.blur(); el.classList.remove('show'); setTimeout(() => el.remove(), 280); };
   ta.addEventListener('input', () => { send.disabled = !ta.value.trim(); try { localStorage.setItem(LS_DRAFT, ta.value); } catch(e) {} });
   $('.cx', el).onclick = close;
