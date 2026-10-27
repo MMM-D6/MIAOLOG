@@ -90,10 +90,10 @@ html.locked #app{visibility:hidden;}
 #main{position:relative;flex:1;max-width:640px;height:100%;}
 .view{position:absolute;left:0;right:0;top:0;bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;overscroll-behavior:contain;}
 .view.active{display:block;}
-body.mac #main{max-width:1180px;}
+body.mac #main{max-width:none;border:none;}
 
 /* tab bar：悬浮、滑动时收起 */
-#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:16px 0 max(4px, calc(var(--safe-b) - 20px));pointer-events:none;
+#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:12px 0 max(2px, calc(var(--safe-b) - 28px));pointer-events:none;
   background:linear-gradient(to bottom, transparent, var(--bg) 58%);transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .25s;}
 #tabbar.hide{transform:translateY(110%);opacity:0;}
 .tabs{display:flex;justify-content:center;align-items:center;gap:38px;}
@@ -197,7 +197,7 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .ne-head svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;display:block;}
 .ne-head button:hover{color:var(--fg);}
 .mac-notes .ne{flex:1;display:flex;flex-direction:column;height:100%;min-width:0;}
-.mac-notes .ne textarea{flex:1;padding:8px 40px 40vh;font-size:16px;line-height:1.7;width:100%;max-width:820px;margin:0 auto;}
+.mac-notes .ne textarea{flex:1;padding:8px max(40px, calc((100% - 820px) / 2)) 40vh;font-size:16px;line-height:1.7;width:100%;}
 .mac-notes .ne .empty{margin:auto;}
 .mac-notes .phead{margin-top:0;}
 .notes-root .phead{margin-top:0;}
@@ -230,6 +230,8 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .acts .cancel{font-weight:600;background:var(--group);border-radius:14px;}
 .full{position:fixed;inset:0;z-index:45;background:var(--bg);display:flex;flex-direction:column;transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);}
 .full.show{transform:none;}
+.full.side{transform:translateX(-100%);}
+.full.side.show{transform:none;}
 .full-head{display:flex;align-items:center;justify-content:space-between;height:52px;padding:var(--safe-t) 8px 0;box-sizing:content-box;border-bottom:1px solid var(--line);flex-shrink:0;}
 .full-head .ttl{font-weight:600;font-size:15px;}
 .full-head button{padding:8px 12px;font-size:16px;}
@@ -588,7 +590,7 @@ let _navTimer = null, _progScroll = 0;
 function showNav(){ clearTimeout(_navTimer); $('#tabbar').classList.remove('hide'); document.body.classList.remove('navhide'); }
 document.addEventListener('scroll', e => {
   if(!e.target || !e.target.classList || !e.target.classList.contains('view')) return;
-  if(Date.now() < _progScroll) return;
+  if(Date.now() < _progScroll || isWide()) return;
   $('#tabbar').classList.add('hide'); document.body.classList.add('navhide');
   clearTimeout(_navTimer); _navTimer = setTimeout(showNav, 650);
 }, true);
@@ -659,6 +661,17 @@ function observeNow(){
 function updateToNow(){ $('#toNow').classList.toggle('show', curView === 'timeline' && !_nowVisible); }
 $('#toNow').addEventListener('click', () => scrollToNow(true));
 tlEl.addEventListener('scroll', () => { if(tlEl.scrollTop < 300 && hasOlder()) loadOlder(); }, {passive:true});
+// 左右滑：只认明显的横向滑动，竖着翻记录不会误触
+function hSwipe(el, onEnd){
+  let x0 = null, y0 = 0;
+  el.addEventListener('touchstart', e => { if(e.touches.length !== 1){ x0 = null; return; } x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive:true});
+  el.addEventListener('touchend', e => {
+    if(x0 == null) return;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+    if(Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8) onEnd(dx);
+  }, {passive:true});
+}
+hSwipe(tlEl, dx => { if(dx > 70 && !planOpen) openPlanner(); });
 feedEl.addEventListener('click', e => { if(e.target.closest('#nowLine')) openPlanner(); });
 
 // 时钟：现在线每半分钟走一次，跨过半点时整体重画
@@ -791,7 +804,8 @@ function openPlanner(){
   planOpen = true;
   const s0 = slotStart(Date.now());
   P = {a:null, b:null, from:s0, until:addDays(dayStart(Date.now()), 2)};
-  const el = document.createElement('div'); el.className = 'full'; el.id = 'planner';
+  const el = document.createElement('div'); el.className = 'full side'; el.id = 'planner';
+  hSwipe(el, dx => { if(dx < -70) closePlanner(); });
   el.innerHTML = '<div class="full-head"><span style="width:60px"></span><span class="ttl"></span><button class="done">完成</button></div><div class="plan-body"></div>';
   const bar = document.createElement('div'); bar.className = 'pbar';
   bar.innerHTML = '<div class="pr"></div><div class="pin"><input enterkeyhint="done" autocomplete="off" placeholder="这段时间做什么"/><button class="ok">好</button></div>';
@@ -826,7 +840,6 @@ function tapSlot(t){
   $('.pr', bar).textContent = hm(s)+' 到 '+endLabel(s, e)+' · '+durText(e - s);
   inp.value = '';
   bar.classList.add('show');
-  inp.focus();
   renderPlanner();
 }
 function commitPlan(){
@@ -1046,7 +1059,7 @@ function openSub(name){
   else if(name === 'export') renderExport();
   else if(name === 'password') renderPassword();
   showView('sub'); subEl.scrollTop = 0;
-  if(name === 'notes' && isWide()){ const ta = $('#noteTa', subEl); if(ta) ta.focus(); }
+  if(name === 'notes' && isWide()){ const ta = $('#noteTa', subEl); if(ta){ ta.focus(); try { ta.setSelectionRange(0,0); } catch(e) {} ta.scrollTop = 0; } }
   if(name === 'notes'){ const sc = $('.notes-scroll', subEl); if(sc) sc.scrollTop = 52; }
 }
 subEl.addEventListener('click', e => { if(e.target.closest('[data-back]')){ if(NS.open) closeNote(); NS.open = null; subName = null; renderMe(); showView('me'); } });
