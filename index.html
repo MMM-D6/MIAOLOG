@@ -839,6 +839,7 @@ function dotMenu(id, after){
   const d = D.dots.find(x => x.id === id); if(!d) return;
   actionSheet([
     {label:'编辑', fn: () => openEditor(d.x, txt => { d.x = txt; d.u = Date.now(); save(); rerenderAll(); })},
+    ...(after ? [] : [{label: d.fav ? '取消收藏' : '收藏', fn: () => { if(d.fav) delete d.fav; else d.fav = Date.now(); d.u = Date.now(); save(); }}]),
     {label:'删除', red:true, fn: () => { d.d = Date.now(); d.u = d.d; save(); if(after) after(); else rerenderAll(); }}
   ]);
 }
