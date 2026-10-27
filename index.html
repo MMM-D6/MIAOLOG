@@ -102,7 +102,7 @@ body.mac #main{max-width:none;border:none;}
 .tab.on{color:var(--fg);}
 .tab.on svg{transform:scale(1.18);stroke-width:1.9;}
 .tab[data-tab="plus"] svg{stroke-width:2.3;}
-body:not(.wide) .tab[data-tab="plus"]{margin-left:30px;}
+body:not(.wide) .tab[data-tab="plus"]{margin-left:72px;}
 .tab:active svg{transform:scale(.88);}
 
 /* timeline */
@@ -168,7 +168,7 @@ body.wide #meBtn{display:none;}
 .seg{display:flex;background:var(--fill2);border-radius:9px;padding:2px;gap:2px;}
 .seg button{font-size:13px;padding:4px 10px;border-radius:7px;color:var(--mut);}
 .seg button.on{background:var(--bg);color:var(--fg);font-weight:600;}
-.foot{color:var(--faint);font-size:12px;text-align:center;padding:8px 0 30px;}
+.foot{color:var(--faint);font-size:12px;text-align:center;padding:8px 16px 30px;white-space:pre-wrap;word-break:break-all;}
 .only-wide{display:none !important;}
 body.wide .only-wide{display:flex !important;}
 body.wide .only-narrow{display:none !important;}
@@ -384,7 +384,7 @@ function endLabel(s, e){ return (dayStart(e-1) === dayStart(s) ? '' : dayLabel(e
 // 本地保存 + Supabase 同步
 // ═══════════════════════════════════════
 let _syncTimer = null, _syncing = false, _syncAgain = false, _loadDone = false;
-let _cloudRev = 0, lastSyncAt = 0, syncOk = true;
+let _cloudRev = 0, lastSyncAt = 0, syncOk = true, syncErr = '';
 const WRITER = Math.random().toString(36).slice(2,10);
 
 function persistLocal(){ try { localStorage.setItem(LS, JSON.stringify(D)); } catch(e) {} }
@@ -398,12 +398,13 @@ function save(){
 let _soonTimer = null;
 function saveSoon(){ clearTimeout(_soonTimer); _soonTimer = setTimeout(() => { _soonTimer = null; save(); }, 600); }
 function flush(){ if(_soonTimer){ clearTimeout(_soonTimer); _soonTimer = null; save(); } }
+window.addEventListener('pagehide', () => { flush(); if(isDirty()) syncToCloud(); });
 window.addEventListener('beforeunload', flush);
 
 const H = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY };
 async function fetchRow(key){
   const r = await fetch(SB_URL+'/rest/v1/'+SB_TABLE+'?key=eq.'+key+'&select=value', {headers:H, cache:'no-store'});
-  if(!r.ok) throw new Error('HTTP '+r.status);
+  if(!r.ok) throw new Error('读取失败 HTTP '+r.status+' '+(await r.text().catch(() => '')).slice(0,160));
   const rows = await r.json();
   return rows && rows[0] && rows[0].value ? JSON.parse(rows[0].value) : null;
 }
@@ -411,7 +412,7 @@ async function pushRow(key, obj){
   const r = await fetch(SB_URL+'/rest/v1/'+SB_TABLE, {method:'POST',
     headers:Object.assign({'Content-Type':'application/json', Prefer:'resolution=merge-duplicates'}, H),
     body: JSON.stringify({key, value: JSON.stringify(obj)})});
-  if(!r.ok) throw new Error('HTTP '+r.status);
+  if(!r.ok) throw new Error('上传失败 HTTP '+r.status+' '+(await r.text().catch(() => '')).slice(0,160));
 }
 // 两份数据合并：同一条以最后修改（u）为准；「见过」的时间取较晚；框架记录取并集
 function mergeItems(a, b){
@@ -462,13 +463,13 @@ async function syncToCloud(){
       }catch(e){ landed = true; }
       if(landed){
         D.rev = next; _cloudRev = next; clearDirty(); persistLocal();
-        lastSyncAt = Date.now(); syncOk = true;
+        lastSyncAt = Date.now(); syncOk = true; syncErr = '';
         if(changed) rerenderAll();
         return;
       }
     }
     throw new Error('conflict');
-  }catch(e){ syncOk = false; }
+  }catch(e){ syncOk = false; syncErr = String(e && e.message || e); if(curView === 'me') renderMe(); }
   finally{
     _syncing = false;
     if(_syncAgain){ _syncAgain = false; setTimeout(syncToCloud, 400); }
@@ -492,7 +493,7 @@ async function refreshFromCloud(){
 }
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible'){ refreshFromCloud(); onClock(true); }
-  else flush();
+  else { flush(); if(isDirty()){ clearTimeout(_syncTimer); syncToCloud(); } }
 });
 window.addEventListener('online', () => { if(isDirty()) syncToCloud(); });
 
@@ -1044,10 +1045,13 @@ const meEl = $('#v-me'), subEl = $('#v-sub');
 function chev(){ return '<span class="chev">›</span>'; }
 function renderMe(){
   const th = (localStorage.getItem('mmm-theme') || 'auto');
-  const sync = lastSyncAt ? (syncOk ? '已同步 · '+hm(lastSyncAt) : '暂时没连上云端，改动先存在这台设备上') : (syncOk ? '' : '暂时没连上云端，改动先存在这台设备上');
+  const pending = isDirty();
+  const sync = !syncOk ? '同步出错，改动先存在这台设备上' + (syncErr ? '\n' + syncErr : '')
+    : pending ? '有改动还没上传' : lastSyncAt ? '已同步 · ' + hm(lastSyncAt) : '';
   meEl.innerHTML = '<div class="page"><div class="bigt">我</div>'
     + '<div class="grp"><button class="row only-narrow" data-go="notes"><span class="rt">备忘录</span>'+chev()+'</button>'
     + '<button class="row" data-go="search"><span class="rt">搜索</span>'+chev()+'</button></div>'
+    + '<div class="grp"><button class="row" data-act="syncnow"><span class="rt">立即同步</span><span class="rv" id="syncState"></span></button></div>'
     + '<div class="grp"><button class="row" data-go="trash"><span class="rt">最近删除</span>'+chev()+'</button></div>'
     + '<div class="grp only-wide" style="flex-direction:column"><button class="row" data-go="export"><span class="rt">导出</span>'+chev()+'</button></div>'
     + '<div class="grp only-wide" style="flex-direction:column">'+EXTENSIONS.map(x => '<a class="row" href="'+x[1]+'" target="_blank" rel="noopener"><span class="rt">'+esc(x[0])+'</span><span class="chev">↗</span></a>').join('')+'</div>'
@@ -1063,6 +1067,11 @@ meEl.addEventListener('click', e => {
   if(th){ setTheme(th.dataset.th); renderMe(); return; }
   const go = e.target.closest('[data-go]'); if(go) return openSub(go.dataset.go);
   const act = e.target.closest('[data-act]'); if(!act) return;
+  if(act.dataset.act === 'syncnow'){
+    const st = $('#syncState'); if(st) st.textContent = '同步中…';
+    (async () => { flush(); markDirty(); await syncToCloud(); await refreshFromCloud(); renderMe(); })();
+    return;
+  }
   if(act.dataset.act === 'backup') downloadText('MMM-备份-'+ymd(Date.now())+'.json', JSON.stringify(D), 'application/json');
   if(act.dataset.act === 'oldbackup') downloadOld();
 });
@@ -1366,7 +1375,7 @@ function rerenderAll(){
   applyWide();
   renderFeed('now');
   let cloud = null, cloudOk = false;
-  try { cloud = await fetchRow(ROW); cloudOk = true; } catch(e) { syncOk = false; }
+  try { cloud = await fetchRow(ROW); cloudOk = true; } catch(e) { syncOk = false; syncErr = String(e && e.message || e); }
   if(cloud){ mergeState(cloud); _cloudRev = Math.max(_cloudRev, Number(cloud.rev)||0); lastSyncAt = Date.now(); }
   if(!D.oldMerged) await mergeOldData();
   purgeOld();
