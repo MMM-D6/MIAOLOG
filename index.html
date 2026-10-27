@@ -93,15 +93,16 @@ html.locked #app{visibility:hidden;}
 body.mac #main{max-width:none;border:none;}
 
 /* tab bar：悬浮、滑动时收起 */
-#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:12px 0 max(2px, calc(var(--safe-b) - 28px));pointer-events:none;
+#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 0 max(0px, calc(var(--safe-b) - 36px));pointer-events:none;
   background:linear-gradient(to bottom, transparent, var(--bg) 58%);transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .25s;}
 #tabbar.hide{transform:translateY(110%);opacity:0;}
 .tabs{display:flex;justify-content:center;align-items:center;gap:38px;}
-.tab{pointer-events:auto;width:46px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--faint);}
+.tab{pointer-events:auto;width:46px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--faint);}
 .tab svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;}
 .tab.on{color:var(--fg);}
 .tab.on svg{transform:scale(1.18);stroke-width:1.9;}
 .tab[data-tab="plus"] svg{stroke-width:2.3;}
+body:not(.wide) .tab[data-tab="plus"]{margin-left:30px;}
 .tab:active svg{transform:scale(.88);}
 
 /* timeline */
@@ -236,6 +237,8 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .full-head .ttl{font-weight:600;font-size:15px;}
 .full-head button{padding:8px 12px;font-size:16px;}
 .full-head .done{font-weight:700;}
+.compose-full .where{font-size:13px;color:var(--mut);font-weight:400;}
+.compose-full .send{margin-right:6px;}
 .full textarea.ed{flex:1;padding:16px 20px calc(var(--kb) + 20px);font-size:17px;line-height:1.6;}
 
 /* planner */
@@ -771,6 +774,36 @@ function openEditor(text, onDone, title){
 
 // ── 打点 ──
 function openCompose(){
+  if(!isWide()) return openComposeFull();
+  return openComposeCenter();
+}
+function sendDot(text){
+  const x = text.replace(/\s+$/,''); if(!x.trim()) return false;
+  const t = Date.now();
+  D.dots.push({id: uid(), t, x, u: t});
+  try { localStorage.removeItem(LS_DRAFT); } catch(e) {}
+  save();
+  if(curView !== 'timeline') showView('timeline');
+  renderFeed('now');
+  return true;
+}
+function openComposeFull(){
+  const now = Date.now(), cur = finalNameAt(now);
+  const el = document.createElement('div'); el.className = 'full compose-full';
+  el.innerHTML = '<div class="full-head"><button class="cx">取消</button><span class="where">'+hm(now)+(cur ? ' · '+esc(cur) : '')+'</span><button class="send" disabled>发送</button></div><textarea class="ed"></textarea>';
+  document.body.appendChild(el);
+  const ta = $('textarea', el), send = $('.send', el);
+  let draft = ''; try { draft = localStorage.getItem(LS_DRAFT) || ''; } catch(e) {}
+  ta.value = draft; send.disabled = !ta.value.trim();
+  requestAnimationFrame(() => el.classList.add('show'));
+  ta.focus();
+  const close = () => { ta.blur(); el.classList.remove('show'); setTimeout(() => el.remove(), 280); };
+  ta.addEventListener('input', () => { send.disabled = !ta.value.trim(); try { localStorage.setItem(LS_DRAFT, ta.value); } catch(e) {} });
+  $('.cx', el).onclick = close;
+  swipeToClose($('.full-head', el), el, close);
+  send.onclick = () => { if(sendDot(ta.value)){ ta.value = ''; close(); } };
+}
+function openComposeCenter(){
   const now = Date.now(), cur = finalNameAt(now);
   const {sh, close} = openLayer(isWide() ? 'sheet center' : 'sheet', '<div class="grab"></div><div class="compose-head"><span class="where">'+hm(now)+(cur ? ' · '+esc(cur) : '')+'</span><button class="send" disabled>发送</button></div><textarea class="compose-ta" rows="3"></textarea>');
   const ta = $('textarea', sh), send = $('.send', sh);
