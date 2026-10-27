@@ -106,7 +106,16 @@ body:not(.wide) .tab[data-tab="plus"]{margin-left:72px;}
 .tab:active svg{transform:scale(.88);}
 
 /* timeline */
-#feed{padding:calc(var(--safe-t) + 18px) 18px 40vh;}
+#feed{padding:6px 18px 40vh;}
+#tlBar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(var(--safe-t) + 8px) 0 4px;}
+#tlBar .search{margin:0 16px;}
+input[type=search]{-webkit-appearance:none;appearance:none;}
+input[type=search]::-webkit-search-cancel-button,input[type=search]::-webkit-search-decoration{-webkit-appearance:none;display:none;}
+#tlx{display:none;color:var(--mut);font-size:13px;padding:0 2px;}
+#tlBar.on #tlx{display:block;}
+#tlRes{display:none;padding-bottom:40vh;}
+#v-timeline.searching #feed{display:none;}
+#v-timeline.searching #tlRes{display:block;}
 .day{font-size:12px;font-weight:600;color:var(--mut);text-align:center;margin:26px 0 10px;letter-spacing:.04em;}
 .day:first-child{margin-top:4px;}
 .blk{display:flex;align-items:center;gap:10px;margin:18px 0 6px;font-size:13px;}
@@ -283,7 +292,7 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 <body>
 <div id="app">
   <div id="main">
-    <section class="view active" id="v-timeline"><div id="feed"></div></section>
+    <section class="view active" id="v-timeline"><div id="tlBar"><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input id="tlq" type="search" enterkeyhint="search" placeholder="搜索" autocomplete="off"/><button id="tlx" aria-label="清除">✕</button></div></div><div id="feed"></div><div id="tlRes"></div></section>
     <section class="view" id="v-draw"><button id="meBtn" aria-label="我"><svg viewBox="0 0 24 24"><circle cx="12" cy="7.8" r="3.6"/><path d="M4.6 20c0-4.4 3.3-7.2 7.4-7.2s7.4 2.8 7.4 7.2z"/></svg></button><div id="drawStage"></div></section>
     <section class="view" id="v-me"></section>
     <section class="view" id="v-sub"></section>
@@ -740,7 +749,21 @@ function observeNow(){
   _nowObs = new IntersectionObserver(es => { _nowVisible = es[0].isIntersecting; updateToNow(); }, {root: tlEl});
   _nowObs.observe(n);
 }
-function updateToNow(){ $('#toNow').classList.toggle('show', curView === 'timeline' && !_nowVisible); }
+function updateToNow(){ $('#toNow').classList.toggle('show', curView === 'timeline' && !_nowVisible && !tlEl.classList.contains('searching')); }
+function runTlSearch(){
+  const q = $('#tlq').value, ts = terms(q), box = $('#tlRes');
+  $('#tlBar').classList.toggle('on', !!q);
+  if(!ts.length){ if(tlEl.classList.contains('searching')){ tlEl.classList.remove('searching'); box.innerHTML = ''; scrollToNow(false); } updateToNow(); return; }
+  if(!tlEl.classList.contains('searching')){ tlEl.classList.add('searching'); tlEl.scrollTop = 0; }
+  const res = liveDots().filter(d => matches(d.x, ts)).slice().reverse();
+  box.innerHTML = res.slice(0, 300).map(d => '<button class="li" data-tjump="'+esc(d.id)+'"><div class="meta">'+dayLabel(d.t)+' '+dotTime(d)+'</div><div class="tx">'+snippet(d.x, ts)+'</div></button>').join('')
+    + '<div class="foot">'+(res.length ? res.length+' 条'+(res.length > 300 ? '，只显示最新的 300 条' : '') : '没有找到')+'</div>';
+  updateToNow();
+}
+function clearTlSearch(){ const q = $('#tlq'); if(!q.value) return; q.value = ''; q.blur(); $('#tlBar').classList.remove('on'); tlEl.classList.remove('searching'); $('#tlRes').innerHTML = ''; }
+$('#tlq').addEventListener('input', runTlSearch);
+$('#tlx').addEventListener('click', () => { clearTlSearch(); scrollToNow(false); updateToNow(); });
+$('#tlRes').addEventListener('click', e => { const j = e.target.closest('[data-tjump]'); if(j){ const id = j.dataset.tjump; clearTlSearch(); jumpToDot(id); } });
 $('#toNow').addEventListener('click', () => scrollToNow(true));
 tlEl.addEventListener('scroll', () => { if(tlEl.scrollTop < 300 && hasOlder()) loadOlder(); }, {passive:true});
 // 左右滑：只认明显的横向滑动，竖着翻记录不会误触
@@ -1018,19 +1041,9 @@ function renderPlanner(){
 let curDraw = null, recentDraws = [], _lastLike = 0, drawHist = [], drawIdx = -1;
 const stage = $('#drawStage');
 function pickDot(){
-  const ld = liveDots().filter(d => d.x && d.x.trim());
-  if(!ld.length) return null;
-  if(ld.length === 1) return ld[0];
-  const now = Date.now(); let tot = 0;
-  const w = ld.map(d => {
-    if(curDraw && d.id === curDraw.id) return 0;
-    let x = (now - Math.max(d.t, d.sn||0)) / DAY + 1;          // 越久没见到越重；写下即算见过
-    for(const r of recentDraws){ x *= 1 - 0.85 * Math.exp(-Math.abs(d.t - r) / (21*DAY)); }  // 刚抽过的那段时期附近暂时变轻
-    x = Math.max(x, 1e-6); tot += x; return x;
-  });
-  let r = Math.random() * tot;
-  for(let i = 0; i < ld.length; i++){ r -= w[i]; if(r <= 0) return ld[i]; }
-  return ld[ld.length-1];
+  const ld = liveDots().filter(d => d.x && d.x.trim() && !(curDraw && d.id === curDraw.id));   // 每一条机会完全相同，只排除眼前这张
+  if(!ld.length) return curDraw && liveDots().some(d => d.id === curDraw.id) ? curDraw : null;
+  return ld[Math.floor(Math.random() * ld.length)];
 }
 function drawNext(){
   if(drawIdx < drawHist.length - 1){
@@ -1042,7 +1055,6 @@ function drawNext(){
   const d = pickDot();
   if(!d){ curDraw = null; return renderDraw(''); }
   curDraw = d; drawHist.push(d.id); drawIdx = drawHist.length - 1;
-  d.sn = Date.now(); recentDraws.push(d.t); if(recentDraws.length > 6) recentDraws.shift(); save();
   animDraw(drawHist.length > 1 ? 'up' : '');
 }
 function drawPrev(){
@@ -1114,6 +1126,7 @@ document.addEventListener('keydown', e => {
   if(e.key === 'ArrowUp' || e.key === 'ArrowLeft'){ e.preventDefault(); drawPrev(); }
 });
 function jumpToDot(id){
+  clearTlSearch();
   const d = D.dots.find(x => x.id === id); if(!d) return;
   if(feedFrom == null || d.t < feedFrom) feedFrom = dayStart(d.t);
   flashId = id; flashUntil = Date.now() + 1800; setTimeout(() => { const f = feedEl.querySelector('.dot.flash'); if(f) f.classList.remove('flash'); }, 1850);
@@ -1133,8 +1146,7 @@ function renderMe(){
   const sync = !syncOk ? '同步出错，改动先存在这台设备上' + (syncErr ? '\n' + syncErr : '')
     : pending ? '有改动还没上传' : lastSyncAt ? '已同步 · ' + hm(lastSyncAt) : '';
   meEl.innerHTML = '<div class="page"><div class="bigt">我</div>'
-    + '<div class="grp"><button class="row only-narrow" data-go="notes"><span class="rt">备忘录</span>'+chev()+'</button>'
-    + '<button class="row" data-go="search"><span class="rt">搜索</span>'+chev()+'</button></div>'
+    + '<div class="grp only-narrow" style="flex-direction:column"><button class="row" data-go="notes"><span class="rt">备忘录</span>'+chev()+'</button></div>'
     + '<div class="grp"><button class="row" data-act="syncnow"><span class="rt">立即同步</span><span class="rv" id="syncState"></span></button></div>'
     + '<div class="grp"><button class="row" data-go="trash"><span class="rt">最近删除</span>'+chev()+'</button></div>'
     + '<div class="grp only-wide" style="flex-direction:column"><button class="row" data-go="export"><span class="rt">导出</span>'+chev()+'</button><button class="row" data-go="import"><span class="rt">导入过去的记录</span>'+chev()+'</button></div>'
