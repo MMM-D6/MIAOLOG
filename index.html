@@ -378,7 +378,8 @@ function dayLabel(ms){
   const d = new Date(ms), y = d.getFullYear() !== new Date().getFullYear() ? d.getFullYear()+'年' : '';
   return y + (d.getMonth()+1)+'月'+d.getDate()+'日 '+WK[d.getDay()];
 }
-function longDate(ms){ const d = new Date(ms); return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+WK[d.getDay()]+' · '+hm(ms); }
+function longDate(ms, noTime){ const d = new Date(ms); return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+WK[d.getDay()]+(noTime ? '' : ' · '+hm(ms)); }
+function dotTime(d){ return d.nt ? '' : hm(d.t); }
 function durText(ms){ const h = ms/3600e3; return h < 1 ? Math.round(ms/MIN)+' 分钟' : (Number.isInteger(h) ? h : h.toFixed(1))+' 小时'; }
 function endLabel(s, e){ return (dayStart(e-1) === dayStart(s) ? '' : dayLabel(e-1)+' ') + (hm(e) === '00:00' ? '24:00' : hm(e)); }
 
@@ -442,6 +443,92 @@ function mergeState(o){
   D.oldMerged = !!(D.oldMerged || o.oldMerged);
   touch();
 }
+// ═══════════════════════════════════════
+// 只传改动：数据按月份拆成很多小行
+//   mmm3          目录：每一小行的版本号 + 框架记录
+//   mmm3:d:2026-10  这个月的打点
+//   mmm3:n        备忘录
+// 同步时先看目录，只下载版本变了的；再只上传本机改过的
+// ═══════════════════════════════════════
+const PART_NOTES = ROW + ':n';
+function partOfDot(d){ const x = new Date(d.t); return ROW + ':d:' + x.getFullYear() + '-' + p2(x.getMonth() + 1); }
+function partitions(){
+  const m = {};
+  D.dots.forEach(d => { const k = partOfDot(d); (m[k] || (m[k] = [])).push(d); });
+  m[PART_NOTES] = D.notes.slice();
+  return m;
+}
+function stampTime(v){ return parseInt(String(v || '').split('.').pop(), 36) || 0; }
+function itemsHash(items){ const a = items.slice().sort((x, y) => x.id < y.id ? -1 : x.id > y.id ? 1 : 0); return hashStr(JSON.stringify(a)); }
+function metaCore(){ return {plan: D.plan, migratedAt: D.migratedAt, oldMerged: D.oldMerged}; }
+const LS_SYNC = 'mmm3-sync';
+let SY = (() => { try { return JSON.parse(localStorage.getItem(LS_SYNC) || 'null') || {}; } catch(e) { return {}; } })();
+SY.known = SY.known || {}; SY.hashes = SY.hashes || {};
+function saveSY(){ try { localStorage.setItem(LS_SYNC, JSON.stringify(SY)); } catch(e) {} }
+
+async function fetchRows(keys){
+  const out = [];
+  for(let i = 0; i < keys.length; i += 40){
+    const list = keys.slice(i, i + 40).map(k => '"' + k + '"').join(',');
+    const r = await fetch(SB_URL + '/rest/v1/' + SB_TABLE + '?select=key,value&key=in.(' + encodeURIComponent(list) + ')', {headers: H, cache: 'no-store'});
+    if(!r.ok) throw new Error('读取失败 HTTP ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 160));
+    (await r.json()).forEach(row => { try { out.push({key: row.key, value: JSON.parse(row.value)}); } catch(e) {} });
+  }
+  return out;
+}
+async function pushRows(rows){
+  const r = await fetch(SB_URL + '/rest/v1/' + SB_TABLE, {method: 'POST',
+    headers: Object.assign({'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates'}, H),
+    body: JSON.stringify(rows)});
+  if(!r.ok) throw new Error('上传失败 HTTP ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 160));
+}
+// 下载：看目录，只拿版本变了的那几行
+async function pull(){
+  const meta = await fetchRow(ROW);
+  if(!meta) return null;
+  if(Array.isArray(meta.dots) || Array.isArray(meta.notes)) mergeState(meta);   // 旧格式（一整份），合并进来
+  else mergeState({plan: meta.plan, migratedAt: meta.migratedAt, oldMerged: meta.oldMerged});
+  const parts = meta.parts || {};
+  const need = Object.keys(parts).filter(k => parts[k] !== SY.known[k]);
+  if(need.length){
+    const rows = await fetchRows(need);
+    rows.forEach(r => {
+      const items = (r.value && r.value.items) || [];
+      if(r.key === PART_NOTES) mergeState({notes: items}); else mergeState({dots: items});
+      SY.known[r.key] = r.value && r.value.v;
+      SY.hashes[r.key] = itemsHash(items);
+    });
+    saveSY();
+  }
+  return meta;
+}
+// 上传：只传本机内容和上次同步时不一样的那几行，最后连同目录一起提交
+async function pushDirty(meta){
+  const parts = partitions(), stamp = WRITER + '.' + Date.now().toString(36);
+  const cloudParts = (meta && meta.parts) || {}, metaParts = {};
+  new Set([...Object.keys(SY.known), ...Object.keys(cloudParts)]).forEach(k => {   // 两边各记了一个版本号时，取较新的
+    const a = SY.known[k], c = cloudParts[k];
+    metaParts[k] = !a ? c : !c ? a : (stampTime(a) >= stampTime(c) ? a : c);
+  });
+  const rows = [], newHashes = {};
+  Object.keys(parts).forEach(k => {
+    const h = itemsHash(parts[k]);
+    if(h !== SY.hashes[k]){ rows.push({key: k, value: JSON.stringify({v: stamp, items: parts[k]})}); metaParts[k] = stamp; newHashes[k] = h; }
+  });
+  const core = metaCore(), coreH = hashStr(JSON.stringify(core));
+  const legacy = meta && (Array.isArray(meta.dots) || Array.isArray(meta.notes));
+  const stale = Object.keys(metaParts).some(k => metaParts[k] !== cloudParts[k]);   // 云端目录过期了，要修正
+  if(meta && !rows.length && !stale && coreH === SY.coreH && !legacy && meta.parts) return {pushed: false};
+  rows.push({key: ROW, value: JSON.stringify(Object.assign(core, {fmt: 2, v: stamp, parts: metaParts}))});
+  await pushRows(rows);
+  let ok = true;
+  try { const after = await fetchRow(ROW); ok = !!after && after.v === stamp; } catch(e) { ok = true; }
+  if(ok){
+    Object.keys(newHashes).forEach(k => { SY.hashes[k] = newHashes[k]; SY.known[k] = stamp; });
+    SY.coreH = coreH; saveSY();
+  }
+  return {pushed: true, ok, n: rows.length - 1};
+}
 async function syncToCloud(){
   if(!_loadDone) return;
   if(_syncing){ _syncAgain = true; return; }
@@ -449,35 +536,26 @@ async function syncToCloud(){
   let changed = false;
   try{
     for(let i = 0; i < 3; i++){
-      let cloud = null;
-      try { cloud = await fetchRow(ROW); } catch(e) { cloud = null; }
-      if(cloud){
-        const before = sig(); mergeState(cloud); if(sig() !== before) changed = true;
-        _cloudRev = Math.max(_cloudRev, Number(cloud.rev)||0);
-      }
-      const next = Math.max(Number(D.rev)||0, _cloudRev) + 1;
-      await pushRow(ROW, Object.assign({}, D, {rev: next, writer: WRITER}));
-      let landed = true;
-      try{
-        const after = await fetchRow(ROW);
-        landed = !!after && after.writer === WRITER && Number(after.rev) === next;
-        if(!landed && after){ mergeState(after); _cloudRev = Math.max(_cloudRev, Number(after.rev)||0); changed = true; }
-      }catch(e){ landed = true; }
-      if(landed){
-        D.rev = next; _cloudRev = next; clearDirty(); persistLocal();
+      const before = sig();
+      const meta = await pull();
+      if(sig() !== before) changed = true;
+      const r = await pushDirty(meta);
+      if(!r.pushed || r.ok){
+        clearDirty(); persistLocal();
         lastSyncAt = Date.now(); syncOk = true; syncErr = '';
         if(changed) rerenderAll();
+        if(curView === 'me') renderMe();
         return;
       }
     }
-    throw new Error('conflict');
+    throw new Error('别的设备也在同时写入，稍后会自动再试');
   }catch(e){ syncOk = false; syncErr = String(e && e.message || e); if(curView === 'me') renderMe(); }
   finally{
     _syncing = false;
     if(_syncAgain){ _syncAgain = false; setTimeout(syncToCloud, 400); }
   }
 }
-function sig(){ return D.dots.length+'|'+D.notes.length+'|'+D.plan.length+'|'+D.dots.reduce((s,d)=>s+(d.u||0)%997,0)+'|'+D.notes.reduce((s,d)=>s+(d.u||0)%997,0); }
+function sig(){ return D.dots.length+'|'+D.notes.length+'|'+D.plan.length+'|'+D.dots.reduce((s,d)=>s+(d.u||0)%997+(d.sn||0)%991,0)+'|'+D.notes.reduce((s,d)=>s+(d.u||0)%997,0); }
 let _refreshing = false;
 async function refreshFromCloud(){
   if(!_loadDone || _refreshing) return;
@@ -485,12 +563,10 @@ async function refreshFromCloud(){
   try{
     flush();
     if(isDirty()){ await syncToCloud(); return; }
-    const cloud = await fetchRow(ROW);
-    if(cloud && (Number(cloud.rev)||0) > _cloudRev){
-      const before = sig(); mergeState(cloud); _cloudRev = Number(cloud.rev)||0;
-      persistLocal(); lastSyncAt = Date.now(); syncOk = true;
-      if(sig() !== before) rerenderAll();
-    }
+    const before = sig();
+    await pull();
+    persistLocal(); lastSyncAt = Date.now(); syncOk = true; syncErr = '';
+    if(sig() !== before) rerenderAll();
   }catch(e){} finally{ _refreshing = false; }
 }
 document.addEventListener('visibilitychange', () => {
@@ -638,7 +714,7 @@ function renderFeed(keep){
   for(const it of items){
     const dd = dayStart(it.t);
     if(it.k !== 0 && dd !== lastDay){ h += '<div class="day">'+dayLabel(it.t)+'</div>'; lastDay = dd; }
-    if(it.k === 2) h += '<div class="dot'+(it.d.id === flashId && Date.now() < flashUntil ? ' flash' : '')+'" data-id="'+esc(it.d.id)+'"><span class="tm">'+hm(it.t)+'</span><div class="tx">'+esc(it.d.x)+'</div></div>';
+    if(it.k === 2) h += '<div class="dot'+(it.d.id === flashId && Date.now() < flashUntil ? ' flash' : '')+'" data-id="'+esc(it.d.id)+'"><span class="tm">'+dotTime(it.d)+'</span><div class="tx">'+esc(it.d.x)+'</div></div>';
     else if(it.k === 1) h += '<div class="blk"><span class="tm">'+hm(it.g.s)+'</span><span class="bn">'+esc(it.g.n)+'</span></div>';
     else if(it.k === 0) h += '<div class="blk-end"></div>';
     else if(it.k === 3) h += '<div class="now" id="nowLine"><span>现在 '+hm(now)+'</span></div>';
@@ -985,7 +1061,7 @@ function renderDraw(dir){
   if(!curDraw){ stage.innerHTML = '<div class="empty">还没有记录</div>'; return; }
   const d = curDraw, long = (d.x||'').length > 220;
   const from = dir === 'up' ? ' from-below' : dir === 'down' ? ' from-above' : '';
-  stage.innerHTML = '<div class="card'+from+'"><button class="cwhen">'+longDate(d.t)+'</button><div class="ctext'+(long?' long':'')+'">'+esc(d.x)+'</div><div class="clike">'+(d.lk ? '♥ '+d.lk : '')+'</div></div>';
+  stage.innerHTML = '<div class="card'+from+'"><button class="cwhen">'+longDate(d.t, d.nt)+'</button><div class="ctext'+(long?' long':'')+'">'+esc(d.x)+'</div><div class="clike">'+(d.lk ? '♥ '+d.lk : '')+'</div></div>';
   if(from) requestAnimationFrame(() => requestAnimationFrame(() => { const c = $('.card', stage); if(c){ c.style.transition = ''; c.classList.remove('from-below','from-above'); } }));
   $('.cwhen', stage).onclick = () => jumpToDot(d.id);
 }
@@ -1061,7 +1137,7 @@ function renderMe(){
     + '<button class="row" data-go="search"><span class="rt">搜索</span>'+chev()+'</button></div>'
     + '<div class="grp"><button class="row" data-act="syncnow"><span class="rt">立即同步</span><span class="rv" id="syncState"></span></button></div>'
     + '<div class="grp"><button class="row" data-go="trash"><span class="rt">最近删除</span>'+chev()+'</button></div>'
-    + '<div class="grp only-wide" style="flex-direction:column"><button class="row" data-go="export"><span class="rt">导出</span>'+chev()+'</button></div>'
+    + '<div class="grp only-wide" style="flex-direction:column"><button class="row" data-go="export"><span class="rt">导出</span>'+chev()+'</button><button class="row" data-go="import"><span class="rt">导入过去的记录</span>'+chev()+'</button></div>'
     + '<div class="grp only-wide" style="flex-direction:column">'+EXTENSIONS.map(x => '<a class="row" href="'+x[1]+'" target="_blank" rel="noopener"><span class="rt">'+esc(x[0])+'</span><span class="chev">↗</span></a>').join('')+'</div>'
     + '<div class="grp"><div class="row"><span class="rt">外观</span><div class="seg" id="themeSeg">'
     + [['auto','跟随系统'],['light','浅色'],['dark','深色']].map(o => '<button data-th="'+o[0]+'" class="'+(th===o[0]?'on':'')+'">'+o[1]+'</button>').join('')+'</div></div>'
@@ -1107,6 +1183,7 @@ function openSub(name){
   else if(name === 'search') renderSearch();
   else if(name === 'trash') renderTrash();
   else if(name === 'export') renderExport();
+  else if(name === 'import') renderImport();
   else if(name === 'password') renderPassword();
   showView('sub'); subEl.scrollTop = 0;
   if(name === 'notes' && isWide()){ const ta = $('#noteTa', subEl); if(ta){ ta.focus(); try { ta.setSelectionRange(0,0); } catch(e) {} ta.scrollTop = 0; } }
@@ -1134,7 +1211,7 @@ function renderSearch(){
     searchQ = inp.value; const ts = terms(searchQ), box = $('#sres', subEl);
     if(!ts.length){ box.innerHTML = ''; return; }
     const res = liveDots().filter(d => matches(d.x, ts)).slice().reverse();
-    box.innerHTML = res.slice(0, 300).map(d => '<button class="li" data-jump="'+esc(d.id)+'"><div class="meta">'+dayLabel(d.t)+' '+hm(d.t)+'</div><div class="tx">'+snippet(d.x, ts)+'</div></button>').join('')
+    box.innerHTML = res.slice(0, 300).map(d => '<button class="li" data-jump="'+esc(d.id)+'"><div class="meta">'+dayLabel(d.t)+' '+dotTime(d)+'</div><div class="tx">'+snippet(d.x, ts)+'</div></button>').join('')
       + '<div class="foot">'+(res.length ? res.length+' 条' : '没有找到')+'</div>';
   };
   inp.addEventListener('input', run); run();
@@ -1156,7 +1233,7 @@ function renderTrash(){
   subEl.innerHTML = '<div class="page">'+pageHead('最近删除')
     + (items.length ? items.map(it => {
         const left = Math.max(1, Math.ceil((it.x.d + TRASH_MS - Date.now()) / DAY));
-        return '<button class="li" data-trash="'+it.k+':'+esc(it.x.id)+'"><div class="meta">'+(it.k==='dot' ? '打点 · '+dayLabel(it.x.t)+' '+hm(it.x.t) : '备忘录')+' · 还剩 '+left+' 天</div><div class="tx">'+esc(it.x.x)+'</div></button>';
+        return '<button class="li" data-trash="'+it.k+':'+esc(it.x.id)+'"><div class="meta">'+(it.k==='dot' ? '打点 · '+dayLabel(it.x.t)+' '+dotTime(it.x) : '备忘录')+' · 还剩 '+left+' 天</div><div class="tx">'+esc(it.x.x)+'</div></button>';
       }).join('') : '<div class="foot" style="padding-top:40px">空的</div>')
     + '</div>';
 }
@@ -1326,12 +1403,143 @@ function buildExport(){
         if(!ops.length) lab = '';
         if(lab && lab !== lastLabel) out += '['+lab+']\n';
         lastLabel = lab;
-        out += hm(d.t)+' '+d.x.replace(/\n/g, '\n      ')+(d.lk ? ' ♥'+d.lk : '')+'\n';
+        out += (d.nt ? '' : hm(d.t)+' ')+d.x.replace(/\n/g, d.nt ? '\n' : '\n      ')+(d.lk ? ' ♥'+d.lk : '')+'\n';
       });
     }
   }
   return {text: out, n: dots.length, days: dayList.length};
 }
+// ═══════════════════════════════════════
+// 导入过去的记录（电脑）
+// ═══════════════════════════════════════
+const IMPORT_TEMPLATE = `# MMM 导入模板
+#
+# 规则：
+# 1. 每一条记录以「日期」开头，日期单独占一行
+#      2023-05-04          只有日期
+#      2023-05-04 21:30    日期加时间
+#    日期也可以写成 2023/5/4 或 2023年5月4日
+# 2. 日期下面就是这一条的内容，可以有很多行，可以有空行
+# 3. 出现下一个日期行，就是下一条记录
+# 4. 以 # 开头的行会被忽略，可以用来写备注
+# 5. 只写日期不写时间的，在 MMM 里时间那一栏会空着；同一天的几条按这里的先后顺序排
+# 6. 同一个日期、同样内容的记录，重复导入时会自动跳过
+#
+# 下面是例子，可以删掉
+
+2023-05-04 21:30
+今天又在图书馆坐了一下午，什么都没写出来。
+
+2023-05-05
+只知道是哪天，不知道几点。
+内容可以有好几行。
+
+2023年5月6日 08:15
+写法也可以这样。
+`;
+const DATE_LINE = /^\s*(\d{4})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?(?:\s+(\d{1,2})\s*[:：]\s*(\d{2}))?\s*$/;
+function hashStr(str){ let h1 = 0x811c9dc5, h2 = 0; for(let i = 0; i < str.length; i++){ const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 16777619); h2 = (h2 * 31 + c) | 0; } return (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36); }
+function mkEntry(y, mo, d, hh, mm){
+  y = +y; mo = +mo; d = +d;
+  const dt = new Date(y, mo - 1, d, hh != null ? +hh : 0, hh != null ? +mm : 0);
+  if(dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  if(hh != null && (+hh > 23 || +mm > 59)) return null;
+  return {t: +dt, nt: hh == null, lines: []};
+}
+function parseImport(text){
+  const out = [], bad = [];
+  const raw = String(text||'').replace(/\r\n?/g, '\n');
+  if(/^\s*\[/.test(raw)){                         // 也认 JSON：[{ "date": "2023-05-04 21:30", "text": "..." }]
+    let arr; try { arr = JSON.parse(raw); } catch(e) { return {entries: [], bad: ['JSON 格式不对：'+e.message]}; }
+    (Array.isArray(arr) ? arr : []).forEach((o, i) => {
+      const m = String(o && (o.date || o.time) || '').match(DATE_LINE), x = String(o && o.text || '').trim();
+      const e = m && mkEntry(m[1], m[2], m[3], m[4], m[5]);
+      if(!e || !x){ bad.push('第 '+(i+1)+' 条：'+(e ? '没有内容' : '日期看不懂')); return; }
+      e.x = x; out.push(e);
+    });
+  } else {
+    let cur = null;
+    raw.split('\n').forEach((line, i) => {
+      if(/^\s*#/.test(line)) return;
+      const m = line.match(DATE_LINE);
+      if(m){
+        const e = mkEntry(m[1], m[2], m[3], m[4], m[5]);
+        if(!e){ bad.push('第 '+(i+1)+' 行：日期不存在「'+line.trim()+'」'); cur = null; return; }
+        cur = e; out.push(e); return;
+      }
+      if(cur) cur.lines.push(line);
+      else if(line.trim()) bad.push('第 '+(i+1)+' 行：前面没有日期，跳过了「'+line.trim().slice(0, 30)+'」');
+    });
+    out.forEach(e => { e.x = e.lines.join('\n').replace(/^\n+|\s+$/g, ''); delete e.lines; });
+  }
+  const entries = out.filter(e => e.x && e.x.trim());
+  out.filter(e => !e.x || !e.x.trim()).forEach(e => bad.push(ymd(e.t)+(e.nt ? '' : ' '+hm(e.t))+'：日期下面没有内容'));
+  const perDay = {};                               // 同一天只写日期的几条，按原本顺序排
+  entries.forEach(e => {
+    e.id = 'i' + hashStr(ymd(e.t) + (e.nt ? '' : hm(e.t)) + '|' + e.x);
+    if(e.nt){ const k = ymd(e.t); perDay[k] = (perDay[k] || 0) + 1; e.t += perDay[k]; }
+  });
+  return {entries, bad};
+}
+let IMP = {text: '', lastBatch: null};
+function renderImport(){
+  subEl.innerHTML = '<div class="page">'+pageHead('导入过去的记录')+'<div class="exp">'
+    + '<div class="line">按模板整理好之后，粘贴到下面，或者选一个文件。导入前会先预览。</div>'
+    + '<div class="btns" style="margin:0 0 12px"><button id="imtpl">下载模板</button><button id="imfile">选择文件</button><input type="file" id="imin" accept=".txt,.md,.json,text/plain,application/json" style="display:none"/></div>'
+    + '<textarea id="imta" placeholder="2023-05-04 21:30&#10;那天的念头……" style="font-family:inherit;font-size:14px"></textarea>'
+    + '<div id="imprev" style="margin-top:12px;font-size:14px;line-height:1.6"></div></div></div>';
+  const ta = $('#imta'); ta.value = IMP.text;
+  $('#imtpl').onclick = () => downloadText('MMM-导入模板.txt', IMPORT_TEMPLATE);
+  $('#imfile').onclick = () => $('#imin').click();
+  $('#imin').onchange = e => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = () => { ta.value = IMP.text = String(r.result||''); previewImport(); }; r.readAsText(f, 'utf-8'); e.target.value = ''; };
+  ta.oninput = () => { IMP.text = ta.value; previewImport(); };
+  previewImport();
+}
+function previewImport(){
+  const box = $('#imprev'); if(!box) return;
+  let h = '';
+  if(IMP.lastBatch){
+    h += '<div style="margin-bottom:14px">已导入 '+IMP.lastBatch.n+' 条。 <button class="okb" id="imundo" style="width:auto;padding:6px 14px;border-radius:999px;background:var(--fill);color:var(--fg);font-weight:600">撤销这次导入</button></div>';
+  }
+  if(!IMP.text.trim()){ box.innerHTML = h; bindUndo(); return; }
+  const {entries, bad} = parseImport(IMP.text);
+  const have = new Set(D.dots.filter(d => !d.d).map(d => d.id));
+  const fresh = entries.filter(e => !have.has(e.id));
+  const sorted = entries.slice().sort((a,b) => a.t - b.t);
+  h += '<div>识别出 <b>'+entries.length+'</b> 条'
+    + (entries.length ? '，从 '+ymd(sorted[0].t)+' 到 '+ymd(sorted[sorted.length-1].t) : '')
+    + (entries.length - fresh.length ? '，其中 '+(entries.length - fresh.length)+' 条已经导入过，会跳过' : '') + '。</div>';
+  if(bad.length) h += '<div style="color:var(--danger);margin-top:8px">'+bad.slice(0, 12).map(esc).join('<br>')+(bad.length > 12 ? '<br>还有 '+(bad.length - 12)+' 处……' : '')+'</div>';
+  if(fresh.length){
+    h += '<div style="margin-top:12px;color:var(--mut)">预览前几条：</div>'
+      + fresh.slice(0, 5).map(e => '<div class="li" style="padding:10px 0"><div class="meta">'+ymd(e.t)+(e.nt ? '' : ' '+hm(e.t))+'</div><div class="tx">'+esc(e.x)+'</div></div>').join('')
+      + '<div class="btns"><button id="imgo">导入 '+fresh.length+' 条</button></div>';
+  }
+  box.innerHTML = h;
+  bindUndo();
+  const go = $('#imgo');
+  if(go) go.onclick = () => {
+    const batch = uid(), now = Date.now();
+    fresh.forEach(e => {
+      let d = D.dots.find(x => x.id === e.id);                    // 以前导入又撤销过的，原地复活，不重复
+      if(!d){ d = {id: e.id}; D.dots.push(d); }
+      Object.assign(d, {t: e.t, x: e.x, u: now, tr: {imp: batch}}); delete d.d; delete d.p; delete d.sn;
+      if(e.nt) d.nt = 1; else delete d.nt;
+    });
+    IMP.lastBatch = {id: batch, n: fresh.length};
+    IMP.text = ''; save(); feedFrom = null; renderFeed('now'); renderImport();
+  };
+}
+function bindUndo(){
+  const u = $('#imundo'); if(!u) return;
+  u.onclick = () => {
+    const b = IMP.lastBatch; if(!b) return;
+    const now = Date.now();
+    D.dots.forEach(d => { if(d.tr && d.tr.imp === b.id && !d.d){ d.x = ''; d.p = 1; d.d = now; d.u = now; } });
+    IMP.lastBatch = null; save(); feedFrom = null; renderFeed('now'); renderImport();
+  };
+}
+
 function renderExport(){
   const opts = [['today','今天'],['7','最近 7 天'],['30','最近 30 天'],['range','日期范围'],['all','全部']];
   subEl.innerHTML = '<div class="page">'+pageHead('导出')+'<div class="exp">'
@@ -1378,18 +1586,17 @@ function rerenderAll(){
 (async function init(){
   let local = null;
   try { local = JSON.parse(localStorage.getItem(LS)||'null'); } catch(e) {}
-  if(local && Array.isArray(local.dots)){ D = Object.assign(blank(), local); _cloudRev = Number(local.rev)||0; }
+  if(local && Array.isArray(local.dots)){ D = Object.assign(blank(), local); delete D.rev; delete D.writer; }
   touch();
   applyWide();
   renderFeed('now');
-  let cloud = null, cloudOk = false;
-  try { cloud = await fetchRow(ROW); cloudOk = true; } catch(e) { syncOk = false; syncErr = String(e && e.message || e); }
-  if(cloud){ mergeState(cloud); _cloudRev = Math.max(_cloudRev, Number(cloud.rev)||0); lastSyncAt = Date.now(); }
+  let cloudOk = false;
+  try { await pull(); cloudOk = true; lastSyncAt = Date.now(); } catch(e) { syncOk = false; syncErr = String(e && e.message || e); }
   if(!D.oldMerged) await mergeOldData();
   purgeOld();
   persistLocal();
   _loadDone = true;
-  if(cloudOk && (isDirty() || !cloud || (D.oldMerged && !cloud.oldMerged))) syncToCloud();
+  if(cloudOk) syncToCloud();
   feedFrom = null;
   rerenderAll();
   renderFeed('now');
