@@ -14,33 +14,6 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/mmm-192.png"/>
 <link rel="manifest" href="manifest.json"/>
 <script>
-// ── 密码：每台设备 12 小时内不用重输 ──
-(function(){
-  var PASS = localStorage.getItem('adhd-rpg-pw') || 'x5uvwa9uyimiaodai1999';
-  var KEY = 'mmm-unlock', HOURS = 12;
-  try{
-    var u = JSON.parse(localStorage.getItem(KEY)||'null');
-    if(u && u.p === PASS && u.until > Date.now()) return;
-  }catch(e){}
-  document.documentElement.classList.add('locked');
-  document.addEventListener('DOMContentLoaded', function(){
-    var o = document.createElement('div');
-    o.id = 'gate';
-    o.innerHTML = '<div class="gate-box"><div class="gate-title">MMM</div>'
-      + '<input id="gateInput" type="password" autocomplete="current-password" enterkeyhint="go"/></div>';
-    document.body.appendChild(o);
-    var inp = document.getElementById('gateInput');
-    setTimeout(function(){ inp.focus(); }, 60);
-    inp.addEventListener('keydown', function(e){
-      if(e.key !== 'Enter') return;
-      if(inp.value === PASS){
-        localStorage.setItem(KEY, JSON.stringify({p:PASS, until:Date.now()+HOURS*3600e3}));
-        o.remove(); document.documentElement.classList.remove('locked');
-        if(window.onUnlocked) window.onUnlocked();
-      } else { inp.value=''; o.querySelector('.gate-box').classList.remove('shake'); void o.offsetWidth; o.querySelector('.gate-box').classList.add('shake'); }
-    });
-  });
-})();
 (function(){ try{ var t=localStorage.getItem('mmm-theme'); if(t==='light'||t==='dark') document.documentElement.setAttribute('data-theme',t); }catch(e){} })();
 </script>
 <style>
@@ -75,13 +48,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","H
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;}
 input,textarea{font:inherit;color:inherit;background:none;border:none;outline:none;}
 textarea{resize:none;}
-html.locked #app{visibility:hidden;}
 
-/* gate */
-#gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;}
-.gate-box{display:flex;flex-direction:column;align-items:center;gap:18px;width:220px;}
-.gate-title{font-weight:700;letter-spacing:.3em;font-size:15px;color:var(--mut);}
-#gateInput{width:100%;text-align:center;font-size:18px;padding:10px 12px;border-radius:12px;background:var(--fill);letter-spacing:.2em;}
+#auth{position:fixed;inset:0;z-index:90;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;}
+.auth-box{width:100%;max-width:320px;display:flex;flex-direction:column;gap:12px;}
+.auth-box h2{font-size:20px;font-weight:700;margin-bottom:4px;}
+.auth-box p{font-size:14px;color:var(--mut);line-height:1.6;}
+.auth-box p.warn{color:var(--fg);background:var(--fill);border-radius:12px;padding:10px 12px;}
+.auth-box input{width:100%;font-size:16px;padding:12px;border-radius:12px;background:var(--fill);}
+.auth-box button{padding:12px;border-radius:12px;background:var(--sel);color:var(--selfg);font-weight:600;font-size:16px;}
+.auth-box button:disabled{opacity:.4;}
+.auth-box .err{color:var(--danger);font-size:13px;min-height:18px;}
 .shake{animation:shake .32s;}
 @keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
 
@@ -432,19 +408,88 @@ function flush(){ if(_soonTimer){ clearTimeout(_soonTimer); _soonTimer = null; s
 window.addEventListener('pagehide', () => { flush(); if(isDirty()) syncToCloud(); });
 window.addEventListener('beforeunload', flush);
 
-const H = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY };
+// ═══════════════════════════════════════
+// 登录：Supabase 账号。之后每一次读写云端都带着「我是谁」，数据库只认你本人
+// ═══════════════════════════════════════
+const LS_AUTH = 'mmm3-auth';
+let AUTH = (() => { try { return JSON.parse(localStorage.getItem(LS_AUTH) || 'null'); } catch(e) { return null; } })();
+function saveAuth(a){ AUTH = a; try { if(a) localStorage.setItem(LS_AUTH, JSON.stringify(a)); else localStorage.removeItem(LS_AUTH); } catch(e) {} }
+function authFromResp(j){ return {access_token: j.access_token, refresh_token: j.refresh_token, expires_at: Date.now() + (Number(j.expires_in) || 3600) * 1000, user: {id: j.user && j.user.id, email: j.user && j.user.email}}; }
+async function authLogin(email, password){
+  const r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {method: 'POST', headers: {'Content-Type': 'application/json', apikey: SB_KEY}, body: JSON.stringify({email, password})});
+  const j = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(j.error_description || j.msg || j.message || ('登录失败 HTTP ' + r.status));
+  saveAuth(authFromResp(j));
+}
+let _refreshP = null;
+function authRefresh(){
+  if(_refreshP) return _refreshP;
+  _refreshP = (async () => {
+    if(!AUTH || !AUTH.refresh_token) throw new Error('还没登录');
+    const r = await fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {'Content-Type': 'application/json', apikey: SB_KEY}, body: JSON.stringify({refresh_token: AUTH.refresh_token})});
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok){
+      if(r.status === 400 || r.status === 401){ saveAuth(null); needLogin(); }   // 登录失效，需要重新登录
+      throw new Error('登录已过期，请重新登录');
+    }
+    saveAuth(authFromResp(j));
+  })().finally(() => { _refreshP = null; });
+  return _refreshP;
+}
+async function authHeaders(){
+  if(!AUTH) throw new Error('还没登录');
+  if(Date.now() > (AUTH.expires_at || 0) - 60e3) await authRefresh();
+  return {apikey: SB_KEY, Authorization: 'Bearer ' + AUTH.access_token};
+}
+async function sbFetch(path, opts){
+  opts = opts || {};
+  let h = await authHeaders();
+  let r = await fetch(SB_URL + path, Object.assign({}, opts, {headers: Object.assign({}, opts.headers || {}, h), cache: 'no-store'}));
+  if(r.status === 401){ await authRefresh(); h = await authHeaders(); r = await fetch(SB_URL + path, Object.assign({}, opts, {headers: Object.assign({}, opts.headers || {}, h), cache: 'no-store'})); }
+  return r;
+}
 async function fetchRow(key){
-  const r = await fetch(SB_URL+'/rest/v1/'+SB_TABLE+'?key=eq.'+key+'&select=value', {headers:H, cache:'no-store'});
+  const r = await sbFetch('/rest/v1/'+SB_TABLE+'?key=eq.'+key+'&select=value');
   if(!r.ok) throw new Error('读取失败 HTTP '+r.status+' '+(await r.text().catch(() => '')).slice(0,160));
   const rows = await r.json();
   return rows && rows[0] && rows[0].value ? JSON.parse(rows[0].value) : null;
 }
-async function pushRow(key, obj){
-  const r = await fetch(SB_URL+'/rest/v1/'+SB_TABLE, {method:'POST',
-    headers:Object.assign({'Content-Type':'application/json', Prefer:'resolution=merge-duplicates'}, H),
-    body: JSON.stringify({key, value: JSON.stringify(obj)})});
-  if(!r.ok) throw new Error('上传失败 HTTP '+r.status+' '+(await r.text().catch(() => '')).slice(0,160));
+
+// ═══════════════════════════════════════
+// 端到端加密：上传前在本机加密，云端只存乱码。口令只在你脑子里和各台设备本地
+// AES-GCM 256，密钥由口令经 PBKDF2-SHA256 推导
+// ═══════════════════════════════════════
+const LS_KEY = 'mmm3-key';
+const TE = new TextEncoder(), TD = new TextDecoder();
+let CK = null, CK_SALT = '', PENDING_ENC = null;
+function b64(buf){ const a = new Uint8Array(buf); let s = ''; for(let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
+function unb64(str){ const s = atob(str); const a = new Uint8Array(s.length); for(let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+async function deriveKey(pass, saltB64, iter){
+  const base = await crypto.subtle.importKey('raw', TE.encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name: 'PBKDF2', salt: unb64(saltB64), iterations: iter, hash: 'SHA-256'}, base, {name: 'AES-GCM', length: 256}, true, ['encrypt', 'decrypt']);
 }
+async function encJSON(obj, key){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, key || CK, TE.encode(JSON.stringify(obj)));
+  return {iv: b64(iv), ct: b64(ct)};
+}
+async function decJSON(o, key){
+  const pt = await crypto.subtle.decrypt({name: 'AES-GCM', iv: unb64(o.iv)}, key || CK, unb64(o.ct));
+  return JSON.parse(TD.decode(pt));
+}
+async function loadLocalKey(){
+  try {
+    const k = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if(!k) return;
+    CK = await crypto.subtle.importKey('raw', unb64(k.k), {name: 'AES-GCM'}, true, ['encrypt', 'decrypt']);
+    CK_SALT = k.salt;
+  } catch(e) { CK = null; }
+}
+async function keepKey(key, salt){
+  CK = key; CK_SALT = salt;
+  try { localStorage.setItem(LS_KEY, JSON.stringify({k: b64(await crypto.subtle.exportKey('raw', key)), salt})); } catch(e) {}
+}
+function forgetKey(){ CK = null; CK_SALT = ''; try { localStorage.removeItem(LS_KEY); } catch(e) {} }
+
 // 两份数据合并：同一条以最后修改（u）为准；「见过」的时间取较晚；框架记录取并集
 function mergeItems(a, b){
   const map = new Map();
@@ -498,40 +543,50 @@ async function fetchRows(keys){
   const out = [];
   for(let i = 0; i < keys.length; i += 40){
     const list = keys.slice(i, i + 40).map(k => '"' + k + '"').join(',');
-    const r = await fetch(SB_URL + '/rest/v1/' + SB_TABLE + '?select=key,value&key=in.(' + encodeURIComponent(list) + ')', {headers: H, cache: 'no-store'});
+    const r = await sbFetch('/rest/v1/' + SB_TABLE + '?select=key,value&key=in.(' + encodeURIComponent(list) + ')');
     if(!r.ok) throw new Error('读取失败 HTTP ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 160));
     (await r.json()).forEach(row => { try { out.push({key: row.key, value: JSON.parse(row.value)}); } catch(e) {} });
   }
   return out;
 }
 async function pushRows(rows){
-  const r = await fetch(SB_URL + '/rest/v1/' + SB_TABLE, {method: 'POST',
-    headers: Object.assign({'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates'}, H),
+  const r = await sbFetch('/rest/v1/' + SB_TABLE, {method: 'POST',
+    headers: {'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates'},
     body: JSON.stringify(rows)});
   if(!r.ok) throw new Error('上传失败 HTTP ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 160));
 }
 // 下载：看目录，只拿版本变了的那几行
+class NeedKey extends Error {}
 async function pull(){
   const meta = await fetchRow(ROW);
   if(!meta) return null;
+  if(meta.enc){
+    if(!CK || CK_SALT !== meta.enc.salt){ forgetKey(); throw new NeedKey('需要加密口令'); }
+  }
   if(Array.isArray(meta.dots) || Array.isArray(meta.notes)) mergeState(meta);   // 旧格式（一整份），合并进来
+  else if(meta.core) mergeState(await decJSON(meta.core));
   else mergeState({plan: meta.plan, migratedAt: meta.migratedAt, oldMerged: meta.oldMerged});
   const parts = meta.parts || {};
   const need = Object.keys(parts).filter(k => parts[k] !== SY.known[k]);
   if(need.length){
     const rows = await fetchRows(need);
-    rows.forEach(r => {
-      const items = (r.value && r.value.items) || [];
+    for(const r of rows){
+      const v = r.value || {};
+      let items = v.items || [];
+      if(v.e) items = await decJSON(v.e);
       if(r.key === PART_NOTES) mergeState({notes: items}); else mergeState({dots: items});
-      SY.known[r.key] = r.value && r.value.v;
-      SY.hashes[r.key] = itemsHash(items);
-    });
+      SY.known[r.key] = v.v;
+      SY.hashes[r.key] = v.e ? itemsHash(items) : '';     // 云端还是明文的，下次一定重新加密上传
+    }
     saveSY();
   }
   return meta;
 }
 // 上传：只传本机内容和上次同步时不一样的那几行，最后连同目录一起提交
 async function pushDirty(meta){
+  if(!CK) throw new NeedKey('需要加密口令');
+  const enc = (meta && meta.enc) || PENDING_ENC;
+  if(!enc) throw new NeedKey('需要加密口令');
   const parts = partitions(), stamp = WRITER + '.' + Date.now().toString(36);
   const cloudParts = (meta && meta.parts) || {}, metaParts = {};
   new Set([...Object.keys(SY.known), ...Object.keys(cloudParts)]).forEach(k => {   // 两边各记了一个版本号时，取较新的
@@ -539,21 +594,22 @@ async function pushDirty(meta){
     metaParts[k] = !a ? c : !c ? a : (stampTime(a) >= stampTime(c) ? a : c);
   });
   const rows = [], newHashes = {};
-  Object.keys(parts).forEach(k => {
+  for(const k of Object.keys(parts)){
     const h = itemsHash(parts[k]);
-    if(h !== SY.hashes[k]){ rows.push({key: k, value: JSON.stringify({v: stamp, items: parts[k]})}); metaParts[k] = stamp; newHashes[k] = h; }
-  });
+    if(h !== SY.hashes[k]){ rows.push({key: k, value: JSON.stringify({v: stamp, e: await encJSON(parts[k])})}); metaParts[k] = stamp; newHashes[k] = h; }
+  }
   const core = metaCore(), coreH = hashStr(JSON.stringify(core));
   const legacy = meta && (Array.isArray(meta.dots) || Array.isArray(meta.notes));
   const stale = Object.keys(metaParts).some(k => metaParts[k] !== cloudParts[k]);   // 云端目录过期了，要修正
-  if(meta && !rows.length && !stale && coreH === SY.coreH && !legacy && meta.parts) return {pushed: false};
-  rows.push({key: ROW, value: JSON.stringify(Object.assign(core, {fmt: 2, v: stamp, parts: metaParts}))});
+  if(meta && !rows.length && !stale && coreH === SY.coreH && !legacy && meta.parts && meta.core) return {pushed: false};
+  rows.push({key: ROW, value: JSON.stringify({fmt: 3, v: stamp, parts: metaParts, enc, core: await encJSON(core)})});
   await pushRows(rows);
   let ok = true;
   try { const after = await fetchRow(ROW); ok = !!after && after.v === stamp; } catch(e) { ok = true; }
   if(ok){
     Object.keys(newHashes).forEach(k => { SY.hashes[k] = newHashes[k]; SY.known[k] = stamp; });
     SY.coreH = coreH; saveSY();
+    if(PENDING_ENC){ PENDING_ENC = null; }
   }
   return {pushed: true, ok, n: rows.length - 1};
 }
@@ -577,7 +633,10 @@ async function syncToCloud(){
       }
     }
     throw new Error('别的设备也在同时写入，稍后会自动再试');
-  }catch(e){ syncOk = false; syncErr = String(e && e.message || e); if(curView === 'me') renderMe(); }
+  }catch(e){
+    syncOk = false; syncErr = String(e && e.message || e); if(curView === 'me') renderMe();
+    if(e instanceof NeedKey){ _loadDone = false; setTimeout(startCloud, 0); }
+  }
   finally{
     _syncing = false;
     if(_syncAgain){ _syncAgain = false; setTimeout(syncToCloud, 400); }
@@ -668,6 +727,91 @@ async function mergeOldData(){
   if(!D.migratedAt) D.migratedAt = Date.now();
   if(cloudOk) D.oldMerged = true;
   touch();
+}
+
+function authScreen(html){
+  let o = $('#auth'); if(!o){ o = document.createElement('div'); o.id = 'auth'; document.body.appendChild(o); }
+  o.innerHTML = '<div class="auth-box">' + html + '</div>';
+  return o;
+}
+function closeAuth(){ const o = $('#auth'); if(o) o.remove(); }
+let _loginWait = null;
+function needLogin(){
+  if(_loginWait) return _loginWait.p;
+  let done; const p = new Promise(r => done = r); _loginWait = {p};
+  const o = authScreen('<h2>登录 MMM</h2><p>用你在 Supabase 里建的那个账号。每台设备只需要登录一次。</p>'
+    + '<input id="auEmail" type="email" autocomplete="username" placeholder="邮箱"/><input id="auPw" type="password" autocomplete="current-password" placeholder="密码"/>'
+    + '<div class="err" id="auErr"></div><button id="auGo">登录</button>');
+  const go = async () => {
+    const b = $('#auGo'); b.disabled = true; $('#auErr').textContent = '';
+    try { await authLogin($('#auEmail').value.trim(), $('#auPw').value); _loginWait = null; closeAuth(); done(); }
+    catch(e){ $('#auErr').textContent = String(e.message || e); b.disabled = false; }
+  };
+  $('#auGo').onclick = go;
+  $('#auPw').addEventListener('keydown', e => { if(e.key === 'Enter') go(); });
+  return p;
+}
+function askPassphrase(enc){
+  return new Promise(done => {
+    if(enc){
+      authScreen('<h2>输入加密口令</h2><p>你的记录在云端是加密的。输入你设置过的加密口令，这台设备以后就不用再输了。</p>'
+        + '<input id="kp1" type="password" autocomplete="off" placeholder="加密口令"/><div class="err" id="kErr"></div><button id="kGo">解锁</button>');
+      const go = async () => {
+        const b = $('#kGo'); b.disabled = true; $('#kErr').textContent = '正在解锁…';
+        try {
+          const key = await deriveKey($('#kp1').value, enc.salt, enc.iter);
+          const chk = await decJSON(enc.check, key);
+          if(chk !== 'mmm-ok') throw new Error();
+          await keepKey(key, enc.salt); closeAuth(); done();
+        } catch(e) { $('#kErr').textContent = '口令不对'; b.disabled = false; }
+      };
+      $('#kGo').onclick = go; $('#kp1').addEventListener('keydown', e => { if(e.key === 'Enter') go(); });
+    } else {
+      authScreen('<h2>设置加密口令</h2><p>以后你的记录会先在设备上加密，再上传到云端。云端只存乱码，别人拿到也看不懂。</p>'
+        + '<p class="warn">这个口令忘了，云端的数据就再也解不开，没有任何人能帮你找回。请记在一个安全的地方。</p>'
+        + '<input id="kp1" type="password" autocomplete="new-password" placeholder="加密口令（至少 8 位）"/><input id="kp2" type="password" autocomplete="new-password" placeholder="再输一次"/>'
+        + '<div class="err" id="kErr"></div><button id="kGo">设置并加密上传</button>');
+      $('#kGo').onclick = async () => {
+        const a = $('#kp1').value, b2 = $('#kp2').value, er = $('#kErr');
+        if(a.length < 8){ er.textContent = '至少 8 位'; return; }
+        if(a !== b2){ er.textContent = '两次不一样'; return; }
+        $('#kGo').disabled = true; er.textContent = '正在生成密钥…';
+        const salt = b64(crypto.getRandomValues(new Uint8Array(16))), iter = 310000;
+        const key = await deriveKey(a, salt, iter);
+        PENDING_ENC = {salt, iter, check: await encJSON('mmm-ok', key)};
+        await keepKey(key, salt);
+        SY.known = {}; SY.hashes = {}; SY.coreH = ''; saveSY();     // 全部重新加密上传
+        closeAuth(); done();
+      };
+    }
+  });
+}
+// 登录 → 口令 → 下载合并 → 上传
+let _starting = false;
+async function startCloud(){
+  if(_starting) return; _starting = true;
+  try{
+    if(!AUTH) await needLogin();
+    let meta = null;
+    for(;;){
+      try { meta = await fetchRow(ROW); break; }
+      catch(e){ syncOk = false; syncErr = String(e && e.message || e); if(!AUTH){ await needLogin(); continue; } return; }
+    }
+    if(!CK || (meta && meta.enc && CK_SALT !== meta.enc.salt)){ forgetKey(); await askPassphrase(meta && meta.enc); }
+    try { await pull(); lastSyncAt = Date.now(); syncOk = true; syncErr = ''; }
+    catch(e){ syncOk = false; syncErr = String(e && e.message || e); if(e instanceof NeedKey){ _starting = false; return startCloud(); } }
+    if(!D.oldMerged) await mergeOldData();
+    purgeOld(); clearLikes(); persistLocal();
+    _loadDone = true;
+    await syncToCloud();
+    feedFrom = null; rerenderAll(); renderFeed('now');
+  } finally { _starting = false; }
+}
+function logout(){
+  saveAuth(null); forgetKey();
+  SY.known = {}; SY.hashes = {}; SY.coreH = ''; saveSY();
+  _loadDone = false; syncOk = false; syncErr = '已退出登录';
+  startCloud();
 }
 
 function clearLikes(){                      // 点赞系统已移除：旧的点赞数清空，不转成收藏
@@ -1205,13 +1349,15 @@ function renderMe(){
     : pending ? '有改动还没上传' : lastSyncAt ? '已同步 · ' + hm(lastSyncAt) : '';
   meEl.innerHTML = '<div class="page"><div class="bigt">我</div>'
     + '<div class="grp only-narrow" style="flex-direction:column"><button class="row" data-go="notes"><span class="rt">备忘录</span>'+chev()+'</button></div>'
-    + '<div class="grp"><button class="row" data-act="syncnow"><span class="rt">立即同步</span><span class="rv" id="syncState"></span></button></div>'
+    + '<div class="grp"><button class="row" data-act="syncnow"><span class="rt">立即同步</span><span class="rv" id="syncState"></span></button>'
+    + '<div class="row"><span class="rt">账号</span><span class="rv">'+esc(AUTH && AUTH.user && AUTH.user.email || '未登录')+'</span></div>'
+    + '<div class="row"><span class="rt">端到端加密</span><span class="rv">'+(CK ? '已开启' : '未开启')+'</span></div>'
+    + '<button class="row red" data-act="logout"><span class="rt">退出登录</span></button></div>'
     + '<div class="grp"><button class="row" data-go="trash"><span class="rt">最近删除</span>'+chev()+'</button></div>'
     + '<div class="grp only-wide" style="flex-direction:column"><button class="row" data-go="export"><span class="rt">导出</span>'+chev()+'</button><button class="row" data-go="import"><span class="rt">导入过去的记录</span>'+chev()+'</button></div>'
     + '<div class="grp only-wide" style="flex-direction:column">'+EXTENSIONS.map(x => '<a class="row" href="'+x[1]+'" target="_blank" rel="noopener"><span class="rt">'+esc(x[0])+'</span><span class="chev">↗</span></a>').join('')+'</div>'
     + '<div class="grp"><div class="row"><span class="rt">外观</span><div class="seg" id="themeSeg">'
     + [['auto','跟随系统'],['light','浅色'],['dark','深色']].map(o => '<button data-th="'+o[0]+'" class="'+(th===o[0]?'on':'')+'">'+o[1]+'</button>').join('')+'</div></div>'
-    + '<button class="row" data-go="password"><span class="rt">修改密码</span>'+chev()+'</button>'
     + '<button class="row" data-act="backup"><span class="rt">下载完整备份</span></button>'
     + '<button class="row" data-act="oldbackup"><span class="rt">下载旧版数据</span></button></div>'
     + '<div class="foot">'+esc(sync)+'</div></div>';
@@ -1224,6 +1370,10 @@ meEl.addEventListener('click', e => {
   if(act.dataset.act === 'syncnow'){
     const st = $('#syncState'); if(st) st.textContent = '同步中…';
     (async () => { flush(); markDirty(); await syncToCloud(); await refreshFromCloud(); renderMe(); })();
+    return;
+  }
+  if(act.dataset.act === 'logout'){
+    actionSheet([{label: '退出登录（这台设备上的记录会保留）', red: true, fn: () => { logout(); renderMe(); }}]);
     return;
   }
   if(act.dataset.act === 'backup') downloadText('MMM-备份-'+ymd(Date.now())+'.json', JSON.stringify(D), 'application/json');
@@ -1254,7 +1404,6 @@ function openSub(name){
   else if(name === 'trash') renderTrash();
   else if(name === 'export') renderExport();
   else if(name === 'import') renderImport();
-  else if(name === 'password') renderPassword();
   showView('sub'); subEl.scrollTop = 0;
   if(name === 'notes' && isWide()){ const ta = $('#noteTa', subEl); if(ta){ ta.focus(); try { ta.setSelectionRange(0,0); } catch(e) {} ta.scrollTop = 0; } }
   if(name === 'notes'){ const sc = $('.notes-scroll', subEl); if(sc) sc.scrollTop = 52; }
@@ -1316,21 +1465,6 @@ subEl.addEventListener('click', e => {
     {label:'彻底删除', red:true, fn: () => { x.x = ''; x.p = 1; delete x.tr; x.u = Date.now(); save(); renderTrash(); }}
   ]);
 });
-
-// ── 修改密码 ──
-function renderPassword(){
-  subEl.innerHTML = '<div class="page">'+pageHead('修改密码')+'<div class="pw"><input type="password" id="pw0" placeholder="当前密码"/><input type="password" id="pw1" placeholder="新密码"/><input type="password" id="pw2" placeholder="再输一次新密码"/><div class="err" id="pwe"></div><button class="okb" id="pwok">保存</button></div></div>';
-  $('#pwok', subEl).onclick = () => {
-    const cur = localStorage.getItem('adhd-rpg-pw') || 'x5uvwa9uyimiaodai1999';
-    const a = $('#pw0').value, b = $('#pw1').value, c = $('#pw2').value, er = $('#pwe');
-    if(a !== cur){ er.textContent = '当前密码不对'; return; }
-    if(!b || b.length < 4){ er.textContent = '新密码至少 4 位'; return; }
-    if(b !== c){ er.textContent = '两次不一样'; return; }
-    localStorage.setItem('adhd-rpg-pw', b);
-    localStorage.setItem('mmm-unlock', JSON.stringify({p:b, until:Date.now()+12*3600e3}));
-    subName = null; renderMe(); showView('me');
-  };
-}
 
 // ═══════════════════════════════════════
 // 备忘录（手机在「我」里，电脑常驻右侧）
@@ -1661,19 +1795,9 @@ function rerenderAll(){
   touch();
   applyWide();
   renderFeed('now');
-  let cloudOk = false;
-  try { await pull(); cloudOk = true; lastSyncAt = Date.now(); } catch(e) { syncOk = false; syncErr = String(e && e.message || e); }
-  if(!D.oldMerged) await mergeOldData();
-  purgeOld();
-  clearLikes();
-  persistLocal();
-  _loadDone = true;
-  if(cloudOk) syncToCloud();
-  feedFrom = null;
-  rerenderAll();
-  renderFeed('now');
+  await loadLocalKey();
+  startCloud();
 })();
-window.onUnlocked = () => { renderFeed('now'); };
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
