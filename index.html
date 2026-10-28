@@ -194,7 +194,7 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 /* 备忘录正文：第一行自动是标题，像苹果备忘录 */
 .nb{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;outline:none;padding:6px 20px 45vh;font-size:16px;line-height:1.6;word-break:break-word;-webkit-user-select:text;user-select:text;}
 .nb:empty::before{content:attr(data-ph);color:var(--faint);}
-.nb > :first-child:not(ul):not(ol):not(pre){font-size:26px;font-weight:700;line-height:1.3;margin:2px 0 8px;}
+.nb > div:first-child:not(:has(ul,ol,pre,h1,h2,h3,p)){font-size:26px;font-weight:700;line-height:1.3;margin:2px 0 8px;}
 .nb h1{font-size:26px;font-weight:700;line-height:1.3;margin:12px 0 6px;}
 .nb h2{font-size:20px;font-weight:700;line-height:1.35;margin:12px 0 4px;}
 .nb h3{font-size:17px;font-weight:600;margin:10px 0 2px;}
@@ -1598,6 +1598,10 @@ function bindNoteEditor(host, n){
         const ol = listOf(); if(ol){ const n = +m[1]; if(n > 1) ol.setAttribute('start', n); else ol.removeAttribute('start'); }
       }
     }
+    if(e.inputType === 'insertParagraph'){
+      const b = blockOf();
+      if(b && /^(H1|H2|H3)$/.test(b.tagName) && !b.textContent.trim()) setBlock('div');
+    }
     clearTimeout(t); t = setTimeout(commit, 250);
   });
   ed.addEventListener('blur', () => { clearTimeout(t); commit(); });
@@ -1646,6 +1650,30 @@ function bindNoteEditor(host, n){
     const r = li.getBoundingClientRect();
     if(e.clientX - r.left < 28){ e.preventDefault(); if(li.hasAttribute('data-done')) li.removeAttribute('data-done'); else li.setAttribute('data-done', ''); commit(); }
   });
+  const setBlock = tag => {
+    const sel = getSelection(); if(!sel.rangeCount) return;
+    const rg = sel.getRangeAt(0);
+    const sc = rg.startContainer, so = rg.startOffset, ec = rg.endContainer, eo = rg.endOffset;
+    const LEAF = /^(H1|H2|H3|PRE|DIV|P)$/;
+    const leafOf = nd => { let x = nd.nodeType === 1 ? nd : nd.parentNode, hit = null; while(x && x !== ed){ if(LEAF.test(x.tagName) && !hit) hit = x; x = x.parentNode; } return hit; };
+    let blocks = [...ed.querySelectorAll('h1,h2,h3,pre,div,p')].filter(b => !b.querySelector('h1,h2,h3,pre,div,p,ul,ol') && !b.closest('li') && rg.intersectsNode(b));
+    const own = leafOf(sc); if(own && !blocks.includes(own) && !own.closest('li')) blocks.unshift(own);
+    if(!blocks.length){                                    // 文字直接躺在编辑区里：先包一层
+      const nd = sc.nodeType === 3 ? sc : sc.childNodes[so] || sc; if(nd.parentNode !== ed) return;
+      const w = document.createElement(tag); ed.insertBefore(w, nd); w.appendChild(nd);
+      blocks = [];
+    }
+    const map = new Map();
+    blocks.forEach(b => {
+      if(b.tagName.toLowerCase() === tag) return;
+      const nb = document.createElement(tag);
+      while(b.firstChild) nb.appendChild(b.firstChild);
+      if(!nb.firstChild) nb.appendChild(document.createElement('br'));
+      b.replaceWith(nb); map.set(b, nb);
+    });
+    const fix = (c, o) => map.has(c) ? [map.get(c), Math.min(o, map.get(c).childNodes.length)] : [c, o];
+    try { const [c1, o1] = fix(sc, so), [c2, o2] = fix(ec, eo); const r = document.createRange(); r.setStart(c1, o1); r.setEnd(c2, o2); sel.removeAllRanges(); sel.addRange(r); } catch(e) {}
+  };
   const blockOf = () => { const sel = getSelection(); if(!sel.rangeCount) return null; let nd = sel.anchorNode; while(nd && nd !== ed){ if(nd.nodeType === 1 && /^(H1|H2|H3|PRE|DIV|P|LI)$/.test(nd.tagName)) return nd; nd = nd.parentNode; } return null; };
   const listOf = () => { const sel = getSelection(); if(!sel.rangeCount) return null; let nd = sel.anchorNode; while(nd && nd !== ed){ if(nd.nodeType === 1 && /^(UL|OL)$/.test(nd.tagName)) return nd; nd = nd.parentNode; } return null; };
   const paint = () => {
@@ -1670,7 +1698,7 @@ function bindNoteEditor(host, n){
       if(btn.dataset.c) document.execCommand(btn.dataset.c);
       if(btn.dataset.b){
         const l = listOf(); if(l) document.execCommand(l.tagName === 'OL' ? 'insertOrderedList' : 'insertUnorderedList');
-        document.execCommand('formatBlock', false, '<' + btn.dataset.b + '>');
+        setBlock(btn.dataset.b === 'div' ? 'p' : btn.dataset.b);
       }
       if(btn.dataset.l){
         const want = btn.dataset.l, l = listOf();
