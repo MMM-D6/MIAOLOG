@@ -191,18 +191,56 @@ body.wide .only-narrow{display:none !important;}
 mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .li.sel{background:var(--fill);}
 .note-ed{display:flex;flex-direction:column;height:100%;}
-.note-ed textarea{flex:1;padding:6px 20px 40vh;font-size:16px;line-height:1.6;}
+/* 备忘录正文：第一行自动是标题，像苹果备忘录 */
+.nb{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;outline:none;padding:6px 20px 45vh;font-size:16px;line-height:1.6;word-break:break-word;-webkit-user-select:text;user-select:text;}
+.nb:empty::before{content:attr(data-ph);color:var(--faint);}
+.nb > :first-child:not(ul):not(ol):not(pre){font-size:26px;font-weight:700;line-height:1.3;margin:2px 0 8px;}
+.nb h1{font-size:26px;font-weight:700;line-height:1.3;margin:12px 0 6px;}
+.nb h2{font-size:20px;font-weight:700;line-height:1.35;margin:12px 0 4px;}
+.nb h3{font-size:17px;font-weight:600;margin:10px 0 2px;}
+.nb p{margin:0;}
+.nb pre{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:14px;line-height:1.55;background:var(--fill);border-radius:8px;padding:8px 10px;margin:6px 0;white-space:pre-wrap;}
+.nb ul,.nb ol{padding-left:24px;margin:2px 0;}
+.nb li{margin:2px 0;}
+.nb ul.check{list-style:none;padding-left:2px;}
+.nb ul.check li{position:relative;padding-left:30px;}
+.nb ul.check li::before{content:"";position:absolute;left:0;top:.18em;width:19px;height:19px;border-radius:50%;border:1.6px solid var(--faint);box-sizing:border-box;cursor:pointer;}
+.nb ul.check li[data-done]::before{background:var(--fg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 10.3l3 3 6-6.6' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat;border-color:var(--fg);}
+.nb ul.check li[data-done]{color:var(--mut);}
+/* 格式工具栏 */
+.ntool{display:flex;flex-direction:column;gap:6px;}
+.ntool .tr{display:flex;align-items:center;gap:4px;}
+.ntool button{min-width:36px;height:36px;padding:0 7px;white-space:nowrap;flex-shrink:0;border-radius:9px;color:var(--fg);font-size:15px;display:flex;align-items:center;justify-content:center;}
+.ntool button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.ntool button.on{background:var(--fill2);}
+.ntool button:active{background:var(--fill);}
+.ntool .sep{width:1px;height:20px;background:var(--line);margin:0 4px;}
+.ntool .styles{display:none;}
+.ntool.open .styles{display:flex;}
+.ntool .styles button{font-size:14px;}
+.ntool .styles button[data-b="h1"]{font-weight:700;font-size:16px;}
+.ntool .styles button[data-b="h2"]{font-weight:700;}
+.ntool .styles button[data-b="pre"]{font-family:ui-monospace,Menlo,monospace;font-size:13px;}
+.ntool.mob .styles button{flex:1;min-width:0;padding:0 2px;}
+.ntool.mob{position:fixed;left:0;right:0;bottom:var(--kb);z-index:30;background:var(--sheet);border-top:1px solid var(--line);padding:6px 10px calc(6px + var(--safe-b));display:none;}
+.ntool.mob.kb{padding-bottom:6px;}
+body.noteediting .ntool.mob{display:flex;}
+body.noteediting #tabbar{display:none;}
 .notes-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .mac-notes{display:flex;height:100%;}
 .mac-notes .nl{width:320px;flex-shrink:0;border-right:1px solid var(--line);display:flex;flex-direction:column;height:100%;overflow:hidden;transition:width .22s cubic-bezier(.2,.8,.2,1),border-color .22s;}
 .mac-notes.folded .nl{width:0;border-right-color:transparent;}
 .mac-notes .nl-in{width:320px;display:flex;flex-direction:column;height:100%;flex-shrink:0;}
-.ne-head{display:flex;align-items:center;justify-content:space-between;height:48px;padding:0 10px;flex-shrink:0;}
+.ne-head{display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:4px 10px;flex-shrink:0;gap:8px;}
 .ne-head button{padding:6px 8px;color:var(--mut);}
 .ne-head svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;display:block;}
 .ne-head button:hover{color:var(--fg);}
 .mac-notes .ne{flex:1;display:flex;flex-direction:column;height:100%;min-width:0;}
-.mac-notes .ne textarea{flex:1;padding:8px max(40px, calc((100% - 820px) / 2)) 40vh;font-size:16px;line-height:1.7;width:100%;}
+.mac-notes .ne .nb{padding:8px max(40px, calc((100% - 820px) / 2)) 40vh;line-height:1.7;}
+.ne-head .ntool{flex:1;flex-direction:row;justify-content:center;align-items:center;}
+.ne-head .ntool .styles::after{content:"";width:1px;height:20px;background:var(--line);margin:0 4px;}
+.ne-head .ntool .tr{justify-content:center;flex-wrap:wrap;}
+.ne-head .ntool .styles{display:flex;}
 .mac-notes .ne .empty{margin:auto;}
 .mac-notes .phead{margin-top:0;}
 .notes-root .phead{margin-top:0;}
@@ -1405,7 +1443,7 @@ function openSub(name){
   else if(name === 'export') renderExport();
   else if(name === 'import') renderImport();
   showView('sub'); subEl.scrollTop = 0;
-  if(name === 'notes' && isWide()){ const ta = $('#noteTa', subEl); if(ta){ ta.focus(); try { ta.setSelectionRange(0,0); } catch(e) {} ta.scrollTop = 0; } }
+  if(name === 'notes' && isWide()){ const ed = $('#noteEd', subEl); if(ed){ ed.focus(); try { const r = document.createRange(); r.setStart(ed, 0); r.collapse(true); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch(e) {} ed.scrollTop = 0; } }
   if(name === 'notes'){ const sc = $('.notes-scroll', subEl); if(sc) sc.scrollTop = 52; }
 }
 subEl.addEventListener('click', e => { if(e.target.closest('[data-back]')){ if(NS.open) closeNote(); NS.open = null; subName = null; renderMe(); showView('me'); } });
@@ -1487,15 +1525,117 @@ function bindNoteSearch(host){
   q.value = NS.q;
   q.addEventListener('input', () => { NS.q = q.value; const ts = terms(NS.q); const list = liveNotes().filter(n => (n.x||'').trim() && (!ts.length || matches(n.x, ts))); $('#nlist', host).innerHTML = noteListHtml(ts, list, isWide() ? NS.open : null); });
 }
+// ── 带格式的正文：只留下这些标签，粘贴进来的一律变成纯文字 ──
+const NOTE_TAGS = new Set(['H1','H2','H3','P','DIV','BR','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','PRE']);
+function cleanNode(node){
+  [...node.childNodes].forEach(ch => {
+    if(ch.nodeType === 3) return;
+    if(ch.nodeType !== 1){ ch.remove(); return; }
+    if(!NOTE_TAGS.has(ch.tagName)){ cleanNode(ch); while(ch.firstChild) node.insertBefore(ch.firstChild, ch); ch.remove(); return; }
+    const keepCheck = ch.tagName === 'UL' && ch.classList.contains('check'), done = ch.tagName === 'LI' && ch.hasAttribute('data-done');
+    [...ch.attributes].forEach(a => ch.removeAttribute(a.name));
+    if(keepCheck) ch.className = 'check';
+    if(done) ch.setAttribute('data-done', '');
+    cleanNode(ch);
+  });
+}
+function cleanHTML(html){ const d = document.createElement('div'); d.innerHTML = html; cleanNode(d); return d.innerHTML; }
+function textToNoteHTML(x){ return String(x || '').split('\n').map(l => '<div>' + (l ? esc(l) : '<br>') + '</div>').join(''); }
+function noteHTML(n){ return n.h != null ? cleanHTML(n.h) : textToNoteHTML(n.x); }
+function noteTextOf(el){                       // 纯文字版：给标题、预览、搜索、导出用
+  const out = [''];
+  const nl = () => { if(out[out.length - 1] !== '') out.push(''); };
+  const walk = node => {
+    node.childNodes.forEach(ch => {
+      if(ch.nodeType === 3){ out[out.length - 1] += ch.textContent; return; }
+      if(ch.nodeType !== 1) return;
+      const t = ch.tagName;
+      if(t === 'BR'){ out.push(''); return; }
+      if(t === 'LI'){ nl(); const ul = ch.parentElement; out[out.length - 1] = ul && ul.classList.contains('check') ? (ch.hasAttribute('data-done') ? '☑ ' : '☐ ') : ul && ul.tagName === 'OL' ? ([...ul.children].indexOf(ch) + 1) + '. ' : '• '; walk(ch); nl(); return; }
+      if(/^(DIV|P|H1|H2|H3|PRE|UL|OL)$/.test(t)){ nl(); walk(ch); nl(); return; }
+      walk(ch);
+    });
+  };
+  walk(el);
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').replace(/^\n+|\s+$/g, '');
+}
+const ICON_CHECK = '<svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.4"/><path d="M11 7h9"/><circle cx="6" cy="17" r="2.4"/><path d="M11 17h9"/></svg>';
+const ICON_UL = '<svg viewBox="0 0 24 24"><circle cx="5" cy="7" r=".9" fill="currentColor"/><circle cx="5" cy="12" r=".9" fill="currentColor"/><circle cx="5" cy="17" r=".9" fill="currentColor"/><path d="M9.5 7H20M9.5 12H20M9.5 17H20"/></svg>';
+const ICON_OL = '<svg viewBox="0 0 24 24"><path d="M4 5.5h1.3v4M4 9.5h2.6M4 14.5c.4-.6 2.5-.8 2.5.4 0 1-2.5 1.6-2.5 3.1h2.6"/><path d="M10 7.5h10M10 16.5h10"/></svg>';
+function noteToolHTML(mob){
+  return '<div class="ntool'+(mob ? ' mob' : '')+'">'
+    + '<div class="tr styles"><button data-b="h1">标题</button><button data-b="h2">小标题</button><button data-b="div">正文</button><button data-b="pre">等宽</button>'
+    + '<span class="sep"></span><button data-c="bold"><b>B</b></button><button data-c="italic"><i>I</i></button><button data-c="underline"><u>U</u></button><button data-c="strikeThrough"><s>S</s></button></div>'
+    + '<div class="tr">' + (mob ? '<button data-aa>Aa</button><span class="sep"></span>' : '')
+    + '<button data-l="check" aria-label="清单">'+ICON_CHECK+'</button><button data-l="ul" aria-label="项目符号">'+ICON_UL+'</button><button data-l="ol" aria-label="编号">'+ICON_OL+'</button>'
+    + (mob ? '<span style="flex:1"></span><button data-kbd aria-label="收起键盘">完成</button>' : '') + '</div></div>';
+}
 function bindNoteEditor(host, n){
-  const ta = $('#noteTa', host); if(!ta) return;
-  ta.value = n.x;
-  ta.addEventListener('input', () => {
-    n.x = ta.value; n.m = n.u = Date.now(); n._dirty = 1; saveSoon();
+  const ed = $('#noteEd', host); if(!ed) return;
+  ed.innerHTML = noteHTML(n);
+  const tools = [...host.querySelectorAll('.ntool')], mobTool = host.querySelector('.ntool.mob');
+  let t = null;
+  const commit = () => {
+    n.h = cleanHTML(ed.innerHTML); n.x = noteTextOf(ed); n.m = n.u = Date.now(); n._dirty = 1; saveSoon();
     const li = host.querySelector('.li[data-nid="'+(window.CSS && CSS.escape ? CSS.escape(n.id) : n.id)+'"]');
     if(li){ $('.l1', li).textContent = noteTitle(n.x); $('.l2', li).innerHTML = '<b>'+shortDate(n.m)+'</b>'+esc(notePreview(n.x)); }
+  };
+  ed.addEventListener('input', () => { clearTimeout(t); t = setTimeout(commit, 250); });
+  ed.addEventListener('blur', () => { clearTimeout(t); commit(); });
+  ed.addEventListener('paste', e => {                        // 粘贴只要纯文字
+    e.preventDefault();
+    const txt = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, txt);
   });
-  if(n._fresh){ ta.focus(); setTimeout(() => ta.focus(), 30); }
+  ed.addEventListener('click', e => {                         // 点清单前面的圆圈：勾上 / 取消
+    const li = e.target.closest('ul.check > li'); if(!li || !ed.contains(li)) return;
+    const r = li.getBoundingClientRect();
+    if(e.clientX - r.left < 28){ e.preventDefault(); if(li.hasAttribute('data-done')) li.removeAttribute('data-done'); else li.setAttribute('data-done', ''); commit(); }
+  });
+  const blockOf = () => { const sel = getSelection(); if(!sel.rangeCount) return null; let nd = sel.anchorNode; while(nd && nd !== ed){ if(nd.nodeType === 1 && /^(H1|H2|H3|PRE|DIV|P|LI)$/.test(nd.tagName)) return nd; nd = nd.parentNode; } return null; };
+  const listOf = () => { const sel = getSelection(); if(!sel.rangeCount) return null; let nd = sel.anchorNode; while(nd && nd !== ed){ if(nd.nodeType === 1 && /^(UL|OL)$/.test(nd.tagName)) return nd; nd = nd.parentNode; } return null; };
+  const paint = () => {
+    if(!ed.contains(getSelection().anchorNode)) return;
+    const b = blockOf(), bt = b ? b.tagName.toLowerCase() : 'div', l = listOf();
+    tools.forEach(tl => {
+      tl.querySelectorAll('[data-c]').forEach(x => { let on = false; try { on = document.queryCommandState(x.dataset.c); } catch(e) {} x.classList.toggle('on', on); });
+      tl.querySelectorAll('[data-b]').forEach(x => x.classList.toggle('on', x.dataset.b === (bt === 'p' || bt === 'li' ? 'div' : bt)));
+      tl.querySelectorAll('[data-l]').forEach(x => x.classList.toggle('on', !!l && (x.dataset.l === 'check' ? l.classList.contains('check') : x.dataset.l === l.tagName.toLowerCase() && !l.classList.contains('check'))));
+    });
+  };
+  document.addEventListener('selectionchange', paint);
+  const obs = new MutationObserver(() => { if(!document.body.contains(ed)){ document.removeEventListener('selectionchange', paint); obs.disconnect(); } });
+  obs.observe(document.body, {childList: true, subtree: true});
+  tools.forEach(tl => {
+    tl.addEventListener('pointerdown', e => { if(e.target.closest('button')) e.preventDefault(); });   // 点工具栏时光标留在正文里
+    tl.addEventListener('click', e => {
+      const btn = e.target.closest('button'); if(!btn) return;
+      if(btn.hasAttribute('data-aa')){ tl.classList.toggle('open'); btn.classList.toggle('on', tl.classList.contains('open')); return; }
+      if(btn.hasAttribute('data-kbd')){ ed.blur(); return; }
+      if(document.activeElement !== ed) ed.focus();
+      if(btn.dataset.c) document.execCommand(btn.dataset.c);
+      if(btn.dataset.b){
+        const l = listOf(); if(l) document.execCommand(l.tagName === 'OL' ? 'insertOrderedList' : 'insertUnorderedList');
+        document.execCommand('formatBlock', false, '<' + btn.dataset.b + '>');
+      }
+      if(btn.dataset.l){
+        const want = btn.dataset.l, l = listOf();
+        const isCheck = l && l.classList.contains('check'), cur = !l ? null : isCheck ? 'check' : l.tagName.toLowerCase();
+        if(cur === want){ document.execCommand(l.tagName === 'OL' ? 'insertOrderedList' : 'insertUnorderedList'); }   // 再点一次 = 取消列表
+        else {
+          if(cur && (cur === 'ol') !== (want === 'ol')) document.execCommand(l.tagName === 'OL' ? 'insertOrderedList' : 'insertUnorderedList');
+          if(!listOf()) document.execCommand(want === 'ol' ? 'insertOrderedList' : 'insertUnorderedList');
+          const nl = listOf(); if(nl) nl.classList.toggle('check', want === 'check');
+        }
+      }
+      commit(); paint();
+    });
+  });
+  if(mobTool){
+    ed.addEventListener('focus', () => { document.body.classList.add('noteediting'); fitKeyboard(); });
+    ed.addEventListener('blur', () => setTimeout(() => { if(document.activeElement !== ed) document.body.classList.remove('noteediting'); }, 120));
+  }
+  if(n._fresh){ ed.focus(); setTimeout(() => ed.focus(), 30); }
 }
 function renderNotes(){
   const host = notesHost; if(!host) return;
@@ -1509,7 +1649,7 @@ function renderNotes(){
       + '<div class="nl"><div class="nl-in"><div class="phead"><button class="back" data-back>‹</button><span class="ttl">备忘录</span></div>'
       + '<div class="search">'+SEARCH_SVG+'<input id="nq" type="search" placeholder="搜索" autocomplete="off"/></div>'
       + '<div class="notes-scroll" id="nlist">'+noteListHtml(ts, list, NS.open)+'</div></div></div>'
-      + '<div class="ne"><div class="ne-head"><button data-nfold aria-label="收起或展开列表">'+SIDE_SVG+'</button>'+NEW_BTN.replace('class="act"','')+'</div>'+(n ? '<textarea id="noteTa" placeholder="第一行会成为标题"></textarea>' : '<div class="empty">没有打开的备忘录</div>')+'</div></div>';
+      + '<div class="ne"><div class="ne-head"><button data-nfold aria-label="收起或展开列表">'+SIDE_SVG+'</button>'+(n ? noteToolHTML(false) : '<span style="flex:1"></span>')+NEW_BTN.replace('class="act"','')+'</div>'+(n ? '<div id="noteEd" class="nb" contenteditable="true" data-ph="第一行会成为标题"></div>' : '<div class="empty">没有打开的备忘录</div>')+'</div></div>';
     bindNoteSearch(host);
     if(n) bindNoteEditor(host, n);
     return;
@@ -1517,7 +1657,7 @@ function renderNotes(){
   if(NS.open){
     const n = D.notes.find(x => x.id === NS.open);
     if(!n){ NS.open = null; return renderNotes(); }
-    host.innerHTML = '<div class="notes-root note-ed"><div class="phead"><button class="back" data-nback>‹</button><span class="ttl"></span>'+NEW_BTN+'</div><textarea id="noteTa" placeholder="第一行会成为标题"></textarea></div>';
+    host.innerHTML = '<div class="notes-root note-ed"><div class="phead"><button class="back" data-nback>‹</button><span class="ttl"></span>'+NEW_BTN+'</div><div id="noteEd" class="nb" contenteditable="true" data-ph="第一行会成为标题"></div>'+noteToolHTML(true)+'</div>';
     bindNoteEditor(host, n);
     return;
   }
@@ -1528,6 +1668,8 @@ function renderNotes(){
   bindNoteSearch(host);
 }
 function closeNote(){
+  document.body.classList.remove('noteediting');
+  const ed = $('#noteEd'); if(ed && document.activeElement === ed) ed.blur();
   const n = D.notes.find(x => x.id === NS.open);
   if(n){
     if(!(n.x||'').trim()){
