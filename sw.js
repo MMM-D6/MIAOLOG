@@ -1,7 +1,7 @@
 // MMM — Service Worker v17
 // v17: 大改版。MMM 变成「时间轴 + 打点 + 抽一条 + 备忘录」；BOX 独立成 box.html；
 //      图标改成 icons/ 里的图片，manifest 不再内嵌大段图片数据；去掉贴纸相关缓存
-const CACHE_NAME = 'mmm-v18';
+const CACHE_NAME = 'mmm-v19';
 const STATIC_ASSETS = ['./manifest.json', './icons/mmm-180.png', './icons/mmm-192.png', './icons/mmm-512.png'];
 
 self.addEventListener('install', event => {

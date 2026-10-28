@@ -201,6 +201,10 @@ mark{background:var(--fill2);color:var(--fg);border-radius:3px;padding:0 1px;}
 .nb p{margin:0;}
 .nb pre{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:14px;line-height:1.55;background:var(--fill);border-radius:8px;padding:8px 10px;margin:6px 0;white-space:pre-wrap;}
 .nb ul,.nb ol{padding-left:24px;margin:2px 0;}
+.nb ol{padding-left:30px;}
+.olpop{position:fixed;z-index:60;display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:14px;background:var(--sheet);box-shadow:0 6px 24px rgba(0,0,0,.16);border:1px solid var(--line);}
+.olpop button{width:34px;height:34px;border-radius:50%;background:var(--fill);font-size:18px;line-height:1;color:var(--fg);}
+.olpop b{min-width:30px;text-align:center;font-size:17px;font-variant-numeric:tabular-nums;}
 .nb li{margin:2px 0;}
 .nb ul.check{list-style:none;padding-left:2px;}
 .nb ul.check li{position:relative;padding-left:30px;}
@@ -1533,7 +1537,9 @@ function cleanNode(node){
     if(ch.nodeType !== 1){ ch.remove(); return; }
     if(!NOTE_TAGS.has(ch.tagName)){ cleanNode(ch); while(ch.firstChild) node.insertBefore(ch.firstChild, ch); ch.remove(); return; }
     const keepCheck = ch.tagName === 'UL' && ch.classList.contains('check'), done = ch.tagName === 'LI' && ch.hasAttribute('data-done');
+    const st = ch.tagName === 'OL' ? parseInt(ch.getAttribute('start'), 10) : 1;
     [...ch.attributes].forEach(a => ch.removeAttribute(a.name));
+    if(st > 1 && st < 10000) ch.setAttribute('start', st);
     if(keepCheck) ch.className = 'check';
     if(done) ch.setAttribute('data-done', '');
     cleanNode(ch);
@@ -1551,7 +1557,7 @@ function noteTextOf(el){                       // 纯文字版：给标题、预
       if(ch.nodeType !== 1) return;
       const t = ch.tagName;
       if(t === 'BR'){ out.push(''); return; }
-      if(t === 'LI'){ nl(); const ul = ch.parentElement; out[out.length - 1] = ul && ul.classList.contains('check') ? (ch.hasAttribute('data-done') ? '☑ ' : '☐ ') : ul && ul.tagName === 'OL' ? ([...ul.children].indexOf(ch) + 1) + '. ' : '• '; walk(ch); nl(); return; }
+      if(t === 'LI'){ nl(); const ul = ch.parentElement; out[out.length - 1] = ul && ul.classList.contains('check') ? (ch.hasAttribute('data-done') ? '☑ ' : '☐ ') : ul && ul.tagName === 'OL' ? ([...ul.children].indexOf(ch) + (ul.start || 1)) + '. ' : '• '; walk(ch); nl(); return; }
       if(/^(DIV|P|H1|H2|H3|PRE|UL|OL)$/.test(t)){ nl(); walk(ch); nl(); return; }
       walk(ch);
     });
@@ -1580,12 +1586,60 @@ function bindNoteEditor(host, n){
     const li = host.querySelector('.li[data-nid="'+(window.CSS && CSS.escape ? CSS.escape(n.id) : n.id)+'"]');
     if(li){ $('.l1', li).textContent = noteTitle(n.x); $('.l2', li).innerHTML = '<b>'+shortDate(n.m)+'</b>'+esc(notePreview(n.x)); }
   };
-  ed.addEventListener('input', () => { clearTimeout(t); t = setTimeout(commit, 250); });
+  ed.addEventListener('input', e => {
+    // 在空行开头打「3. 」或「3、」：变成从 3 开始的编号列表
+    if(e.inputType === 'insertText' && (e.data === ' ' || e.data === '\u00a0')){
+      const b = blockOf();
+      const m = b && b.tagName !== 'LI' && !listOf() && b.textContent.match(/^(\d{1,4})[.．、][\s\u00a0]$/);
+      if(m){
+        b.innerHTML = '<br>';
+        const r = document.createRange(); r.setStart(b, 0); r.collapse(true); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+        document.execCommand('insertOrderedList');
+        const ol = listOf(); if(ol){ const n = +m[1]; if(n > 1) ol.setAttribute('start', n); else ol.removeAttribute('start'); }
+      }
+    }
+    clearTimeout(t); t = setTimeout(commit, 250);
+  });
   ed.addEventListener('blur', () => { clearTimeout(t); commit(); });
   ed.addEventListener('paste', e => {                        // 粘贴只要纯文字
     e.preventDefault();
     const txt = (e.clipboardData || window.clipboardData).getData('text/plain');
     document.execCommand('insertText', false, txt);
+  });
+  // 点编号：弹出一个小小的 − 数字 ＋，改这一条的编号，后面的跟着变
+  let olPop = null;
+  const closeOlPop = () => { if(olPop){ olPop.remove(); olPop = null; document.removeEventListener('pointerdown', outOlPop, true); } };
+  const outOlPop = e => { if(olPop && !olPop.contains(e.target)) closeOlPop(); };
+  const openOlPop = (ol, li) => {
+    closeOlPop();
+    const idx = [...ol.children].indexOf(li);
+    let num = idx + (ol.start || 1);
+    olPop = document.createElement('div'); olPop.className = 'olpop';
+    olPop.innerHTML = '<button data-k="-1">−</button><b>'+num+'</b><button data-k="1">＋</button>';
+    const r = li.getBoundingClientRect();
+    olPop.style.left = Math.max(8, r.left - 30) + 'px';
+    olPop.style.top = (r.bottom + 6) + 'px';
+    olPop.addEventListener('pointerdown', e => e.preventDefault());
+    olPop.addEventListener('click', e => {
+      const b = e.target.closest('[data-k]'); if(!b) return;
+      num = Math.max(idx + 1, num + (+b.dataset.k));
+      const start = num - idx;
+      if(start > 1) ol.setAttribute('start', start); else ol.removeAttribute('start');
+      $('b', olPop).textContent = num; commit();
+    });
+    document.body.appendChild(olPop);
+    setTimeout(() => document.addEventListener('pointerdown', outOlPop, true), 0);
+  };
+  ed.addEventListener('blur', () => setTimeout(() => { if(olPop && !olPop.matches(':hover')) closeOlPop(); }, 200));
+  ed.addEventListener('click', e => {
+    const ol = e.target.closest('ol');
+    if(ol && ed.contains(ol)){
+      const lis = [...ol.children].filter(x => x.tagName === 'LI'); const first = lis[0];
+      if(first && e.clientX < first.getBoundingClientRect().left + 2){
+        const li = lis.find(x => { const r = x.getBoundingClientRect(); return e.clientY >= r.top - 2 && e.clientY <= r.bottom + 2; });
+        if(li){ e.preventDefault(); openOlPop(ol, li); return; }
+      }
+    }
   });
   ed.addEventListener('click', e => {                         // 点清单前面的圆圈：勾上 / 取消
     const li = e.target.closest('ul.check > li'); if(!li || !ed.contains(li)) return;
